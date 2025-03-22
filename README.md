@@ -6,7 +6,7 @@
 Install the package globally or alternatively you can also use `npx`
 
 ```bash
-npm install -g aws-cost-cli
+npm install -g infra-cost
 ```
 
 ## Usage
