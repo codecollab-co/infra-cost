@@ -95,53 +95,6 @@ aws-cost --json
   <summary>You will get the following output in response</summary>
 
 ```json
-{
-  "account": "theroadmap",
-  "totals": {
-    "lastMonth": 0.38,
-    "thisMonth": 11.86,
-    "last7Days": 1.29,
-    "yesterday": 0.22
-  },
-  "totalsByService": {
-    "lastMonth": {
-      "AmazonCloudWatch": 0,
-      "Tax": 0,
-      "AWS Key Management Service": 0,
-      "AWS Service Catalog": 0,
-      "Amazon Simple Email Service": 0.38,
-      "Amazon Simple Notification Service": 0,
-      "Amazon Simple Storage Service": 0.00001
-    },
-    "thisMonth": {
-      "AmazonCloudWatch": 0,
-      "Tax": 0,
-      "AWS Key Management Service": 0,
-      "AWS Service Catalog": 0,
-      "Amazon Simple Email Service": 11.85,
-      "Amazon Simple Notification Service": 0,
-      "Amazon Simple Storage Service": 0
-    },
-    "last7Days": {
-      "AmazonCloudWatch": 0,
-      "Tax": 0,
-      "AWS Key Management Service": 0,
-      "AWS Service Catalog": 0,
-      "Amazon Simple Email Service": 1.28,
-      "Amazon Simple Notification Service": 0,
-      "Amazon Simple Storage Service": 0
-    },
-    "yesterday": {
-      "AmazonCloudWatch": 0,
-      "Tax": 0,
-      "AWS Key Management Service": 0,
-      "AWS Service Catalog": 0,
-      "Amazon Simple Email Service": 0.22,
-      "Amazon Simple Notification Service": 0,
-      "Amazon Simple Storage Service": 0
-    }
-  }
-}
 ```
 </details>
 
