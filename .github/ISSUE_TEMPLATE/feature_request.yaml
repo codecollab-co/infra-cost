@@ -9,30 +9,23 @@ body:
     value: |-
       Thank you for requesting a feature. Please complete the form below so we can triage and prioritize your feature.
 
-- id: 'tldr'
-  type: 'textarea'
-  attributes:
-    label: 'TL;DR'
-    description: 'Describe the feature in 1-2 sentences.'
-  validations:
-    required: true
 
-- id: 'tf_resources'
+- id: 'detailed_feature_description'
   type: 'textarea'
   attributes:
-    label: 'Terraform Resources'
-    description: 'If provider resources are available, please include links to the provider documentation.'
+    label: 'Detailed description of feature'
+    description: 'Is your feature request related to a problem? Please describe. Include a suitable example if possible.'
     render: 'markdown'
 
-- id: 'detailed_design'
+- id: 'solution_description'
   type: 'textarea'
   attributes:
-    label: 'Detailed design'
-    description: 'Do you have more information about a detailed design? Are there specific considerations to take? Include sample configuration if possible.'
+    label: 'Describe the solution you would like'
+    description: 'Is your feature request related to a problem? Please describe. Include a suitable example if possible.'
     render: 'markdown'
 
 - id: 'additional'
   type: 'textarea'
   attributes:
     label: 'Additional information'
-    description: 'Is there anything else you think we should know?'
+    description: 'Describe alternatives you have considered:'
