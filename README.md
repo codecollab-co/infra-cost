@@ -95,6 +95,92 @@ aws-cost --json
   <summary>You will get the following output in response</summary>
 
 ```json
+{
+  "totals": {
+    "lastMonth": 157.8016994008,
+    "thisMonth": 21.499375037900002,
+    "last7Days": 24.973976725800004,
+    "yesterday": 3.0157072707
+  },
+  "totalsByService": {
+    "lastMonth": {
+      "AWS Key Management Service": 0.1136712728,
+      "AWS Lambda": 0,
+      "Amazon DynamoDB": 0,
+      "EC2 - Other": 7.429695578699999,
+      "Amazon Elastic Compute Cloud - Compute": 20.012435730400007,
+      "Amazon Elastic Container Service for Kubernetes": 8.203354166999999,
+      "Amazon Elastic Load Balancing": 17.8041212886,
+      "Amazon Relational Database Service": 64.19798108490001,
+      "Amazon Simple Storage Service": 0.05173824170000002,
+      "Amazon Virtual Private Cloud": 15.410926380000006,
+      "AmazonCloudWatch": 1.8165903879000003,
+      "Tax": 22.75,
+      "AWS Glue": 0,
+      "Amazon Simple Notification Service": 0,
+      "Amazon Simple Queue Service": 0,
+      "AWS Secrets Manager": 0.0011852688,
+      "AWS Cost Explorer": 0.01
+    },
+    "thisMonth": {
+      "AWS Key Management Service": 0,
+      "AWS Lambda": 0,
+      "Amazon DynamoDB": 0,
+      "EC2 - Other": 0.653115731,
+      "Amazon Elastic Compute Cloud - Compute": 3.2255999999999996,
+      "Amazon Elastic Container Service for Kubernetes": 0,
+      "Amazon Elastic Load Balancing": 3.4436290893,
+      "Amazon Relational Database Service": 8.0306438101,
+      "Amazon Simple Storage Service": 0.0102726955,
+      "Amazon Virtual Private Cloud": 2.881275,
+      "AmazonCloudWatch": 0.154838712,
+      "Tax": 3.1,
+      "AWS Glue": 0,
+      "Amazon Simple Notification Service": 0,
+      "Amazon Simple Queue Service": 0,
+      "AWS Secrets Manager": 0,
+      "AWS Cost Explorer": 0
+    },
+    "last7Days": {
+      "AWS Key Management Service": 0,
+      "AWS Lambda": 0,
+      "Amazon DynamoDB": 0,
+      "EC2 - Other": 0.7554970696,
+      "Amazon Elastic Compute Cloud - Compute": 3.7631999999999994,
+      "Amazon Elastic Container Service for Kubernetes": 0,
+      "Amazon Elastic Load Balancing": 4.0171728722,
+      "Amazon Relational Database Service": 9.496635127500001,
+      "Amazon Simple Storage Service": 0.0118860755,
+      "Amazon Virtual Private Cloud": 3.365069445,
+      "AmazonCloudWatch": 0.46451613599999997,
+      "Tax": 3.1,
+      "AWS Glue": 0,
+      "Amazon Simple Notification Service": 0,
+      "Amazon Simple Queue Service": 0,
+      "AWS Secrets Manager": 0,
+      "AWS Cost Explorer": 0
+    },
+    "yesterday": {
+      "AWS Key Management Service": 0,
+      "AWS Lambda": 0,
+      "Amazon DynamoDB": 0,
+      "EC2 - Other": 0.1094404603,
+      "Amazon Elastic Compute Cloud - Compute": 0.5376,
+      "Amazon Elastic Container Service for Kubernetes": 0,
+      "Amazon Elastic Load Balancing": 0.5745390425,
+      "Amazon Relational Database Service": 1.3124030765,
+      "Amazon Simple Storage Service": 0.0017246914,
+      "Amazon Virtual Private Cloud": 0.48,
+      "AmazonCloudWatch": 0,
+      "Tax": 0,
+      "AWS Glue": 0,
+      "Amazon Simple Notification Service": 0,
+      "Amazon Simple Queue Service": 0,
+      "AWS Secrets Manager": 0,
+      "AWS Cost Explorer": 0
+    }
+  }
+}
 ```
 </details>
 
