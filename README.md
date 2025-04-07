@@ -68,6 +68,8 @@ aws-cost
 ```
 You will get the following output
 
+![Cost](./.github/images/aws-cost.png)
+
 ## Total Costs
 > You can also get the summary of the cost without the service breakdown
 
@@ -75,6 +77,8 @@ You will get the following output
 aws-cost --summary
 ```
 You will get the following output
+
+![Summary](./.github/images/aws-cost-summary.png)
 
 ## Plain Text
 > You can also get the output as plain text
