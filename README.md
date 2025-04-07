@@ -82,7 +82,95 @@ You will get the following output
 ```bash
 aws-cost --text
 ```
-You will get the following output in response
+
+<details>
+  <summary>You will get the following output in response</summary>
+  
+```
+Totals:
+  Last Month: $157.80
+  This Month: $21.50
+  Last 7 Days: $24.97
+  Yesterday: $3.02
+
+Totals by Service:
+  Last Month:
+    Amazon Elastic Container Service for Kubernetes: $8.20
+    Amazon Elastic Compute Cloud - Compute: $20.01
+    Amazon Relational Database Service: $64.20
+    Amazon Simple Notification Service: $0.00
+    Amazon Elastic Load Balancing: $17.80
+    Amazon Simple Storage Service: $0.05
+    Amazon Virtual Private Cloud: $15.41
+    Amazon Simple Queue Service: $0.00
+    AWS Key Management Service: $0.11
+    AWS Secrets Manager: $0.00
+    AWS Cost Explorer: $0.01
+    AmazonCloudWatch: $1.82
+    Amazon DynamoDB: $0.00
+    EC2 - Other: $7.43
+    AWS Lambda: $0.00
+    AWS Glue: $0.00
+    Tax: $22.75
+
+  This Month:
+    Amazon Elastic Container Service for Kubernetes: $0.00
+    Amazon Elastic Compute Cloud - Compute: $3.23
+    Amazon Relational Database Service: $8.03
+    Amazon Simple Notification Service: $0.00
+    Amazon Elastic Load Balancing: $3.44
+    Amazon Simple Storage Service: $0.01
+    Amazon Virtual Private Cloud: $2.88
+    Amazon Simple Queue Service: $0.00
+    AWS Key Management Service: $0.00
+    AWS Secrets Manager: $0.00
+    AWS Cost Explorer: $0.00
+    AmazonCloudWatch: $0.15
+    Amazon DynamoDB: $0.00
+    EC2 - Other: $0.65
+    AWS Lambda: $0.00
+    AWS Glue: $0.00
+    Tax: $3.10
+
+  Last 7 Days:
+    Amazon Elastic Container Service for Kubernetes: $0.00
+    Amazon Elastic Compute Cloud - Compute: $3.76
+    Amazon Relational Database Service: $9.50
+    Amazon Simple Notification Service: $0.00
+    Amazon Elastic Load Balancing: $4.02
+    Amazon Simple Storage Service: $0.01
+    Amazon Virtual Private Cloud: $3.37
+    Amazon Simple Queue Service: $0.00
+    AWS Key Management Service: $0.00
+    AWS Secrets Manager: $0.00
+    AWS Cost Explorer: $0.00
+    AmazonCloudWatch: $0.46
+    Amazon DynamoDB: $0.00
+    EC2 - Other: $0.76
+    AWS Lambda: $0.00
+    AWS Glue: $0.00
+    Tax: $3.10
+
+  Yesterday:
+    Amazon Elastic Container Service for Kubernetes: $0.00
+    Amazon Elastic Compute Cloud - Compute: $0.54
+    Amazon Relational Database Service: $1.31
+    Amazon Simple Notification Service: $0.00
+    Amazon Elastic Load Balancing: $0.57
+    Amazon Simple Storage Service: $0.00
+    Amazon Virtual Private Cloud: $0.48
+    Amazon Simple Queue Service: $0.00
+    AWS Key Management Service: $0.00
+    AWS Secrets Manager: $0.00
+    AWS Cost Explorer: $0.00
+    AmazonCloudWatch: $0.00
+    Amazon DynamoDB: $0.00
+    EC2 - Other: $0.11
+    AWS Lambda: $0.00
+    AWS Glue: $0.00
+    Tax: $0.00
+```
+</details>
 
 ## JSON Output
 > You can also get the output as JSON
