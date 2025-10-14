@@ -1,311 +1,282 @@
-## aws-cost-cli
-> CLI tool to perform cost analysis on your AWS account with Slack integration
+# infra-cost
 
-## Installation
+> Multi-cloud CLI tool for cost analysis across AWS, Google Cloud, Azure, Alibaba Cloud, and Oracle Cloud with Slack integration
 
-Install the package globally or alternatively you can also use `npx`
+## 🚀 Features
 
+- **Multi-cloud support**: AWS, Google Cloud (GCP), Microsoft Azure, Alibaba Cloud, Oracle Cloud
+- **Enhanced Slack integration**: Detailed cost breakdowns with service-level insights
+- **Flexible authentication**: Environment variables, IAM roles, profiles, and explicit credentials
+- **Multiple output formats**: Fancy tables, plain text, JSON
+- **Automated publishing**: npm and Homebrew with CI/CD pipelines
+- **Modern AWS SDK v3**: Enhanced performance and security
+
+## 📦 Installation
+
+### npm (Recommended)
 ```bash
 npm install -g infra-cost
 ```
 
-## Usage
-
-For the simple usage, just run the command without any options. 
-
-```
-aws-cost
+### Homebrew
+```bash
+brew install codecollab-co/tap/infra-cost
 ```
 
-The output will be a the totals with breakdown by service. Optionally, you can pass the following options to modify the output:
+### npx (No installation required)
+```bash
+npx infra-cost
+```
+
+## 🎯 Quick Start
+
+### AWS (Default Provider)
+```bash
+# Using default AWS credentials
+infra-cost
+
+# Using specific credentials
+infra-cost --access-key YOUR_KEY --secret-key YOUR_SECRET --region us-east-1
+```
+
+### Multi-Cloud Usage
+```bash
+# Google Cloud Platform
+infra-cost --provider gcp --project-id my-project --key-file /path/to/service-account.json
+
+# Microsoft Azure
+infra-cost --provider azure --subscription-id sub-id --tenant-id tenant-id --client-id client-id --client-secret secret
+
+# Alibaba Cloud
+infra-cost --provider alicloud --access-key key --secret-key secret --region cn-hangzhou
+
+# Oracle Cloud Infrastructure
+infra-cost --provider oracle --user-id user-ocid --tenancy-id tenancy-ocid --fingerprint fingerprint --key-file /path/to/private-key
+```
+
+## 🔧 Usage
+
+### Command Line Options
 
 ```bash
-$ aws-cost --help
+infra-cost [options]
 
-  Usage: aws-cost [options]
+Cloud Provider Options:
+  --provider [provider]           Cloud provider (aws, gcp, azure, alicloud, oracle) (default: "aws")
+  -p, --profile [profile]         Cloud provider profile to use (default: "default")
+  -r, --region [region]           Cloud provider region (default: "us-east-1")
 
-  A CLI tool to perform cost analysis on your AWS account
+AWS/Generic Credentials:
+  -k, --access-key [key]          Access key (AWS Access Key, etc.)
+  -s, --secret-key [key]          Secret key (AWS Secret Key, etc.)
+  -T, --session-token [key]       Session token (AWS Session Token, etc.)
 
-  Options:
-    -V, --version                  output the version number
+Google Cloud Options:
+  --project-id [id]               GCP Project ID
+  --key-file [path]               Path to service account JSON file
 
-    -k, --access-key [key]         AWS access key
-    -s, --secret-key [key]         AWS secret key
-    -r, --region [region]          AWS region (default: us-east-1)
+Azure Options:
+  --subscription-id [id]          Azure Subscription ID
+  --tenant-id [id]                Azure Tenant ID
+  --client-id [id]                Azure Client ID
+  --client-secret [secret]        Azure Client Secret
 
-    -p, --profile [profile]        AWS profile to use (default: "default")
+Alibaba Cloud Options:
+  (Uses --access-key and --secret-key)
 
-    -j, --json                     Get the output as JSON
-    -u, --summary                  Get only the summary without service breakdown
-    -t, --text                     Get the output as plain text (no colors / tables)
+Oracle Cloud Options:
+  --user-id [id]                  Oracle User OCID
+  --tenancy-id [id]               Oracle Tenancy OCID
+  --fingerprint [fingerprint]     Oracle Public Key Fingerprint
+  --key-file [path]               Path to private key file
 
-    -S, --slack-token [token]      Slack token for the slack message
-    -C, --slack-channel [channel]  Slack channel to post the message to
+Output Options:
+  -j, --json                      Get the output as JSON
+  -u, --summary                   Get only the summary without service breakdown
+  -t, --text                      Get the output as plain text (no colors/tables)
 
-    -v, --version                  Get the version of the CLI
-    -h, --help                     Get the help of the CLI
+Slack Integration:
+  -S, --slack-token [token]       Token for the slack integration
+  -C, --slack-channel [channel]   Channel to which the slack integration should post
+
+Other Options:
+  -V, --version                   output the version number
+  -h, --help                      display help for command
 ```
 
-In order to use the CLI you can either pass the AWS credentials through the options i.e.:
+## 🔐 Authentication
 
+### AWS Authentication (Multiple Methods Supported)
+
+#### 1. Environment Variables
 ```bash
-aws-cost -k [key] -s [secret] -r [region]
+export AWS_ACCESS_KEY_ID=your_access_key
+export AWS_SECRET_ACCESS_KEY=your_secret_key
+export AWS_REGION=us-east-1
+infra-cost
 ```
 
-or if you have configured the credentials using [aws-cli](https://github.com/aws/aws-cli), you can simply run the following command:
-
+#### 2. AWS Profiles
 ```bash
-aws-cost
+# Use default profile
+infra-cost
+
+# Use specific profile
+infra-cost --profile production
 ```
 
-To configure the credentials using aws-cli, have a look at the [aws-cli docs](https://github.com/aws/aws-cli#configuration) for more information.
-
-## Detailed Breakdown
-> The default usage is to get the cost breakdown by service
-
+#### 3. IAM Roles (EC2/Lambda/ECS)
+When running on AWS infrastructure, the CLI automatically uses IAM roles:
 ```bash
-aws-cost
+infra-cost  # Automatically uses attached IAM role
 ```
-You will get the following output
 
+#### 4. AWS SSO
+```bash
+aws sso login --profile my-sso-profile
+infra-cost --profile my-sso-profile
+```
+
+#### 5. Explicit Credentials
+```bash
+infra-cost --access-key KEY --secret-key SECRET --region us-east-1
+```
+
+### Other Cloud Providers
+
+**Note**: Multi-cloud providers (GCP, Azure, Alibaba Cloud, Oracle Cloud) are currently in development. The architecture is ready, but API integrations are not yet implemented. Use AWS for full functionality.
+
+## 📊 Output Formats
+
+### 1. Default Fancy Output
+```bash
+infra-cost
+```
 ![Cost](./.github/images/aws-cost.png)
 
-## Total Costs
-> You can also get the summary of the cost without the service breakdown
-
+### 2. Summary Only
 ```bash
-aws-cost --summary
+infra-cost --summary
 ```
-You will get the following output
-
 ![Summary](./.github/images/aws-cost-summary.png)
 
-## Plain Text
-> You can also get the output as plain text
+### 3. Plain Text
+```bash
+infra-cost --text
+```
+
+### 4. JSON Output
+```bash
+infra-cost --json
+```
+
+## 💬 Slack Integration
+
+### Enhanced Slack Features
+- **Comprehensive cost breakdown** for all time periods
+- **Service-level details** including Last 7 Days data
+- **Rich formatting** with blocks and sections
+- **Automated workflows** support
+
+### Setup
+1. Create a [Slack app](https://api.slack.com/apps?new_app=1)
+2. Add `chat:write` and `chat:write.public` scopes
+3. Get your OAuth token and channel ID
+
+### Usage
+```bash
+infra-cost --slack-token xoxb-your-token --slack-channel C1234567890
+```
+
+### Automated Daily Reports
+Set up a GitHub workflow to send daily cost reports:
+
+```yaml
+name: Daily AWS Costs
+on:
+  schedule:
+    - cron: '0 9 * * *'  # 9 AM UTC daily
+jobs:
+  costs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          npx infra-cost \
+            --slack-token ${{ secrets.SLACK_TOKEN }} \
+            --slack-channel ${{ secrets.SLACK_CHANNEL }}
+```
+
+## 🏗️ Development & Publishing
+
+### npm Publishing
+This project includes automated npm publishing with semantic versioning:
 
 ```bash
-aws-cost --text
+# Check version status
+npm run version:check
+
+# Bump version
+npm run version:bump:patch
+npm run version:bump:minor
+npm run version:bump:major
+
+# Dry run publish
+npm run publish:dry
+
+# Manual publish
+npm run publish:latest
+npm run publish:beta
 ```
 
-<details>
-  <summary>You will get the following output in response</summary>
-  
-```
-Totals:
-  Last Month: $157.80
-  This Month: $21.50
-  Last 7 Days: $24.97
-  Yesterday: $3.02
-
-Totals by Service:
-  Last Month:
-    Amazon Elastic Container Service for Kubernetes: $8.20
-    Amazon Elastic Compute Cloud - Compute: $20.01
-    Amazon Relational Database Service: $64.20
-    Amazon Simple Notification Service: $0.00
-    Amazon Elastic Load Balancing: $17.80
-    Amazon Simple Storage Service: $0.05
-    Amazon Virtual Private Cloud: $15.41
-    Amazon Simple Queue Service: $0.00
-    AWS Key Management Service: $0.11
-    AWS Secrets Manager: $0.00
-    AWS Cost Explorer: $0.01
-    AmazonCloudWatch: $1.82
-    Amazon DynamoDB: $0.00
-    EC2 - Other: $7.43
-    AWS Lambda: $0.00
-    AWS Glue: $0.00
-    Tax: $22.75
-
-  This Month:
-    Amazon Elastic Container Service for Kubernetes: $0.00
-    Amazon Elastic Compute Cloud - Compute: $3.23
-    Amazon Relational Database Service: $8.03
-    Amazon Simple Notification Service: $0.00
-    Amazon Elastic Load Balancing: $3.44
-    Amazon Simple Storage Service: $0.01
-    Amazon Virtual Private Cloud: $2.88
-    Amazon Simple Queue Service: $0.00
-    AWS Key Management Service: $0.00
-    AWS Secrets Manager: $0.00
-    AWS Cost Explorer: $0.00
-    AmazonCloudWatch: $0.15
-    Amazon DynamoDB: $0.00
-    EC2 - Other: $0.65
-    AWS Lambda: $0.00
-    AWS Glue: $0.00
-    Tax: $3.10
-
-  Last 7 Days:
-    Amazon Elastic Container Service for Kubernetes: $0.00
-    Amazon Elastic Compute Cloud - Compute: $3.76
-    Amazon Relational Database Service: $9.50
-    Amazon Simple Notification Service: $0.00
-    Amazon Elastic Load Balancing: $4.02
-    Amazon Simple Storage Service: $0.01
-    Amazon Virtual Private Cloud: $3.37
-    Amazon Simple Queue Service: $0.00
-    AWS Key Management Service: $0.00
-    AWS Secrets Manager: $0.00
-    AWS Cost Explorer: $0.00
-    AmazonCloudWatch: $0.46
-    Amazon DynamoDB: $0.00
-    EC2 - Other: $0.76
-    AWS Lambda: $0.00
-    AWS Glue: $0.00
-    Tax: $3.10
-
-  Yesterday:
-    Amazon Elastic Container Service for Kubernetes: $0.00
-    Amazon Elastic Compute Cloud - Compute: $0.54
-    Amazon Relational Database Service: $1.31
-    Amazon Simple Notification Service: $0.00
-    Amazon Elastic Load Balancing: $0.57
-    Amazon Simple Storage Service: $0.00
-    Amazon Virtual Private Cloud: $0.48
-    Amazon Simple Queue Service: $0.00
-    AWS Key Management Service: $0.00
-    AWS Secrets Manager: $0.00
-    AWS Cost Explorer: $0.00
-    AmazonCloudWatch: $0.00
-    Amazon DynamoDB: $0.00
-    EC2 - Other: $0.11
-    AWS Lambda: $0.00
-    AWS Glue: $0.00
-    Tax: $0.00
-```
-</details>
-
-## JSON Output
-> You can also get the output as JSON
+### Homebrew Publishing
+Automated Homebrew formula updates via GitHub Actions:
 
 ```bash
-aws-cost --json
+# Prepare release (interactive)
+npm run prepare-release
+
+# This will:
+# 1. Update version in package.json
+# 2. Update Homebrew formula
+# 3. Run tests and build
+# 4. Create git tag
+# 5. Trigger release workflow
 ```
 
-<details>
-  <summary>You will get the following output in response</summary>
+## 🔧 Development
 
-```json
-{
-  "totals": {
-    "lastMonth": 157.8016994008,
-    "thisMonth": 21.499375037900002,
-    "last7Days": 24.973976725800004,
-    "yesterday": 3.0157072707
-  },
-  "totalsByService": {
-    "lastMonth": {
-      "AWS Key Management Service": 0.1136712728,
-      "AWS Lambda": 0,
-      "Amazon DynamoDB": 0,
-      "EC2 - Other": 7.429695578699999,
-      "Amazon Elastic Compute Cloud - Compute": 20.012435730400007,
-      "Amazon Elastic Container Service for Kubernetes": 8.203354166999999,
-      "Amazon Elastic Load Balancing": 17.8041212886,
-      "Amazon Relational Database Service": 64.19798108490001,
-      "Amazon Simple Storage Service": 0.05173824170000002,
-      "Amazon Virtual Private Cloud": 15.410926380000006,
-      "AmazonCloudWatch": 1.8165903879000003,
-      "Tax": 22.75,
-      "AWS Glue": 0,
-      "Amazon Simple Notification Service": 0,
-      "Amazon Simple Queue Service": 0,
-      "AWS Secrets Manager": 0.0011852688,
-      "AWS Cost Explorer": 0.01
-    },
-    "thisMonth": {
-      "AWS Key Management Service": 0,
-      "AWS Lambda": 0,
-      "Amazon DynamoDB": 0,
-      "EC2 - Other": 0.653115731,
-      "Amazon Elastic Compute Cloud - Compute": 3.2255999999999996,
-      "Amazon Elastic Container Service for Kubernetes": 0,
-      "Amazon Elastic Load Balancing": 3.4436290893,
-      "Amazon Relational Database Service": 8.0306438101,
-      "Amazon Simple Storage Service": 0.0102726955,
-      "Amazon Virtual Private Cloud": 2.881275,
-      "AmazonCloudWatch": 0.154838712,
-      "Tax": 3.1,
-      "AWS Glue": 0,
-      "Amazon Simple Notification Service": 0,
-      "Amazon Simple Queue Service": 0,
-      "AWS Secrets Manager": 0,
-      "AWS Cost Explorer": 0
-    },
-    "last7Days": {
-      "AWS Key Management Service": 0,
-      "AWS Lambda": 0,
-      "Amazon DynamoDB": 0,
-      "EC2 - Other": 0.7554970696,
-      "Amazon Elastic Compute Cloud - Compute": 3.7631999999999994,
-      "Amazon Elastic Container Service for Kubernetes": 0,
-      "Amazon Elastic Load Balancing": 4.0171728722,
-      "Amazon Relational Database Service": 9.496635127500001,
-      "Amazon Simple Storage Service": 0.0118860755,
-      "Amazon Virtual Private Cloud": 3.365069445,
-      "AmazonCloudWatch": 0.46451613599999997,
-      "Tax": 3.1,
-      "AWS Glue": 0,
-      "Amazon Simple Notification Service": 0,
-      "Amazon Simple Queue Service": 0,
-      "AWS Secrets Manager": 0,
-      "AWS Cost Explorer": 0
-    },
-    "yesterday": {
-      "AWS Key Management Service": 0,
-      "AWS Lambda": 0,
-      "Amazon DynamoDB": 0,
-      "EC2 - Other": 0.1094404603,
-      "Amazon Elastic Compute Cloud - Compute": 0.5376,
-      "Amazon Elastic Container Service for Kubernetes": 0,
-      "Amazon Elastic Load Balancing": 0.5745390425,
-      "Amazon Relational Database Service": 1.3124030765,
-      "Amazon Simple Storage Service": 0.0017246914,
-      "Amazon Virtual Private Cloud": 0.48,
-      "AmazonCloudWatch": 0,
-      "Tax": 0,
-      "AWS Glue": 0,
-      "Amazon Simple Notification Service": 0,
-      "Amazon Simple Queue Service": 0,
-      "AWS Secrets Manager": 0,
-      "AWS Cost Explorer": 0
-    }
-  }
-}
-```
-</details>
-
-## Slack Integration
-
-> You can also get the output as a slack message
-
-You will need to create [a slack app](https://api.slack.com/apps?new_app=1), visit the **OAuth & Permissions** tab, and add the `chat:write` and `chat:write.public` scopes. Then create an OAuth token from the "OAuth Tokens" section and pass it to the CLI.
-
-> **Note:** The `--slack-channel` is the [channel id](https://stackoverflow.com/questions/40940327/what-is-the-simplest-way-to-find-a-slack-team-id-and-a-channel-id#answer-44883343), not the name.
-
+### Build
 ```bash
-aws-cost --slack-token [token] --slack-channel [channel]
+npm run build
 ```
 
-You will get the message on slack with the breakdown:
+### Type Checking
+```bash
+npm run typecheck
+```
 
-You can set up a GitHub [workflow similar to this](https://github.com/codecollab-co/infra-cost/blob/7549ceb2ba75b562e29f85ac53a9413c3e1f57ee/.github/workflows/aws-costs.yml#L1) which can send the daily cost breakdown to Slack.
+### Version Management
+```bash
+npm run version:check     # Check current version status
+npm run version:next      # Get next version
+npm run version:set       # Set specific version
+```
 
-## Note
+## 📋 Requirements & Permissions
 
-Regarding the credentials, you need to have the following permissions in order to use the CLI:
-
+### AWS Permissions Required
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "VisualEditor0",
+      "Sid": "InfraCostPermissions",
       "Effect": "Allow",
       "Action": [
         "iam:ListAccountAliases",
-        "ce:GetCostAndUsage"
+        "ce:GetCostAndUsage",
+        "sts:GetCallerIdentity"
       ],
       "Resource": "*"
     }
@@ -313,7 +284,79 @@ Regarding the credentials, you need to have the following permissions in order t
 }
 ```
 
-Also, please note that this tool uses AWS Cost Explorer under the hood which [costs $0.01 per request](https://aws.amazon.com/aws-cost-management/aws-cost-explorer/pricing/).
+### Cost Considerations
+- **AWS Cost Explorer**: $0.01 per request
+- **Other providers**: Varies by provider's pricing model
 
-## License
-MIT &copy; Code Collab
+## 🏗️ Architecture
+
+### Multi-Cloud Provider Pattern
+```
+src/
+├── providers/
+│   ├── factory.ts     # Provider factory
+│   ├── aws.ts         # AWS implementation ✅
+│   ├── gcp.ts         # Google Cloud (placeholder)
+│   ├── azure.ts       # Azure (placeholder)
+│   ├── alicloud.ts    # Alibaba Cloud (placeholder)
+│   └── oracle.ts      # Oracle Cloud (placeholder)
+├── types/
+│   └── providers.ts   # Common interfaces
+└── ...
+```
+
+### Key Features
+- **Abstract provider interface** for consistent API
+- **Factory pattern** for provider instantiation
+- **Extensible architecture** for adding new cloud providers
+- **Type-safe implementation** with TypeScript
+
+## 🚀 CI/CD Pipelines
+
+### Automated Workflows
+- **npm publishing** with semantic versioning
+- **Homebrew formula updates**
+- **Release automation** with GitHub Actions
+- **Multi-platform testing** (Node.js 16, 18, 20)
+
+### Quality Assurance
+- **TypeScript compilation** checking
+- **Security auditing** with npm audit
+- **Dependency validation**
+- **Build verification**
+
+## 📚 Documentation
+
+- [Homebrew Setup Guide](./HOMEBREW_SETUP.md)
+- [npm Publishing Guide](./NPM_PUBLISHING.md)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run `npm run typecheck` and `npm run build`
+5. Submit a pull request
+
+## 📄 License
+
+MIT © [Code Collab](https://github.com/codecollab-co)
+
+---
+
+## 🔄 Recent Updates
+
+### v0.1.0 - Multi-Cloud Architecture
+- ✅ **Multi-cloud provider support** (architecture ready)
+- ✅ **Enhanced Slack integration** with detailed breakdowns
+- ✅ **AWS SDK v3 upgrade** for better performance
+- ✅ **IAM roles and environment variables** support
+- ✅ **Automated npm and Homebrew publishing**
+- ✅ **Critical bug fixes** and consistency improvements
+
+### Migration from aws-cost-cli
+This tool has evolved from `aws-cost-cli` to `infra-cost` with backward compatibility maintained. Both `infra-cost` and `aws-cost` commands work.
+
+---
+
+*For questions or support, please [create an issue](https://github.com/codecollab-co/infra-cost/issues) on GitHub.*
