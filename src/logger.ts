@@ -1,8 +1,8 @@
 import chalk from 'chalk';
 import ora, { Ora } from 'ora';
 
-export function printFatalError(error: string) {
-  console.error(`  
+export function printFatalError(error: string): never {
+  console.error(`
     ${chalk.bold.redBright.underline(`Error:`)}
     ${chalk.redBright(`${error}`)}
   `);
