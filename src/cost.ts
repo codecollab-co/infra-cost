@@ -1,6 +1,6 @@
 import { CostExplorerClient, GetCostAndUsageCommand } from '@aws-sdk/client-cost-explorer';
 import dayjs from 'dayjs';
-import { AWSConfig } from './config';
+import { AWSClientConfig } from './config';
 import { showSpinner } from './logger';
 
 export type RawCostByService = {
@@ -9,7 +9,7 @@ export type RawCostByService = {
   };
 };
 
-export async function getRawCostByService(awsConfig: AWSConfig): Promise<RawCostByService> {
+export async function getRawCostByService(awsConfig: AWSClientConfig): Promise<RawCostByService> {
   showSpinner('Getting pricing data');
 
   const costExplorer = new CostExplorerClient({
@@ -143,7 +143,7 @@ function calculateServiceTotals(rawCostByService: RawCostByService): TotalCosts 
   };
 }
 
-export async function getTotalCosts(awsConfig: AWSConfig): Promise<TotalCosts> {
+export async function getTotalCosts(awsConfig: AWSClientConfig): Promise<TotalCosts> {
   const rawCosts = await getRawCostByService(awsConfig);
   const totals = calculateServiceTotals(rawCosts);
 

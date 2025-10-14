@@ -3,7 +3,7 @@ import { STSClient, GetCallerIdentityCommand } from '@aws-sdk/client-sts';
 import { AWSConfig } from './config';
 import { showSpinner } from './logger';
 
-export async function getAccountAlias(awsConfig: AWSConfig): Promise<string> {
+export async function getAccountAlias(awsConfig: AWSClientConfig): Promise<string> {
   showSpinner('Getting account alias');
 
   const iam = new IAMClient({

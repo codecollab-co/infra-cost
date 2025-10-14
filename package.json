@@ -73,6 +73,10 @@
   },
   "homepage": "https://github.com/codecollab-co/infra-cost.git#readme",
   "dependencies": {
+    "@aws-sdk/client-cost-explorer": "^3.370.0",
+    "@aws-sdk/client-iam": "^3.370.0",
+    "@aws-sdk/client-sts": "^3.370.0",
+    "@aws-sdk/credential-providers": "^3.370.0",
     "@aws-sdk/client-ce": "^3.254.0",
     "@aws-sdk/client-iam": "^3.254.0",
     "@aws-sdk/client-sts": "^3.254.0",
