@@ -27,11 +27,24 @@
     "typecheck": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
     "version:check": "node scripts/version-manager.js check",
+
     "version:next": "node scripts/version-manager.js next",
     "publish:dry": "npm publish --dry-run",
     "prepare-release": "./scripts/prepare-release.sh",
     "prepublishOnly": "npm run build",
     "postversion": "echo \"Don't forget to push the tag: git push origin v$npm_package_version\""
+    "version:bump:patch": "node scripts/version-manager.js bump patch",
+    "version:bump:minor": "node scripts/version-manager.js bump minor",
+    "version:bump:major": "node scripts/version-manager.js bump major",
+    "version:bump:prerelease": "node scripts/version-manager.js bump prerelease",
+    "version:set": "node scripts/version-manager.js set",
+    "version:next": "node scripts/version-manager.js next",
+    "publish:dry": "npm publish --dry-run",
+    "publish:beta": "npm publish --tag beta",
+    "publish:latest": "npm publish --tag latest",
+    "prepublishOnly": "npm run build && npm run typecheck",
+    "postpublish": "echo \"🎉 Published $(npm pkg get name)@$(npm pkg get version) to npm!\""
+
   },
   "keywords": [
     "aws",
@@ -72,6 +85,10 @@
     "@azure/identity": "^3.1.0",
     "@alicloud/pop-core": "^1.7.12",
     "oci-sdk": "^2.69.0",
+    "@aws-sdk/client-cost-explorer": "^3.370.0",
+    "@aws-sdk/client-iam": "^3.370.0",
+    "@aws-sdk/client-sts": "^3.370.0",
+    "@aws-sdk/shared-ini-file-loader": "^3.370.0",
     "chalk": "^5.2.0",
     "commander": "^10.0.0",
     "dayjs": "^1.11.7",

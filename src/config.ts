@@ -13,7 +13,7 @@ export type AWSConfig = {
   credentials: {
     accessKeyId: string;
     secretAccessKey: string;
-    sessionToken: string;
+    sessionToken?: string;
   };
   region: string;
 };

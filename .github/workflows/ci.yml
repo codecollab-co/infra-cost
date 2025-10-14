@@ -1,0 +1,190 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript check
+        run: npm run typecheck
+
+      - name: Build project
+        run: npm run build
+
+      - name: Test package installation
+        run: |
+          # Pack the package
+          npm pack
+
+          # Create a test directory
+          mkdir test-install
+          cd test-install
+
+          # Install the packed version
+          npm init -y
+          npm install ../infra-cost-*.tgz
+
+          # Test that the CLI works
+          npx aws-cost --help || echo "CLI help command failed"
+          npx aws-cost --version || echo "CLI version command failed"
+
+      - name: Validate package.json
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+
+            // Required fields
+            const required = ['name', 'version', 'description', 'main', 'bin'];
+            const missing = required.filter(field => !pkg[field]);
+            if (missing.length > 0) {
+              throw new Error('Missing required fields: ' + missing.join(', '));
+            }
+
+            // Validate bin paths exist
+            Object.values(pkg.bin || {}).forEach(binPath => {
+              if (!require('fs').existsSync(binPath)) {
+                throw new Error('Binary path does not exist: ' + binPath);
+              }
+            });
+
+            console.log('✅ Package validation passed');
+          "
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: |
+          # Run npm audit and capture output
+          if ! npm audit --audit-level=moderate; then
+            echo "⚠️ Security vulnerabilities found"
+            echo "Run 'npm audit fix' to resolve automatically fixable issues"
+            exit 1
+          fi
+
+      - name: Check for outdated packages
+        run: |
+          echo "📦 Checking for outdated packages..."
+          npm outdated || true
+
+  package-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and analyze package
+        run: |
+          npm run build
+
+          # Check package size
+          PACKAGE_SIZE=$(du -sh dist/ | cut -f1)
+          echo "📦 Package size: $PACKAGE_SIZE"
+
+          # Check if package is too large
+          PACKAGE_SIZE_BYTES=$(du -s dist/ | cut -f1)
+          if [ $PACKAGE_SIZE_BYTES -gt 10240 ]; then  # 10MB limit
+            echo "⚠️ Package size is quite large: $PACKAGE_SIZE"
+            echo "Consider optimizing bundle size"
+          fi
+
+          # Analyze dependencies
+          echo "📊 Dependency analysis:"
+          npm ls --depth=0
+
+      - name: Test CLI functionality
+        run: |
+          npm run build
+
+          # Test basic CLI functionality without AWS credentials
+          node dist/index.js --help > /dev/null || {
+            echo "❌ CLI help command failed"
+            exit 1
+          }
+
+          node dist/index.js --version > /dev/null || {
+            echo "❌ CLI version command failed"
+            exit 1
+          }
+
+          echo "✅ Basic CLI functionality test passed"
+
+  publish-dry-run:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Test publish (dry run)
+        run: |
+          echo "🧪 Testing npm publish process (dry run)..."
+          npm publish --dry-run
+          echo "✅ Publish dry run completed successfully"
+
+      - name: Package analysis
+        run: |
+          echo "📦 Package contents:"
+          npm pack --dry-run
+
+          echo ""
+          echo "📋 Would publish:"
+          echo "- Name: $(node -e 'console.log(require("./package.json").name)')"
+          echo "- Version: $(node -e 'console.log(require("./package.json").version)')"
+          echo "- Size: $(npm pack --dry-run 2>/dev/null | tail -1 | awk '{print $NF}')"

@@ -11,7 +11,6 @@ import { CloudProviderFactory } from './providers/factory';
 import { CloudProvider, ProviderConfig } from './types/providers';
 import { TotalCosts } from './cost';
 
-
 const program = new Command();
 
 program
