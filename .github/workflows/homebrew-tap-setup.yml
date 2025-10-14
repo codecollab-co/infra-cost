@@ -1,0 +1,108 @@
+name: Setup Homebrew Tap
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_tap_repo:
+        description: 'Create the homebrew tap repository'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  setup-homebrew-tap:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub CLI
+        run: |
+          # GitHub CLI should be pre-installed on ubuntu-latest
+          gh --version
+
+      - name: Create Homebrew Tap Repository
+        if: ${{ github.event.inputs.create_tap_repo == 'true' }}
+        run: |
+          # Create the homebrew tap repository if it doesn't exist
+          TAP_REPO="codecollab-co/homebrew-tap"
+
+          if ! gh repo view $TAP_REPO > /dev/null 2>&1; then
+            echo "Creating Homebrew tap repository..."
+            gh repo create $TAP_REPO \
+              --description "Homebrew formulas for Code Collab tools" \
+              --public
+
+            # Clone the new repository
+            git clone https://github.com/${TAP_REPO}.git homebrew-tap
+            cd homebrew-tap
+
+            # Create initial formula
+            mkdir -p Formula
+            cp ../homebrew/infra-cost.rb Formula/
+
+            # Create README
+            cat > README.md << 'EOF'
+          # Code Collab Homebrew Tap
+
+          This tap contains Homebrew formulas for Code Collab tools.
+
+          ## Installation
+
+          ```bash
+          # Add the tap
+          brew tap codecollab-co/tap
+
+          # Install infra-cost
+          brew install infra-cost
+          ```
+
+          ## Available Formulas
+
+          - **infra-cost**: CLI tool to perform cost analysis on your AWS account
+          EOF
+
+            # Initialize git and push
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "Initial homebrew tap setup with infra-cost formula"
+            git push
+
+            echo "✅ Homebrew tap repository created successfully!"
+          else
+            echo "ℹ️  Homebrew tap repository already exists"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Update Formula in Tap
+        run: |
+          TAP_REPO="codecollab-co/homebrew-tap"
+
+          # Clone the tap repository
+          git clone https://github.com/${TAP_REPO}.git homebrew-tap
+          cd homebrew-tap
+
+          # Update the formula
+          cp ../homebrew/infra-cost.rb Formula/
+
+          # Check if there are changes
+          if git diff --quiet; then
+            echo "ℹ️  No changes to formula"
+            exit 0
+          fi
+
+          # Commit and push changes
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/infra-cost.rb
+          git commit -m "Update infra-cost formula"
+          git push
+
+          echo "✅ Formula updated in Homebrew tap"
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TOKEN || secrets.GITHUB_TOKEN }}
