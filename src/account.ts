@@ -1,22 +1,31 @@
-import AWS from 'aws-sdk';
+import { IAMClient, ListAccountAliasesCommand } from '@aws-sdk/client-iam';
+import { STSClient, GetCallerIdentityCommand } from '@aws-sdk/client-sts';
 import { AWSConfig } from './config';
 import { showSpinner } from './logger';
 
 export async function getAccountAlias(awsConfig: AWSConfig): Promise<string> {
   showSpinner('Getting account alias');
 
-  const iam = new AWS.IAM(awsConfig);
+  const iam = new IAMClient({
+    credentials: awsConfig.credentials,
+    region: awsConfig.region,
+  });
 
-  const accountAliases = await iam.listAccountAliases().promise();
-  const foundAlias = accountAliases?.['AccountAliases']?.[0];
+  const listAliasesCommand = new ListAccountAliasesCommand({});
+  const accountAliases = await iam.send(listAliasesCommand);
+  const foundAlias = accountAliases?.AccountAliases?.[0];
 
   if (foundAlias) {
     return foundAlias;
   }
 
-  const sts = new AWS.STS(awsConfig);
+  const sts = new STSClient({
+    credentials: awsConfig.credentials,
+    region: awsConfig.region,
+  });
 
-  const accountInfo = await sts.getCallerIdentity().promise();
+  const getCallerIdentityCommand = new GetCallerIdentityCommand({});
+  const accountInfo = await sts.send(getCallerIdentityCommand);
 
   return accountInfo?.Account || '';
 }
