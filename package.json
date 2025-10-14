@@ -24,7 +24,19 @@
     "predev": "run-s clean",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "version:check": "node scripts/version-manager.js check",
+    "version:bump:patch": "node scripts/version-manager.js bump patch",
+    "version:bump:minor": "node scripts/version-manager.js bump minor",
+    "version:bump:major": "node scripts/version-manager.js bump major",
+    "version:bump:prerelease": "node scripts/version-manager.js bump prerelease",
+    "version:set": "node scripts/version-manager.js set",
+    "version:next": "node scripts/version-manager.js next",
+    "publish:dry": "npm publish --dry-run",
+    "publish:beta": "npm publish --tag beta",
+    "publish:latest": "npm publish --tag latest",
+    "prepublishOnly": "npm run build && npm run typecheck",
+    "postpublish": "echo \"🎉 Published $(npm pkg get name)@$(npm pkg get version) to npm!\""
   },
   "keywords": [
     "aws",
