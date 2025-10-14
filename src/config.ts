@@ -18,6 +18,11 @@ export type AWSConfig = {
   region: string;
 };
 
+export type AWSClientConfig = {
+  credentials: AwsCredentialIdentityProvider;
+  region: string;
+};
+
 export async function getAwsConfigFromOptionsOrFile(options: {
   profile: string;
   accessKey: string;
