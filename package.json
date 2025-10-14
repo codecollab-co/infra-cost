@@ -28,7 +28,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "version:check": "node scripts/version-manager.js check",
     "version:next": "node scripts/version-manager.js next",
-    "publish:dry": "npm publish --dry-run"
+    "publish:dry": "npm publish --dry-run",
+    "prepare-release": "./scripts/prepare-release.sh",
+    "prepublishOnly": "npm run build",
+    "postversion": "echo \"Don't forget to push the tag: git push origin v$npm_package_version\""
   },
   "keywords": [
     "aws",
