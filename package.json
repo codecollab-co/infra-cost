@@ -24,7 +24,10 @@
     "predev": "run-s clean",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare-release": "./scripts/prepare-release.sh",
+    "prepublishOnly": "npm run build",
+    "postversion": "echo \"Don't forget to push the tag: git push origin v$npm_package_version\""
   },
   "keywords": [
     "aws",
