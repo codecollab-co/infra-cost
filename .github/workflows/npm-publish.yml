@@ -1,0 +1,218 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version type to publish'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+        - prerelease
+      tag:
+        description: 'npm tag (latest, beta, alpha, etc.)'
+        required: false
+        default: 'latest'
+        type: string
+      dry_run:
+        description: 'Dry run (do not actually publish)'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run typecheck
+
+      - name: Build project
+        run: npm run build
+
+      - name: Determine version and publish type
+        id: version_info
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" =~ ^refs/tags/v.* ]]; then
+            # Tag-based release
+            VERSION=${GITHUB_REF#refs/tags/v}
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "is_prerelease=$([[ ${VERSION} == *"-"* ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+            echo "npm_tag=$([[ ${VERSION} == *"-"* ]] && echo "beta" || echo "latest")" >> $GITHUB_OUTPUT
+            echo "publish_type=tag" >> $GITHUB_OUTPUT
+          else
+            # Manual workflow dispatch
+            echo "version=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
+            echo "is_prerelease=$([[ "${{ github.event.inputs.version_type }}" == "prerelease" ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+            echo "npm_tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+            echo "publish_type=manual" >> $GITHUB_OUTPUT
+            echo "dry_run=${{ github.event.inputs.dry_run }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version (manual workflow)
+        if: steps.version_info.outputs.publish_type == 'manual'
+        run: |
+          # Bump version for manual workflow
+          if [ "${{ steps.version_info.outputs.version }}" = "prerelease" ]; then
+            NEW_VERSION=$(npm version prerelease --preid=beta --no-git-tag-version)
+          else
+            NEW_VERSION=$(npm version ${{ steps.version_info.outputs.version }} --no-git-tag-version)
+          fi
+
+          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+          echo "Bumped version to ${NEW_VERSION}"
+
+      - name: Validate package
+        run: |
+          # Check package integrity
+          npm pack --dry-run
+
+          # Validate package.json
+          node -e "
+            const pkg = require('./package.json');
+            if (!pkg.name || !pkg.version || !pkg.description) {
+              throw new Error('Missing required package.json fields');
+            }
+            console.log('Package validation passed');
+            console.log('Name:', pkg.name);
+            console.log('Version:', pkg.version);
+            console.log('Description:', pkg.description);
+          "
+
+      - name: Check if version already exists
+        id: version_check
+        run: |
+          CURRENT_VERSION=$(node -e "console.log(require('./package.json').version)")
+
+          if npm view infra-cost@${CURRENT_VERSION} version >/dev/null 2>&1; then
+            echo "version_exists=true" >> $GITHUB_OUTPUT
+            echo "Version ${CURRENT_VERSION} already exists on npm"
+          else
+            echo "version_exists=false" >> $GITHUB_OUTPUT
+            echo "Version ${CURRENT_VERSION} is new"
+          fi
+
+          echo "current_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release (manual workflow)
+        if: |
+          steps.version_info.outputs.publish_type == 'manual' &&
+          steps.version_info.outputs.dry_run == 'false' &&
+          steps.version_check.outputs.version_exists == 'false'
+        run: |
+          VERSION=$(node -e "console.log(require('./package.json').version)")
+
+          # Generate changelog
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$PREVIOUS_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s" ${PREVIOUS_TAG}..HEAD)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" --max-count=10)
+          fi
+
+          # Create tag
+          git tag "v${VERSION}"
+          git push origin "v${VERSION}"
+
+          # Create release
+          gh release create "v${VERSION}" \
+            --title "Release v${VERSION}" \
+            --notes "## What's Changed
+
+          ${CHANGELOG}
+
+          **Full Changelog**: https://github.com/codecollab-co/infra-cost/compare/${PREVIOUS_TAG}...v${VERSION}" \
+            ${{ steps.version_info.outputs.is_prerelease == 'true' && '--prerelease' || '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to npm (dry run)
+        if: steps.version_info.outputs.dry_run == 'true'
+        run: |
+          echo "🧪 DRY RUN - Would publish with the following settings:"
+          echo "Version: $(node -e "console.log(require('./package.json').version)")"
+          echo "Tag: ${{ steps.version_info.outputs.npm_tag }}"
+          echo "Command: npm publish --tag=${{ steps.version_info.outputs.npm_tag }}"
+          npm publish --dry-run --tag=${{ steps.version_info.outputs.npm_tag }}
+
+      - name: Publish to npm
+        if: |
+          steps.version_info.outputs.dry_run == 'false' &&
+          steps.version_check.outputs.version_exists == 'false'
+        run: |
+          echo "Publishing to npm with tag: ${{ steps.version_info.outputs.npm_tag }}"
+          npm publish --tag=${{ steps.version_info.outputs.npm_tag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Commit version changes (manual workflow)
+        if: |
+          steps.version_info.outputs.publish_type == 'manual' &&
+          steps.version_info.outputs.dry_run == 'false' &&
+          steps.version_check.outputs.version_exists == 'false'
+        run: |
+          git add package.json package-lock.json
+          git commit -m "Bump version to $(node -e "console.log(require('./package.json').version)")"
+          git push origin main
+
+      - name: Post-publish summary
+        if: steps.version_info.outputs.dry_run == 'false'
+        run: |
+          VERSION=$(node -e "console.log(require('./package.json').version)")
+          TAG="${{ steps.version_info.outputs.npm_tag }}"
+
+          echo "## 🎉 Publication Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package**: infra-cost@${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "- **npm tag**: ${TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Install command**: \`npm install infra-cost@${TAG}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Registry URL**: https://www.npmjs.com/package/infra-cost" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.version_check.outputs.version_exists }}" = "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Note**: Version ${VERSION} already existed on npm - no new publication" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Dry run summary
+        if: steps.version_info.outputs.dry_run == 'true'
+        run: |
+          VERSION=$(node -e "console.log(require('./package.json').version)")
+          TAG="${{ steps.version_info.outputs.npm_tag }}"
+
+          echo "## 🧪 Dry Run Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Would publish**: infra-cost@${VERSION}" >> $GITHUB_STEP_SUMMARY
+          echo "- **With npm tag**: ${TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "- **No actual changes made**" >> $GITHUB_STEP_SUMMARY

@@ -1,6 +1,6 @@
-import AWS from 'aws-sdk';
+import { CostExplorerClient, GetCostAndUsageCommand } from '@aws-sdk/client-cost-explorer';
 import dayjs from 'dayjs';
-import { AWSConfig } from './config';
+import { AWSClientConfig } from './config';
 import { showSpinner } from './logger';
 
 export type RawCostByService = {
@@ -9,38 +9,42 @@ export type RawCostByService = {
   };
 };
 
-export async function getRawCostByService(awsConfig: AWSConfig): Promise<RawCostByService> {
+export async function getRawCostByService(awsConfig: AWSClientConfig): Promise<RawCostByService> {
   showSpinner('Getting pricing data');
 
-  const costExplorer = new AWS.CostExplorer(awsConfig);
+  const costExplorer = new CostExplorerClient({
+    credentials: awsConfig.credentials,
+    region: awsConfig.region,
+  });
+
   const endDate = dayjs().subtract(1, 'day');
   const startDate = endDate.subtract(65, 'day');
 
   // Get the cost and usage data for the specified account
-  const pricingData = await costExplorer
-    .getCostAndUsage({
-      TimePeriod: {
-        Start: startDate.format('YYYY-MM-DD'),
-        End: endDate.format('YYYY-MM-DD'),
-      },
-      Granularity: 'DAILY',
-      Filter: {
-        Not: {
-          Dimensions: {
-            Key: 'RECORD_TYPE',
-            Values: ['Credit', 'Refund', 'Upfront', 'Support'],
-          },
+  const command = new GetCostAndUsageCommand({
+    TimePeriod: {
+      Start: startDate.format('YYYY-MM-DD'),
+      End: endDate.format('YYYY-MM-DD'),
+    },
+    Granularity: 'DAILY',
+    Filter: {
+      Not: {
+        Dimensions: {
+          Key: 'RECORD_TYPE',
+          Values: ['Credit', 'Refund', 'Upfront', 'Support'],
         },
       },
-      Metrics: ['UnblendedCost'],
-      GroupBy: [
-        {
-          Type: 'DIMENSION',
-          Key: 'SERVICE',
-        },
-      ],
-    })
-    .promise();
+    },
+    Metrics: ['UnblendedCost'],
+    GroupBy: [
+      {
+        Type: 'DIMENSION',
+        Key: 'SERVICE',
+      },
+    ],
+  });
+
+  const pricingData = await costExplorer.send(command);
 
   const costByService = {};
 
@@ -139,7 +143,7 @@ function calculateServiceTotals(rawCostByService: RawCostByService): TotalCosts 
   };
 }
 
-export async function getTotalCosts(awsConfig: AWSConfig): Promise<TotalCosts> {
+export async function getTotalCosts(awsConfig: AWSClientConfig): Promise<TotalCosts> {
   const rawCosts = await getRawCostByService(awsConfig);
   const totals = calculateServiceTotals(rawCosts);
 
