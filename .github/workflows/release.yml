@@ -1,0 +1,125 @@
+name: Release and Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run typecheck
+
+      - name: Build project
+        run: npm run build
+
+      - name: Create tarball
+        run: |
+          # Create distribution package
+          npm pack
+
+          # Get package info
+          PACKAGE_NAME=$(node -e "console.log(require('./package.json').name)")
+          PACKAGE_VERSION=$(node -e "console.log(require('./package.json').version)")
+
+          # Rename tarball to more standard format
+          mv ${PACKAGE_NAME}-${PACKAGE_VERSION}.tgz infra-cost-${PACKAGE_VERSION}.tgz
+
+      - name: Extract release info
+        id: release_info
+        run: |
+          # Extract version from tag
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+          # Check if this is a pre-release
+          if [[ ${VERSION} == *"-"* ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Simple changelog from recent commits
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD~1 2>/dev/null || echo "")
+          if [ -n "$PREVIOUS_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s" ${PREVIOUS_TAG}..HEAD)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" --max-count=10)
+          fi
+
+          # Create changelog file
+          cat > CHANGELOG.md << EOF
+          ## What's Changed
+
+          ${CHANGELOG}
+
+          **Full Changelog**: https://github.com/codecollab-co/infra-cost/compare/${PREVIOUS_TAG}...v${{ steps.release_info.outputs.version }}
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            infra-cost-${{ steps.release_info.outputs.version }}.tgz
+          body_path: CHANGELOG.md
+          prerelease: ${{ steps.release_info.outputs.prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to npm
+        run: |
+          # Only publish to npm if it's not a pre-release
+          if [ "${{ steps.release_info.outputs.prerelease }}" == "false" ]; then
+            npm publish
+          else
+            npm publish --tag beta
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.ref, '-') }} # Only run for stable releases, not pre-releases
+
+    steps:
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Update Homebrew Formula
+        uses: mislav/bump-homebrew-formula-action@v3
+        with:
+          formula-name: infra-cost
+          homebrew-tap: codecollab-co/homebrew-tap
+          base-branch: main
+          download-url: https://github.com/codecollab-co/infra-cost/archive/v${{ steps.version.outputs.version }}.tar.gz
+          commit-message: |
+            infra-cost ${{ steps.version.outputs.version }}
+
+            Automated update by GitHub Actions
+        env:
+          COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TOKEN }}

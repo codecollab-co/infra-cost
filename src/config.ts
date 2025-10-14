@@ -3,8 +3,18 @@ import type { AwsCredentialIdentity, AwsCredentialIdentityProvider } from "@aws-
 import chalk from "chalk";
 import { printFatalError } from "./logger";
 
-export type AWSClientConfig = {
-  credentials: AwsCredentialIdentityProvider;
+export type EnvConfig = {
+  awsAccessKey: string;
+  awsSecretKey: string;
+  awsRegion: string;
+};
+
+export type AWSConfig = {
+  credentials: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    sessionToken?: string;
+  };
   region: string;
 };
 
