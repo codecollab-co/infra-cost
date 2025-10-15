@@ -1,8 +1,24 @@
 {
   "name": "infra-cost",
-  "version": "0.2.0",
+  "version": "0.2.4",
   "description": "Multi-cloud FinOps CLI tool for comprehensive cost analysis and infrastructure optimization across AWS, GCP, Azure, Alibaba Cloud, and Oracle Cloud",
-  "type": "module",
+  "keywords": [
+    "aws",
+    "gcp",
+    "azure",
+    "cloud-cost",
+    "finops",
+    "cost-optimization",
+    "multi-cloud",
+    "cost-analysis",
+    "infrastructure",
+    "cloud-billing",
+    "cost-management",
+    "devops",
+    "cli-tool",
+    "cost-monitoring",
+    "budget-tracking"
+  ],
   "author": {
     "name": "Code Collab",
     "email": "codecollab.co@gmail.com",
@@ -18,125 +34,87 @@
     "infra-cost": "./bin/index.js",
     "aws-cost": "./bin/index.js"
   },
+  "main": "./dist/index.js",
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
     "prebuild": "run-s clean",
-    "predev": "run-s clean",
+    "build": "tsup",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "version:check": "node scripts/version-manager.js check",
-    "version:next": "node scripts/version-manager.js next",
-    "version:bump:patch": "node scripts/version-manager.js bump patch",
-    "version:bump:minor": "node scripts/version-manager.js bump minor",
-    "version:bump:major": "node scripts/version-manager.js bump major",
-    "version:bump:prerelease": "node scripts/version-manager.js bump prerelease",
-    "version:set": "node scripts/version-manager.js set",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "dev": "tsup --watch",
+    "version:check": "echo \"Current version: $(npm pkg get version | tr -d '\"')\"",
+    "version:next": "npm version patch --no-git-tag-version",
+    "version:bump:patch": "npm version patch",
+    "version:bump:minor": "npm version minor",
+    "version:bump:major": "npm version major",
     "publish:dry": "npm publish --dry-run",
+    "publish:latest": "npm publish",
     "publish:beta": "npm publish --tag beta",
-    "publish:latest": "npm publish --tag latest",
-    "prepare-release": "./scripts/prepare-release.sh",
-    "prepublishOnly": "npm run build",
-    "postversion": "echo \"Don't forget to push the tag: git push origin v$npm_package_version\"",
-    "postpublish": "echo \"🎉 Published $(npm pkg get name)@$(npm pkg get version) to npm!\""
+    "prepare-release": "npm run build && npm run test && npm run version:bump:patch",
+    "postpublish": "echo \"🎉 Published $(npm pkg get name)@$(npm pkg get version) to npm!\"",
+    "prepublishOnly": "npm run build"
   },
-  "keywords": [
-    "aws",
-    "gcp",
-    "azure",
-    "alibaba-cloud",
-    "oracle-cloud",
-    "multi-cloud",
-    "cost",
-    "cli",
-    "infra-cost",
-    "cloud-cost",
-    "cost-analysis",
-    "typescript"
-  ],
-  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/codecollab-co/infra-cost.git"
   },
-  "engines": {
-    "node": ">=12.0"
-  },
   "bugs": {
     "url": "https://github.com/codecollab-co/infra-cost/issues"
   },
-  "homepage": "https://github.com/codecollab-co/infra-cost.git#readme",
+  "homepage": "https://github.com/codecollab-co/infra-cost#readme",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
   "dependencies": {
-    "@aws-sdk/client-budgets": "^3.908.0",
-    "@aws-sdk/client-cost-explorer": "^3.370.0",
-    "@aws-sdk/client-ec2": "^3.909.0",
-    "@aws-sdk/client-iam": "^3.370.0",
-    "@aws-sdk/client-lambda": "^3.908.0",
-    "@aws-sdk/client-rds": "^3.908.0",
-    "@aws-sdk/client-s3": "^3.908.0",
-    "@aws-sdk/client-sts": "^3.370.0",
-    "@aws-sdk/credential-providers": "^3.370.0",
-    "@aws-sdk/shared-ini-file-loader": "^3.370.0",
-    "axios": "^1.12.2",
-    "chalk": "^5.2.0",
-    "cli-progress": "^3.12.0",
+    "@aws-sdk/client-cost-explorer": "^3.621.0",
+    "@aws-sdk/client-iam": "^3.621.0",
+    "@aws-sdk/client-sts": "^3.621.0",
+    "@aws-sdk/credential-providers": "^3.621.0",
+    "@slack/web-api": "^7.5.0",
+    "chalk": "^4.1.2",
     "cli-table3": "^0.6.5",
-    "commander": "^10.0.0",
-    "dayjs": "^1.11.7",
-    "dotenv": "^16.0.3",
-    "exceljs": "^4.4.0",
-    "express": "^5.1.0",
-    "moment": "^2.30.1",
-    "node-fetch": "^3.3.0",
-    "ora": "^6.1.2",
-    "puppeteer": "^24.24.1",
-    "xlsx": "^0.18.5"
+    "commander": "^12.1.0",
+    "yauzl": "^3.0.0",
+    "pend": "^1.2.0",
+    "fd-slicer": "^1.1.0",
+    "pako": "^2.1.0",
+    "zod": "^3.23.8",
+    "callsites": "^3.1.0"
   },
   "devDependencies": {
-    "@types/cli-progress": "^3.11.6",
-    "@types/express": "^5.0.3",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^18.11.18",
-    "@types/supertest": "^6.0.3",
-    "jest": "^30.2.0",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^22.5.4",
+    "@types/yauzl": "^2.10.3",
+    "@typescript-eslint/eslint-plugin": "^8.5.0",
+    "@typescript-eslint/parser": "^8.5.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
     "npm-run-all": "^4.1.5",
-    "supertest": "^7.1.4",
-    "ts-jest": "^29.4.5",
-    "ts-node": "^10.9.1",
-    "tsup": "^6.5.0",
-    "typescript": "^4.9.4"
+    "ts-jest": "^29.2.5",
+    "tsup": "^6.7.0",
+    "typescript": "^5.6.2"
   },
-  "peerDependencies": {
-    "@alicloud/pop-core": "^1.7.12",
-    "@azure/arm-costmanagement": "^1.0.0",
-    "@azure/arm-subscriptions": "^5.1.0",
-    "@azure/identity": "^3.1.0",
-    "@google-cloud/billing": "^4.1.0",
-    "@google-cloud/resource-manager": "^5.1.0",
-    "oci-sdk": "^2.69.0"
-  },
-  "peerDependenciesMeta": {
-    "@google-cloud/billing": {
-      "optional": true
-    },
-    "@google-cloud/resource-manager": {
-      "optional": true
-    },
-    "@azure/arm-costmanagement": {
-      "optional": true
-    },
-    "@azure/arm-subscriptions": {
-      "optional": true
-    },
-    "@azure/identity": {
-      "optional": true
-    },
-    "@alicloud/pop-core": {
-      "optional": true
-    },
-    "oci-sdk": {
-      "optional": true
-    }
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.ts"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!src/**/*.d.ts"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ]
   }
 }

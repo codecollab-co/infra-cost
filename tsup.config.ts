@@ -6,11 +6,11 @@ export default defineConfig([
     outDir: 'dist',
     target: 'node16',
     platform: 'node',
-    format: ['esm'],
+    format: ['cjs'],
     splitting: false,
     sourcemap: true,
     minify: false,
-    shims: true,
+    shims: false,
     dts: false,
   },
 ]);

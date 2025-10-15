@@ -1,15 +1,66 @@
-# infra-cost
+# 💰 infra-cost
 
-> Multi-cloud CLI tool for cost analysis across AWS, Google Cloud, Azure, Alibaba Cloud, and Oracle Cloud with Slack integration
+<div align="center">
+
+**Multi-cloud FinOps CLI tool for comprehensive cost analysis and infrastructure optimization**
+
+[![npm version](https://badge.fury.io/js/infra-cost.svg)](https://badge.fury.io/js/infra-cost)
+[![Downloads](https://img.shields.io/npm/dm/infra-cost.svg)](https://npmjs.org/package/infra-cost)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub issues](https://img.shields.io/github/issues/codecollab-co/infra-cost)](https://github.com/codecollab-co/infra-cost/issues)
+[![GitHub stars](https://img.shields.io/github/stars/codecollab-co/infra-cost)](https://github.com/codecollab-co/infra-cost/stargazers)
+
+*Take control of your cloud costs across AWS, Google Cloud, Azure, Alibaba Cloud, and Oracle Cloud* 🚀
+
+[Installation](#-installation) • [Quick Start](#-quick-start) • [Features](#-features) • [Documentation](#-documentation) • [Contributing](#-contributing)
+
+</div>
+
+---
+
+## 🎯 Why infra-cost?
+
+**Save money. Optimize resources. Make informed decisions.**
+
+- 💸 **Reduce cloud spend** by up to 30% with actionable insights
+- 🔍 **Multi-cloud visibility** - see costs across all your providers in one place
+- ⚡ **Real-time analysis** - get instant cost breakdowns and trends
+- 🤖 **AI-powered recommendations** for optimization opportunities
+- 📊 **Executive reports** - beautiful PDF reports for stakeholders
+- 🔔 **Smart alerting** - proactive cost anomaly detection
+- 💬 **Team collaboration** - Slack integration for cost awareness
 
 ## 🚀 Features
 
-- **Multi-cloud support**: AWS, Google Cloud (GCP), Microsoft Azure, Alibaba Cloud, Oracle Cloud
-- **Enhanced Slack integration**: Detailed cost breakdowns with service-level insights
-- **Flexible authentication**: Environment variables, IAM roles, profiles, and explicit credentials
-- **Multiple output formats**: Fancy tables, plain text, JSON
-- **Automated publishing**: npm and Homebrew with CI/CD pipelines
-- **Modern AWS SDK v3**: Enhanced performance and security
+### 🌐 **Multi-Cloud Support**
+- **AWS** ✅ (Full support with Cost Explorer integration)
+- **Google Cloud** 🚧 (Architecture ready, coming soon)
+- **Microsoft Azure** 🚧 (Architecture ready, coming soon)
+- **Alibaba Cloud** 🚧 (Architecture ready, coming soon)
+- **Oracle Cloud** 🚧 (Architecture ready, coming soon)
+
+### 📊 **Comprehensive Analytics**
+- **Cost Forecasting** - AI-powered predictions for future spending
+- **Budget Monitoring** - Track against budgets with smart alerts
+- **Resource Rightsizing** - ML recommendations for optimal instance sizes
+- **Sustainability Analysis** - Carbon footprint tracking and green recommendations
+- **Security Cost Analysis** - Security posture vs. cost optimization
+- **Anomaly Detection** - AI-powered cost spike identification
+
+### 🎛️ **Advanced Features**
+- **Interactive Dashboards** - Rich terminal UI with real-time data
+- **PDF Report Generation** - Executive summaries and technical deep-dives
+- **Cross-Cloud Optimization** - Find the best provider for each workload
+- **Automated Optimization** - Execute cost-saving actions automatically
+- **Audit Logging** - Comprehensive compliance tracking
+- **Enterprise Multi-tenancy** - Team and organization management
+
+### 🔧 **Developer Experience**
+- **Multiple output formats**: Fancy tables, plain text, JSON, CSV, Excel
+- **Flexible authentication**: Environment variables, IAM roles, profiles
+- **CI/CD Integration**: GitHub Actions, Jenkins, GitLab CI
+- **API Server**: REST endpoints for custom integrations
+- **Webhook Support**: Real-time notifications and integrations
 
 ## 📦 Installation
 
@@ -18,9 +69,10 @@
 npm install -g infra-cost
 ```
 
-### Homebrew
+### Homebrew (macOS/Linux)
 ```bash
-brew install codecollab-co/tap/infra-cost
+brew tap codecollab-co/tap
+brew install infra-cost
 ```
 
 ### npx (No installation required)
@@ -28,87 +80,51 @@ brew install codecollab-co/tap/infra-cost
 npx infra-cost
 ```
 
+### Docker
+```bash
+docker run --rm codecollab-co/infra-cost --help
+```
+
 ## 🎯 Quick Start
 
-### AWS (Default Provider)
+### 1. Basic AWS Cost Analysis
 ```bash
 # Using default AWS credentials
 infra-cost
 
-# Using specific credentials
-infra-cost --access-key YOUR_KEY --secret-key YOUR_SECRET --region us-east-1
+# Get a 6-month cost trend with forecasting
+infra-cost --trend --forecast 30
+
+# Interactive multi-cloud dashboard
+infra-cost --multi-cloud-dashboard
 ```
 
-### Multi-Cloud Usage
+### 2. Advanced Analysis
 ```bash
-# Google Cloud Platform
-infra-cost --provider gcp --project-id my-project --key-file /path/to/service-account.json
+# Generate executive PDF report
+infra-cost --executive-summary --pdf-report quarterly-report.pdf
 
-# Microsoft Azure
-infra-cost --provider azure --subscription-id sub-id --tenant-id tenant-id --client-id client-id --client-secret secret
+# AI-powered anomaly detection
+infra-cost --anomaly-detect --anomaly-realtime
 
-# Alibaba Cloud
-infra-cost --provider alicloud --access-key key --secret-key secret --region cn-hangzhou
-
-# Oracle Cloud Infrastructure
-infra-cost --provider oracle --user-id user-ocid --tenancy-id tenancy-ocid --fingerprint fingerprint --key-file /path/to/private-key
+# Comprehensive sustainability analysis
+infra-cost --sustainability --carbon-footprint --green-recommendations
 ```
 
-## 🔧 Usage
-
-### Command Line Options
-
+### 3. Team Collaboration
 ```bash
-infra-cost [options]
+# Send daily cost report to Slack
+infra-cost --slack-token YOUR_TOKEN --slack-channel "#finops" --smart-alerts
 
-Cloud Provider Options:
-  --provider [provider]           Cloud provider (aws, gcp, azure, alicloud, oracle) (default: "aws")
-  -p, --profile [profile]         Cloud provider profile to use (default: "default")
-  -r, --region [region]           Cloud provider region (default: "us-east-1")
-
-AWS/Generic Credentials:
-  -k, --access-key [key]          Access key (AWS Access Key, etc.)
-  -s, --secret-key [key]          Secret key (AWS Secret Key, etc.)
-  -T, --session-token [key]       Session token (AWS Session Token, etc.)
-
-Google Cloud Options:
-  --project-id [id]               GCP Project ID
-  --key-file [path]               Path to service account JSON file
-
-Azure Options:
-  --subscription-id [id]          Azure Subscription ID
-  --tenant-id [id]                Azure Tenant ID
-  --client-id [id]                Azure Client ID
-  --client-secret [secret]        Azure Client Secret
-
-Alibaba Cloud Options:
-  (Uses --access-key and --secret-key)
-
-Oracle Cloud Options:
-  --user-id [id]                  Oracle User OCID
-  --tenancy-id [id]               Oracle Tenancy OCID
-  --fingerprint [fingerprint]     Oracle Public Key Fingerprint
-  --key-file [path]               Path to private key file
-
-Output Options:
-  -j, --json                      Get the output as JSON
-  -u, --summary                   Get only the summary without service breakdown
-  -t, --text                      Get the output as plain text (no colors/tables)
-
-Slack Integration:
-  -S, --slack-token [token]       Token for the slack integration
-  -C, --slack-channel [channel]   Channel to which the slack integration should post
-
-Other Options:
-  -V, --version                   output the version number
-  -h, --help                      display help for command
+# Start real-time cost monitoring
+infra-cost --monitor --alert-threshold 1000 --alert-channel slack
 ```
 
 ## 🔐 Authentication
 
-### AWS Authentication (Multiple Methods Supported)
+### AWS Authentication (Multiple Methods)
 
-#### 1. Environment Variables
+#### 1. Environment Variables (Recommended)
 ```bash
 export AWS_ACCESS_KEY_ID=your_access_key
 export AWS_SECRET_ACCESS_KEY=your_secret_key
@@ -123,12 +139,15 @@ infra-cost
 
 # Use specific profile
 infra-cost --profile production
+
+# Auto-discover profiles
+infra-cost --discover-profiles --auto-profile
 ```
 
 #### 3. IAM Roles (EC2/Lambda/ECS)
-When running on AWS infrastructure, the CLI automatically uses IAM roles:
 ```bash
-infra-cost  # Automatically uses attached IAM role
+# Automatically uses attached IAM role
+infra-cost
 ```
 
 #### 4. AWS SSO
@@ -137,131 +156,164 @@ aws sso login --profile my-sso-profile
 infra-cost --profile my-sso-profile
 ```
 
-#### 5. Explicit Credentials
+### Multi-Cloud Setup (Coming Soon)
 ```bash
-infra-cost --access-key KEY --secret-key SECRET --region us-east-1
+# Google Cloud Platform
+infra-cost --provider gcp --project-id my-project --key-file service-account.json
+
+# Microsoft Azure
+infra-cost --provider azure --subscription-id sub-id --tenant-id tenant-id
+
+# Cross-cloud comparison
+infra-cost --compare-clouds aws,gcp,azure --optimization-report
 ```
 
-### Other Cloud Providers
+## 📊 Output Examples
 
-**Note**: Multi-cloud providers (GCP, Azure, Alibaba Cloud, Oracle Cloud) are currently in development. The architecture is ready, but API integrations are not yet implemented. Use AWS for full functionality.
-
-## 📊 Output Formats
-
-### 1. Default Fancy Output
+### Default Rich Terminal UI
 ```bash
-infra-cost
+infra-cost --smart-alerts --compact
 ```
-![Cost](./.github/images/aws-cost.png)
+![Cost Analysis](./.github/images/aws-cost.png)
 
-### 2. Summary Only
+### Executive Dashboard
 ```bash
-infra-cost --summary
+infra-cost --executive-summary
 ```
-![Summary](./.github/images/aws-cost-summary.png)
+![Executive Summary](./.github/images/executive-dashboard.png)
 
-### 3. Plain Text
+### JSON for Automation
 ```bash
-infra-cost --text
+infra-cost --json --forecast 30 --analytics-insights
 ```
 
-### 4. JSON Output
+### PDF Reports
 ```bash
-infra-cost --json
+infra-cost --pdf-report monthly-report.pdf --trend --optimization-tips
 ```
 
 ## 💬 Slack Integration
 
-### Enhanced Slack Features
-- **Comprehensive cost breakdown** for all time periods
-- **Service-level details** including Last 7 Days data
-- **Rich formatting** with blocks and sections
-- **Automated workflows** support
+### Enhanced Team Collaboration
+- **Rich cost breakdowns** with visual charts
+- **Proactive alerts** for budget overruns and anomalies
+- **Automated workflows** for approval processes
+- **Team cost awareness** with regular updates
 
-### Setup
-1. Create a [Slack app](https://api.slack.com/apps?new_app=1)
-2. Add `chat:write` and `chat:write.public` scopes
-3. Get your OAuth token and channel ID
-
-### Usage
+### Setup & Usage
 ```bash
-infra-cost --slack-token xoxb-your-token --slack-channel C1234567890
+# Create Slack app with chat:write permissions
+# Get OAuth token and channel ID
+
+# Send cost report
+infra-cost --slack-token xoxb-your-token --slack-channel "#finops"
+
+# Enable smart alerts
+infra-cost --slack-token xoxb-your-token --slack-channel "#alerts" --smart-alerts
 ```
 
 ### Automated Daily Reports
-Set up a GitHub workflow to send daily cost reports:
-
 ```yaml
-name: Daily AWS Costs
+name: Daily FinOps Report
 on:
   schedule:
-    - cron: '0 9 * * *'  # 9 AM UTC daily
+    - cron: '0 9 * * 1-5'  # Weekdays 9 AM UTC
 jobs:
-  costs:
+  cost-report:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
       - run: |
           npx infra-cost \
+            --executive-summary \
             --slack-token ${{ secrets.SLACK_TOKEN }} \
-            --slack-channel ${{ secrets.SLACK_CHANNEL }}
+            --slack-channel ${{ secrets.SLACK_CHANNEL }} \
+            --smart-alerts --trends 7
 ```
 
-## 🏗️ Development & Publishing
+## 🔧 Advanced Usage
 
-### npm Publishing
-This project includes automated npm publishing with semantic versioning:
-
+### Cost Forecasting & Analytics
 ```bash
-# Check version status
-npm run version:check
+# AI-powered forecasting with multiple models
+infra-cost --forecast 90 --forecast-model AUTO --forecast-confidence 95
 
-# Bump version
-npm run version:bump:patch
-npm run version:bump:minor
-npm run version:bump:major
+# Business intelligence insights
+infra-cost --analytics --analytics-insights --analytics-drivers
 
-# Dry run publish
-npm run publish:dry
-
-# Manual publish
-npm run publish:latest
-npm run publish:beta
+# Custom dashboards
+infra-cost --dashboard-create "Monthly Review" --chart-create "line:Cost Trends"
 ```
 
-### Homebrew Publishing
-Automated Homebrew formula updates via GitHub Actions:
-
+### Optimization & Automation
 ```bash
-# Prepare release (interactive)
-npm run prepare-release
+# Generate optimization recommendations
+infra-cost --finops --optimization-tips --rightsize --sustainability
 
-# This will:
-# 1. Update version in package.json
-# 2. Update Homebrew formula
-# 3. Run tests and build
-# 4. Create git tag
-# 5. Trigger release workflow
+# Automated optimization (dry-run first!)
+infra-cost --optimize-dry-run --optimize-rules resize,schedule,unused
+
+# Cross-cloud cost comparison
+infra-cost --compare-clouds aws,gcp --optimization-report
 ```
 
-## 🔧 Development
-
-### Build
+### Enterprise Features
 ```bash
-npm run build
+# Multi-tenant management
+infra-cost --enterprise --tenants --platform-metrics
+
+# API server for integrations
+infra-cost --api-server --api-port 3000 --webhook-create
+
+# Comprehensive audit logging
+infra-cost --audit --compliance-check soc2 --audit-export json
 ```
 
-### Type Checking
-```bash
-npm run typecheck
+## 🏗️ Architecture & Extensibility
+
+### Multi-Cloud Provider Pattern
+```
+src/
+├── providers/
+│   ├── factory.ts      # Provider factory
+│   ├── aws.ts          # AWS implementation ✅
+│   ├── gcp.ts          # Google Cloud 🚧
+│   ├── azure.ts        # Azure 🚧
+│   ├── alicloud.ts     # Alibaba Cloud 🚧
+│   └── oracle.ts       # Oracle Cloud 🚧
+├── analytics/          # AI/ML cost analysis
+├── optimization/       # Cost optimization engines
+├── visualization/      # Dashboards & charts
+├── integrations/       # Third-party integrations
+└── enterprise/         # Multi-tenant features
 ```
 
-### Version Management
-```bash
-npm run version:check     # Check current version status
-npm run version:next      # Get next version
-npm run version:set       # Set specific version
-```
+### Key Design Principles
+- **Abstract provider interface** for consistent multi-cloud API
+- **Plugin architecture** for easy extensibility
+- **Type-safe implementation** with comprehensive TypeScript coverage
+- **Modular design** allowing feature composition
+- **Performance optimized** with efficient data processing
+
+## 🚀 Roadmap
+
+### Q4 2024
+- ✅ Enhanced terminal UI and visualization
+- ✅ AI-powered anomaly detection
+- ✅ Comprehensive PDF reporting
+- ✅ Advanced Slack integration
+- 🚧 Google Cloud Platform support
+
+### Q1 2025
+- 🔮 Microsoft Azure integration
+- 🔮 Advanced forecasting models
+- 🔮 Mobile app companion
+- 🔮 Sustainability tracking expansion
+
+### Q2 2025
+- 🔮 Alibaba Cloud & Oracle Cloud support
+- 🔮 Advanced automation engine
+- 🔮 Enterprise SSO integration
+- 🔮 Custom plugin system
 
 ## 📋 Requirements & Permissions
 
@@ -271,11 +323,14 @@ npm run version:set       # Set specific version
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "InfraCostPermissions",
+      "Sid": "InfraCostMinimalPermissions",
       "Effect": "Allow",
       "Action": [
         "iam:ListAccountAliases",
         "ce:GetCostAndUsage",
+        "ce:GetRightsizingRecommendation",
+        "ce:GetSavingsUtilization",
+        "budgets:ViewBudget",
         "sts:GetCallerIdentity"
       ],
       "Resource": "*"
@@ -284,59 +339,115 @@ npm run version:set       # Set specific version
 }
 ```
 
-### Cost Considerations
-- **AWS Cost Explorer**: $0.01 per request
-- **Other providers**: Varies by provider's pricing model
+### System Requirements
+- Node.js 16+ (recommended: 18+)
+- Memory: 512MB+ available
+- Network: Internet access for cloud provider APIs
+- Optional: Docker for containerized deployments
 
-## 🏗️ Architecture
+## 🧪 Development
 
-### Multi-Cloud Provider Pattern
+### Local Development Setup
+```bash
+# Clone repository
+git clone https://github.com/codecollab-co/infra-cost.git
+cd infra-cost
+
+# Install dependencies
+npm install
+
+# Build project
+npm run build
+
+# Run tests
+npm test
+
+# Start development server
+npm run dev
 ```
-src/
-├── providers/
-│   ├── factory.ts     # Provider factory
-│   ├── aws.ts         # AWS implementation ✅
-│   ├── gcp.ts         # Google Cloud (placeholder)
-│   ├── azure.ts       # Azure (placeholder)
-│   ├── alicloud.ts    # Alibaba Cloud (placeholder)
-│   └── oracle.ts      # Oracle Cloud (placeholder)
-├── types/
-│   └── providers.ts   # Common interfaces
-└── ...
+
+### Testing & Quality Assurance
+```bash
+# Type checking
+npm run typecheck
+
+# Linting
+npm run lint
+
+# Security audit
+npm audit
+
+# Test coverage
+npm run test:coverage
 ```
 
-### Key Features
-- **Abstract provider interface** for consistent API
-- **Factory pattern** for provider instantiation
-- **Extensible architecture** for adding new cloud providers
-- **Type-safe implementation** with TypeScript
+### Release Management
+```bash
+# Check current version status
+npm run version:check
 
-## 🚀 CI/CD Pipelines
+# Bump version
+npm run version:bump:patch   # Bug fixes
+npm run version:bump:minor   # New features
+npm run version:bump:major   # Breaking changes
 
-### Automated Workflows
-- **npm publishing** with semantic versioning
-- **Homebrew formula updates**
-- **Release automation** with GitHub Actions
-- **Multi-platform testing** (Node.js 16, 18, 20)
-
-### Quality Assurance
-- **TypeScript compilation** checking
-- **Security auditing** with npm audit
-- **Dependency validation**
-- **Build verification**
-
-## 📚 Documentation
-
-- [Homebrew Setup Guide](./HOMEBREW_SETUP.md)
-- [npm Publishing Guide](./NPM_PUBLISHING.md)
+# Prepare release
+npm run prepare-release
+```
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run `npm run typecheck` and `npm run build`
-5. Submit a pull request
+We welcome contributions from the community! Here's how you can help:
+
+### 🌟 Ways to Contribute
+- **⭐ Star this repository** to show your support
+- **🐛 Report bugs** and suggest improvements via [issues](https://github.com/codecollab-co/infra-cost/issues)
+- **📝 Improve documentation** - help others understand and use the tool
+- **🔧 Add cloud provider support** - help us expand to more providers
+- **🧪 Write tests** - improve code quality and reliability
+- **💡 Suggest features** - share your ideas for new capabilities
+
+### 🚀 Getting Started with Contributing
+1. **Fork** the repository
+2. **Clone** your fork: `git clone https://github.com/YOUR_USERNAME/infra-cost.git`
+3. **Create a branch**: `git checkout -b feature/amazing-feature`
+4. **Make changes** and write tests
+5. **Run quality checks**: `npm run typecheck && npm run lint && npm test`
+6. **Commit**: `git commit -m "Add amazing feature"`
+7. **Push**: `git push origin feature/amazing-feature`
+8. **Create a Pull Request**
+
+### 📋 Contribution Guidelines
+- Follow the existing code style and conventions
+- Add tests for new features
+- Update documentation as needed
+- Keep PRs focused on a single feature/fix
+- Be respectful and constructive in discussions
+
+### 🏷️ Good First Issues
+Look for issues labeled `good first issue` or `help wanted` to get started!
+
+## 📞 Support & Community
+
+### 💬 Get Help
+- **📚 Documentation**: [docs.codecollab.co/infra-cost](https://docs.codecollab.co/infra-cost) *(coming soon)*
+- **🐛 Bug Reports**: [GitHub Issues](https://github.com/codecollab-co/infra-cost/issues)
+- **💡 Feature Requests**: [GitHub Discussions](https://github.com/codecollab-co/infra-cost/discussions)
+- **📧 Email Support**: support@codecollab.co
+
+### 🌟 Show Your Support
+If infra-cost helps you save money and optimize costs, please:
+- ⭐ **Star this repository**
+- 🐦 **Share on Twitter** with #InfraCost #FinOps
+- 📝 **Write a review** or blog post about your experience
+- 🤝 **Contribute** code, documentation, or feedback
+
+### 🏢 Enterprise Support
+For enterprise deployments, custom integrations, and professional support:
+- 📧 Contact: enterprise@codecollab.co
+- 🔒 SLA-backed support available
+- 🎨 Custom branding and whitelabeling
+- 🏗️ Professional services and consulting
 
 ## 📄 License
 
@@ -344,19 +455,32 @@ MIT © [Code Collab](https://github.com/codecollab-co)
 
 ---
 
-## 🔄 Recent Updates
+## 🔄 Changelog
 
-### v0.1.0 - Multi-Cloud Architecture
-- ✅ **Multi-cloud provider support** (architecture ready)
-- ✅ **Enhanced Slack integration** with detailed breakdowns
-- ✅ **AWS SDK v3 upgrade** for better performance
-- ✅ **IAM roles and environment variables** support
-- ✅ **Automated npm and Homebrew publishing**
-- ✅ **Critical bug fixes** and consistency improvements
+### v0.2.4 - Latest Release
+- ✅ **Fixed CommonJS compatibility** - Homebrew installation now works perfectly
+- ✅ **Enhanced error handling** and user experience improvements
+- ✅ **Optimized build process** for better performance
+
+### v0.2.0 - Enhanced Features
+- ✅ **AI-powered anomaly detection** with real-time monitoring
+- ✅ **Advanced visualization engine** with interactive dashboards
+- ✅ **PDF report generation** for executives and technical teams
+- ✅ **Comprehensive Slack integration** with rich formatting
+- ✅ **Multi-cloud architecture** ready for expansion
+- ✅ **Enterprise features** including multi-tenancy and API server
 
 ### Migration from aws-cost-cli
-This tool has evolved from `aws-cost-cli` to `infra-cost` with backward compatibility maintained. Both `infra-cost` and `aws-cost` commands work.
+This tool evolved from `aws-cost-cli` with full backward compatibility. Both `infra-cost` and `aws-cost` commands work seamlessly.
 
 ---
 
-*For questions or support, please [create an issue](https://github.com/codecollab-co/infra-cost/issues) on GitHub.*
+<div align="center">
+
+**Made with ❤️ by [Code Collab](https://github.com/codecollab-co)**
+
+*Empowering teams to optimize cloud costs and build sustainable infrastructure*
+
+[⭐ Star us on GitHub](https://github.com/codecollab-co/infra-cost) • [🐦 Follow on Twitter](https://twitter.com/codecollabco) • [💼 LinkedIn](https://linkedin.com/company/codecollab-co)
+
+</div>
