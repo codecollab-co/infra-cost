@@ -118,3 +118,5 @@ dist
 
 # Compiled code
 dist/
+
+.claude/

@@ -1,59 +1,47 @@
 import chalk from 'chalk';
 import { TotalCosts } from '../cost';
 import { hideSpinner } from '../logger';
+import { TerminalUIEngine } from '../visualization/terminal-ui';
+import { CostBreakdown } from '../types/providers';
 
 export function printFancy(accountAlias: string, totals: TotalCosts, isSummary: boolean = false) {
   hideSpinner();
   console.clear();
 
-  const totalCosts = totals.totals;
-  const serviceCosts = totals.totalsByService;
+  const ui = new TerminalUIEngine();
 
-  const allServices = Object.keys(serviceCosts.yesterday);
-  const sortedServiceNames = allServices.sort((a, b) => b.length - a.length);
+  // Convert TotalCosts to CostBreakdown format for consistency
+  const costBreakdown: CostBreakdown = {
+    totals: totals.totals,
+    totalsByService: totals.totalsByService
+  };
 
-  const maxServiceLength =
-    sortedServiceNames.reduce((max, service) => {
-      return Math.max(max, service.length);
-    }, 0) + 1;
-
-  const totalLastMonth = chalk.green(`$${totalCosts.lastMonth.toFixed(2)}`);
-  const totalThisMonth = chalk.green(`$${totalCosts.thisMonth.toFixed(2)}`);
-  const totalLast7Days = chalk.green(`$${totalCosts.last7Days.toFixed(2)}`);
-  const totalYesterday = chalk.bold.yellowBright(`$${totalCosts.yesterday.toFixed(2)}`);
-
-  console.log('');
-  console.log(`${'AWS Cost Report:'.padStart(maxServiceLength + 1)} ${chalk.bold.yellow(accountAlias)}`);
-  console.log('');
-  console.log(`${'Last Month'.padStart(maxServiceLength)}: ${totalLastMonth}`);
-  console.log(`${'This Month'.padStart(maxServiceLength)}: ${totalThisMonth}`);
-  console.log(`${'Last 7 days'.padStart(maxServiceLength)}: ${totalLast7Days}`);
-  console.log(`${chalk.bold('Yesterday'.padStart(maxServiceLength))}: ${totalYesterday}`);
-  console.log('');
+  // Display enhanced header
+  const header = ui.createHeader('🚀 Infrastructure Cost Analysis', `Account: ${accountAlias}`);
+  console.log(header);
 
   if (isSummary) {
+    // Display summary with enhanced formatting
+    console.log(ui.createCostTable(costBreakdown, {
+      showPercentages: true,
+      highlightTop: 3,
+      currency: 'USD',
+      compact: true
+    }));
     return;
   }
 
-  const headerPadLength = 11;
+  // Display full cost breakdown with rich formatting
+  console.log(ui.createCostTable(costBreakdown, {
+    showPercentages: true,
+    highlightTop: 10,
+    currency: 'USD',
+    compact: false
+  }));
 
-  const serviceHeader = chalk.white('Service'.padStart(maxServiceLength));
-  const lastMonthHeader = chalk.white(`Last Month`.padEnd(headerPadLength));
-  const thisMonthHeader = chalk.white(`This Month`.padEnd(headerPadLength));
-  const last7DaysHeader = chalk.white(`Last 7 Days`.padEnd(headerPadLength));
-  const yesterdayHeader = chalk.bold.white('Yesterday'.padEnd(headerPadLength));
-
-  console.log(`${serviceHeader} ${lastMonthHeader} ${thisMonthHeader} ${last7DaysHeader} ${yesterdayHeader}`);
-
-  for (let service of sortedServiceNames) {
-    const serviceLabel = chalk.cyan(service.padStart(maxServiceLength));
-    const lastMonthTotal = chalk.green(`$${serviceCosts.lastMonth[service].toFixed(2)}`.padEnd(headerPadLength));
-    const thisMonthTotal = chalk.green(`$${serviceCosts.thisMonth[service].toFixed(2)}`.padEnd(headerPadLength));
-    const last7DaysTotal = chalk.green(`$${serviceCosts.last7Days[service].toFixed(2)}`.padEnd(headerPadLength));
-    const yesterdayTotal = chalk.bold.yellowBright(
-      `$${serviceCosts.yesterday[service].toFixed(2)}`.padEnd(headerPadLength)
-    );
-
-    console.log(`${serviceLabel} ${lastMonthTotal} ${thisMonthTotal} ${last7DaysTotal} ${yesterdayTotal}`);
-  }
+  // Add footer with useful information
+  console.log('\n' + chalk.gray('━'.repeat(70)));
+  console.log(chalk.gray('💡 Use --json for machine-readable output or --audit for detailed analysis'));
+  console.log(chalk.gray('📊 Add --trend to see 6-month cost trend visualization'));
+  console.log(chalk.gray('📧 Add --slack-token to send reports to Slack channels'));
 }

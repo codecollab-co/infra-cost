@@ -1,4 +1,4 @@
-import { CloudProviderAdapter, ProviderConfig, AccountInfo, RawCostData, CostBreakdown, CloudProvider } from '../types/providers';
+import { CloudProviderAdapter, ProviderConfig, AccountInfo, RawCostData, CostBreakdown, CloudProvider, ResourceInventory, InventoryFilters, BudgetInfo, BudgetAlert, CostTrendAnalysis, FinOpsRecommendation } from '../types/providers';
 import { showSpinner } from '../logger';
 
 export class AlibabaCloudProvider extends CloudProviderAdapter {
@@ -44,6 +44,34 @@ export class AlibabaCloudProvider extends CloudProviderAdapter {
   async getCostBreakdown(): Promise<CostBreakdown> {
     const rawCostData = await this.getRawCostData();
     return this.calculateServiceTotals(rawCostData);
+  }
+
+  async getResourceInventory(filters?: InventoryFilters): Promise<ResourceInventory> {
+    throw new Error('Alibaba Cloud resource inventory not yet implemented. Please use AWS for now.');
+  }
+
+  async getResourceCosts(resourceId: string): Promise<number> {
+    throw new Error('Alibaba Cloud resource costing not yet implemented. Please use AWS for now.');
+  }
+
+  async getOptimizationRecommendations(): Promise<string[]> {
+    throw new Error('Alibaba Cloud optimization recommendations not yet implemented. Please use AWS for now.');
+  }
+
+  async getBudgets(): Promise<BudgetInfo[]> {
+    throw new Error('Alibaba Cloud budget tracking not yet implemented. Please use AWS for now.');
+  }
+
+  async getBudgetAlerts(): Promise<BudgetAlert[]> {
+    throw new Error('Alibaba Cloud budget alerts not yet implemented. Please use AWS for now.');
+  }
+
+  async getCostTrendAnalysis(months?: number): Promise<CostTrendAnalysis> {
+    throw new Error('Alibaba Cloud cost trend analysis not yet implemented. Please use AWS for now.');
+  }
+
+  async getFinOpsRecommendations(): Promise<FinOpsRecommendation[]> {
+    throw new Error('Alibaba Cloud FinOps recommendations not yet implemented. Please use AWS for now.');
   }
 
   // Helper method to validate Alibaba Cloud-specific configuration
