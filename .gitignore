@@ -120,3 +120,5 @@ dist
 dist/
 
 .claude/
+
+.DS_Store
