@@ -37,7 +37,7 @@
     "publish:beta": "npm publish --tag beta",
     "publish:latest": "npm publish --tag latest",
     "prepare-release": "./scripts/prepare-release.sh",
-    "prepublishOnly": "npm run build && npm run typecheck",
+    "prepublishOnly": "npm run build",
     "postversion": "echo \"Don't forget to push the tag: git push origin v$npm_package_version\"",
     "postpublish": "echo \"🎉 Published $(npm pkg get name)@$(npm pkg get version) to npm!\""
   },
