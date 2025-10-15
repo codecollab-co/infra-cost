@@ -29,6 +29,8 @@ import { APIServer, APIConfiguration, APIKey } from './api/api-server';
 import { WebhookManager, WebhookEvent, WebhookDelivery } from './api/webhook-manager';
 import { CostAnomalyDetectorAI, AIAnomalyDetectionConfiguration, AIAnomaly, AIAnomalyInput, AIAnomalyDetectionReport } from './analytics/anomaly-detector';
 import { AdvancedVisualizationEngine, ChartConfiguration, Dashboard, ChartData, OutputFormat, VisualizationConfiguration } from './visualization/dashboard-engine';
+import { MultiCloudDashboard } from './visualization/multi-cloud-dashboard';
+import chalk from 'chalk';
 import { join } from 'path';
 
 
@@ -80,6 +82,8 @@ program
   // Cross-cloud optimization
   .option('--compare-clouds [providers]', 'Compare costs across multiple cloud providers (comma-separated)')
   .option('--optimization-report', 'Generate cross-cloud optimization recommendations')
+  .option('--multi-cloud-dashboard', 'Display comprehensive multi-cloud infrastructure dashboard')
+  .option('--all-clouds-inventory', 'Show inventory across all configured cloud providers')
   // Resource analysis
   .option('--dependency-mapping', 'Analyze resource dependencies and relationships')
   .option('--tagging-compliance', 'Analyze tagging compliance against standards')
@@ -283,6 +287,8 @@ type OptionsType = {
   // Cross-cloud options
   compareClouds: string;
   optimizationReport: boolean;
+  multiCloudDashboard: boolean;
+  allCloudsInventory: boolean;
   // Resource analysis options
   dependencyMapping: boolean;
   taggingCompliance: boolean;
@@ -3757,6 +3763,37 @@ if (options.compareClouds || options.optimizationReport) {
     }
   } catch (error) {
     console.error(`Failed to perform cross-cloud analysis: ${error.message}`);
+  }
+}
+
+// Handle multi-cloud dashboard and all-clouds inventory requests
+if (options.multiCloudDashboard || options.allCloudsInventory) {
+  try {
+    const multiCloudDashboard = new MultiCloudDashboard();
+
+    if (options.multiCloudDashboard) {
+      console.log(chalk.yellow('🌐 Generating Multi-Cloud Infrastructure Dashboard...'));
+
+      // Parse provider list if specified with --compare-clouds
+      let targetProviders: CloudProvider[] | undefined;
+      if (options.compareClouds) {
+        const requestedProviders = options.compareClouds.split(',').map(p => p.trim().toLowerCase() as CloudProvider);
+        const supportedProviders = Object.values(CloudProvider);
+        targetProviders = requestedProviders.filter(p => supportedProviders.includes(p));
+      }
+
+      const dashboardOutput = await multiCloudDashboard.generateMultiCloudInventoryDashboard(targetProviders);
+      console.log(dashboardOutput);
+
+    } else if (options.allCloudsInventory) {
+      console.log(chalk.yellow('☁️ Collecting inventory from all configured cloud providers...'));
+
+      const dashboardOutput = await multiCloudDashboard.generateMultiCloudInventoryDashboard();
+      console.log(dashboardOutput);
+    }
+
+  } catch (error) {
+    console.error(`Failed to generate multi-cloud dashboard: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

@@ -6,10 +6,32 @@ export function printInventory(accountAlias: string, inventory: ResourceInventor
   hideSpinner();
   console.clear();
 
-  // Header
+  // Enhanced Header with Provider Branding
+  const providerIcons = {
+    'aws': '☁️',
+    'gcp': '🌐',
+    'azure': '🔷',
+    'alicloud': '🟠',
+    'oracle': '🔴'
+  };
+
+  const providerNames = {
+    'aws': 'Amazon Web Services (AWS)',
+    'gcp': 'Google Cloud Platform (GCP)',
+    'azure': 'Microsoft Azure',
+    'alicloud': 'Alibaba Cloud',
+    'oracle': 'Oracle Cloud Infrastructure (OCI)'
+  };
+
+  const providerIcon = providerIcons[inventory.provider] || '☁️';
+  const providerName = providerNames[inventory.provider] || inventory.provider.toUpperCase();
+
   console.log('');
-  console.log(`${'🏗️  Resource Inventory:'.padEnd(30)} ${chalk.bold.cyan(accountAlias)}`);
-  console.log(`${'☁️  Provider:'.padEnd(30)} ${chalk.green(inventory.provider.toUpperCase())}`);
+  console.log('═'.repeat(80));
+  console.log(`${providerIcon}  ${chalk.bold.cyan('INFRASTRUCTURE INVENTORY')} - ${chalk.bold.yellow(providerName)}`);
+  console.log('═'.repeat(80));
+  console.log(`${'🏗️  Account/Project:'.padEnd(30)} ${chalk.bold.cyan(accountAlias)}`);
+  console.log(`${'☁️  Provider:'.padEnd(30)} ${chalk.green(providerName)}`);
   console.log(`${'🌍 Region(s):'.padEnd(30)} ${chalk.blue(inventory.region)}`);
   console.log(`${'📅 Last Updated:'.padEnd(30)} ${chalk.gray(inventory.lastUpdated.toLocaleString())}`);
   console.log('');
