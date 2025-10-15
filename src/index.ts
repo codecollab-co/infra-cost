@@ -244,6 +244,8 @@ program
   .option('-h, --help', 'Get the help of the CLI')
   .parse(process.argv);
 
+async function main() {
+
 type OptionsType = {
   // Provider selection
   provider: string;
@@ -5469,3 +5471,11 @@ if (options.trend || options.audit || options.executiveSummary || options.pdfRep
 if (options.slackToken && options.slackChannel) {
   await notifySlack(alias, costs, options.summary, options.slackToken, options.slackChannel);
 }
+
+}
+
+// Run the main function
+main().catch(error => {
+  console.error('An error occurred:', error);
+  process.exit(1);
+});
