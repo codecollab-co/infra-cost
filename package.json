@@ -1,7 +1,7 @@
 {
   "name": "infra-cost",
-  "version": "0.1.0",
-  "description": "A CLI tool to perform cost analysis on your infra account's cost",
+  "version": "0.2.0",
+  "description": "Multi-cloud FinOps CLI tool for comprehensive cost analysis and infrastructure optimization across AWS, GCP, Azure, Alibaba Cloud, and Oracle Cloud",
   "type": "module",
   "author": {
     "name": "Code Collab",
