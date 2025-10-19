@@ -227,7 +227,7 @@ program
   .option('--visualization-theme [theme]', 'Set visualization theme (default, dark, corporate)')
   .option('--visualization-templates', 'Show available dashboard templates')
   .option('--visualization-demo', 'Generate demo dashboard with sample data')
-  // Preset mode commands (AWS FinOps Dashboard inspired)
+  // Preset mode commands (FinOps Dashboard inspired)
   .option('--trend', 'Generate 6-month cost trend analysis with visualization')
   .option('--audit', 'Generate comprehensive audit report with recommendations')
   .option('--executive-summary', 'Generate executive-level cost summary report')
@@ -5299,7 +5299,7 @@ if (options.dashboardCreate || options.dashboardTemplate || options.dashboardLis
   console.log(''); // Add spacing
 }
 
-// Handle preset mode commands (AWS FinOps Dashboard inspired)
+// Handle preset mode commands (FinOps Dashboard inspired)
 if (options.trend || options.audit || options.executiveSummary || options.pdfReport) {
   const { TerminalUIEngine } = await import('./visualization/terminal-ui');
   const { default: PDFExporter } = await import('./exporters/pdf-exporter');

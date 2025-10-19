@@ -1,6 +1,6 @@
 # Enhanced infra-cost Features
 
-This document describes the advanced features added to `infra-cost` inspired by the AWS FinOps Dashboard, providing enterprise-grade cost analysis capabilities.
+This document describes the advanced features added to `infra-cost` inspired by the FinOps Dashboard, providing enterprise-grade cost analysis capabilities.
 
 ## 🆕 New Features Overview
 
@@ -21,7 +21,7 @@ This document describes the advanced features added to `infra-cost` inspired by 
 ### 3. Preset Command Modes
 - **Quick analysis** with `--trend`, `--audit`, `--executive-summary`
 - **Simplified workflows** for common use cases
-- **AWS FinOps Dashboard compatibility** in CLI patterns
+- **FinOps Dashboard compatibility** in CLI patterns
 - **PDF export integration** with all preset modes
 
 ### 4. Interactive Analysis Mode
@@ -74,7 +74,7 @@ infra-cost --discover-profiles
 ## 📊 Enhanced Terminal UI
 
 ### Rich Cost Tables
-The new terminal UI provides AWS FinOps Dashboard-style formatting:
+The new terminal UI provides FinOps Dashboard-style formatting:
 
 ```bash
 infra-cost --provider aws --profile production
@@ -235,12 +235,12 @@ infra-cost --alert-threshold 25% --alert-type PERCENTAGE
 infra-cost --alert-type ANOMALY --anomaly-sensitivity high
 ```
 
-## 🔄 Migration from AWS FinOps Dashboard
+## 🔄 Migration from FinOps Dashboard
 
 ### Command Equivalents
-If you're familiar with the AWS FinOps Dashboard, here are the equivalent commands:
+If you're familiar with the FinOps Dashboard, here are the equivalent commands:
 
-| AWS FinOps Dashboard | infra-cost Enhanced |
+| FinOps Dashboard | infra-cost Enhanced |
 |---------------------|-------------------|
 | `aws-finops --trend` | `infra-cost --trend` |
 | `aws-finops --audit` | `infra-cost --audit` |
@@ -248,7 +248,7 @@ If you're familiar with the AWS FinOps Dashboard, here are the equivalent comman
 | `aws-finops --report-type pdf` | `infra-cost --pdf-report filename.pdf` |
 
 ### Enhanced Capabilities
-`infra-cost` provides everything AWS FinOps Dashboard offers, plus:
+`infra-cost` provides everything FinOps Dashboard offers, plus:
 
 ✅ **Multi-cloud support** (not just AWS)
 ✅ **Interactive analysis mode** for guided exploration
