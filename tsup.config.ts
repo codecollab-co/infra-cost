@@ -4,7 +4,7 @@ export default defineConfig([
   {
     entry: ['src/index.ts', 'src/demo/test-enhanced-ui.ts', 'src/demo/test-multi-cloud-dashboard.ts'],
     outDir: 'dist',
-    target: 'node16',
+    target: 'node20',
     platform: 'node',
     format: ['cjs'],
     splitting: false,
