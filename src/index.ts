@@ -2,11 +2,11 @@ import { Command } from 'commander';
 import packageJson from '../package.json' assert { type: 'json' };
 import { getAccountAlias } from './account';
 import { getAwsConfigFromOptionsOrFile } from './config';
-import { getTotalCosts } from './cost';
+import { getTotalCosts, RawCostByService } from './cost';
 import { printFancy } from './printers/fancy';
 import { printJson } from './printers/json';
 import { notifySlack } from './printers/slack';
-import { printPlainText } from './printers/text';
+import { printPlainText, TotalCostsWithDelta } from './printers/text';
 import { printInventory, printOptimizationRecommendations, printResourceSummary } from './printers/inventory';
 import { InventoryExporter } from './exporters/inventory';
 import { CloudProviderFactory } from './providers/factory';
@@ -32,6 +32,10 @@ import { AdvancedVisualizationEngine, ChartConfiguration, Dashboard, ChartData, 
 import { MultiCloudDashboard } from './visualization/multi-cloud-dashboard';
 import chalk from 'chalk';
 import { join } from 'path';
+// New imports for Sprint 1 features
+import { AppConfigManager, configInit, configValidate, configListProfiles, configShow, ResolvedConfig } from './config/app-config';
+import { analyzeCostDelta, enhanceCostsWithDelta, generateDeltaSummary, CostDeltaAnalysis } from './analytics/cost-delta';
+import { isSSOProfile, getSSOProfileInfo, discoverSSOProfiles, createAutoCredentialProvider, validateSSOCredentials, getSSOLoginInstructions, listSSOProfiles, printSSOProfileInfo } from './auth/sso-provider';
 
 
 const program = new Command();
@@ -48,6 +52,21 @@ program
   .option('-s, --secret-key [key]', 'Secret key (AWS Secret Key, etc.)')
   .option('-T, --session-token [key]', 'Session token (AWS Session Token, etc.)')
   .option('-r, --region [region]', 'Cloud provider region', 'us-east-1')
+  // Configuration file support (Issue #29)
+  .option('--config-file [path]', 'Path to configuration file')
+  .option('--config-profile [name]', 'Use named profile from configuration file')
+  .option('--app-config-init [path]', 'Initialize application configuration file')
+  .option('--app-config-validate [path]', 'Validate application configuration file')
+  .option('--app-config-list-profiles', 'List available configuration profiles')
+  .option('--app-config-show', 'Show current configuration')
+  // SSO login support (Issue #9)
+  .option('--sso', 'Use AWS SSO for authentication')
+  .option('--sso-list', 'List available SSO profiles')
+  .option('--sso-info [profile]', 'Show SSO profile information')
+  .option('--sso-validate [profile]', 'Validate SSO credentials')
+  // Cost delta analysis (Issue #7)
+  .option('--delta', 'Show cost delta/difference compared to previous period')
+  .option('--delta-threshold [percent]', 'Alert threshold for cost changes (default: 10%)', '10')
   // Provider-specific options
   .option('--project-id [id]', 'GCP Project ID')
   .option('--key-file [path]', 'Path to service account key file (GCP) or private key (Oracle)')
@@ -447,6 +466,21 @@ type OptionsType = {
   autoProfile: boolean;
   smartAlerts: boolean;
   compact: boolean;
+  // Configuration file options (Issue #29)
+  configFile: string;
+  configProfile: string;
+  appConfigInit: string;
+  appConfigValidate: string;
+  appConfigListProfiles: boolean;
+  appConfigShow: boolean;
+  // SSO options (Issue #9)
+  sso: boolean;
+  ssoList: boolean;
+  ssoInfo: string;
+  ssoValidate: string;
+  // Cost delta options (Issue #7)
+  delta: boolean;
+  deltaThreshold: string;
   // Other options
   help: boolean;
 };
@@ -541,7 +575,167 @@ if (options.help) {
   process.exit(0);
 }
 
-// Handle configuration management commands
+// Handle application configuration commands (Issue #29)
+if (options.appConfigInit || options.appConfigValidate || options.appConfigListProfiles || options.appConfigShow) {
+  if (options.appConfigInit) {
+    // appConfigInit can be a path string or just a flag
+    const configPath = typeof options.appConfigInit === 'string' && options.appConfigInit.length > 0
+      ? options.appConfigInit
+      : undefined;
+    configInit(configPath);
+    process.exit(0);
+  }
+
+  if (options.appConfigValidate) {
+    // appConfigValidate can be a path string or just a flag
+    const configPath = typeof options.appConfigValidate === 'string' && options.appConfigValidate.length > 0
+      ? options.appConfigValidate
+      : undefined;
+    const isValid = configValidate(configPath);
+    process.exit(isValid ? 0 : 1);
+  }
+
+  if (options.appConfigListProfiles) {
+    configListProfiles();
+    process.exit(0);
+  }
+
+  if (options.appConfigShow) {
+    configShow(options.configFile);
+    process.exit(0);
+  }
+}
+
+// Handle SSO commands (Issue #9)
+if (options.ssoList || options.ssoInfo || options.ssoValidate) {
+  if (options.ssoList) {
+    listSSOProfiles();
+    process.exit(0);
+  }
+
+  if (options.ssoInfo) {
+    // ssoInfo can be a profile name string or just a flag
+    const profileName = typeof options.ssoInfo === 'string' && options.ssoInfo.length > 0
+      ? options.ssoInfo
+      : options.profile;
+    printSSOProfileInfo(profileName);
+    process.exit(0);
+  }
+
+  if (options.ssoValidate) {
+    // ssoValidate can be a profile name string or just a flag
+    const profileName = typeof options.ssoValidate === 'string' && options.ssoValidate.length > 0
+      ? options.ssoValidate
+      : options.profile;
+    const result = await validateSSOCredentials(profileName);
+    if (result.success) {
+      console.log(chalk.green('SSO credentials are valid'));
+      console.log(`  Account: ${result.accountId}`);
+      console.log(`  Role: ${result.roleName}`);
+      if (result.expiresAt) {
+        console.log(`  Expires: ${result.expiresAt.toLocaleString()}`);
+      }
+    } else {
+      console.log(chalk.red('SSO validation failed'));
+      console.log(`  Error: ${result.error}`);
+      console.log(getSSOLoginInstructions(profileName));
+    }
+    process.exit(result.success ? 0 : 1);
+  }
+}
+
+// Apply configuration file settings if specified (Issue #29)
+let resolvedConfig: ResolvedConfig | null = null;
+if (options.configFile || options.configProfile || AppConfigManager.findConfigFile()) {
+  try {
+    resolvedConfig = AppConfigManager.resolveConfig(
+      {
+        provider: options.provider,
+        profile: options.profile,
+        region: options.region,
+        accessKey: options.accessKey,
+        secretKey: options.secretKey,
+        sessionToken: options.sessionToken,
+        projectId: options.projectId,
+        keyFile: options.keyFile,
+        subscriptionId: options.subscriptionId,
+        tenantId: options.tenantId,
+        clientId: options.clientId,
+        clientSecret: options.clientSecret,
+        userId: options.userId,
+        tenancyId: options.tenancyId,
+        fingerprint: options.fingerprint,
+        slackToken: options.slackToken,
+        slackChannel: options.slackChannel,
+      },
+      options.configProfile,
+      options.configFile // Pass configFile path to honor --config-file option
+    );
+
+    // Apply resolved config to options if not explicitly set by CLI
+    // Use getOptionValueSource to distinguish CLI-provided values from defaults
+    if (program.getOptionValueSource('provider') === 'default' && resolvedConfig.provider) {
+      options.provider = resolvedConfig.provider;
+    }
+    if (program.getOptionValueSource('profile') === 'default' && resolvedConfig.profile) {
+      options.profile = resolvedConfig.profile;
+    }
+    if (program.getOptionValueSource('region') === 'default' && resolvedConfig.region) {
+      options.region = resolvedConfig.region;
+    }
+    // Propagate all credential fields from resolved config when not set via CLI
+    if (!options.accessKey && resolvedConfig.accessKey) {
+      options.accessKey = resolvedConfig.accessKey;
+    }
+    if (!options.secretKey && resolvedConfig.secretKey) {
+      options.secretKey = resolvedConfig.secretKey;
+    }
+    if (!options.sessionToken && resolvedConfig.sessionToken) {
+      options.sessionToken = resolvedConfig.sessionToken;
+    }
+    // GCP settings
+    if (!options.projectId && resolvedConfig.projectId) {
+      options.projectId = resolvedConfig.projectId;
+    }
+    if (!options.keyFile && resolvedConfig.keyFile) {
+      options.keyFile = resolvedConfig.keyFile;
+    }
+    // Azure settings
+    if (!options.subscriptionId && resolvedConfig.subscriptionId) {
+      options.subscriptionId = resolvedConfig.subscriptionId;
+    }
+    if (!options.tenantId && resolvedConfig.tenantId) {
+      options.tenantId = resolvedConfig.tenantId;
+    }
+    if (!options.clientId && resolvedConfig.clientId) {
+      options.clientId = resolvedConfig.clientId;
+    }
+    if (!options.clientSecret && resolvedConfig.clientSecret) {
+      options.clientSecret = resolvedConfig.clientSecret;
+    }
+    // Oracle settings
+    if (!options.userId && resolvedConfig.userId) {
+      options.userId = resolvedConfig.userId;
+    }
+    if (!options.tenancyId && resolvedConfig.tenancyId) {
+      options.tenancyId = resolvedConfig.tenancyId;
+    }
+    if (!options.fingerprint && resolvedConfig.fingerprint) {
+      options.fingerprint = resolvedConfig.fingerprint;
+    }
+    // Slack settings
+    if (!options.slackToken && resolvedConfig.slackToken) {
+      options.slackToken = resolvedConfig.slackToken;
+    }
+    if (!options.slackChannel && resolvedConfig.slackChannel) {
+      options.slackChannel = resolvedConfig.slackChannel;
+    }
+  } catch (error) {
+    console.warn(`Warning: Failed to load configuration: ${(error as Error).message}`);
+  }
+}
+
+// Handle configuration management commands (monitoring config - legacy)
 if (options.configInit || options.configValidate || options.configSample) {
   if (options.configInit) {
     initializeMonitoringConfig(options.configInit);
@@ -572,20 +766,56 @@ const providerType = options.provider.toLowerCase() as CloudProvider;
 let providerConfig: ProviderConfig;
 
 if (providerType === CloudProvider.AWS) {
-  // Use existing AWS configuration for backward compatibility
-  const awsConfig = await getAwsConfigFromOptionsOrFile({
-    profile: options.profile,
-    accessKey: options.accessKey,
-    secretKey: options.secretKey,
-    sessionToken: options.sessionToken,
-    region: options.region,
-  });
+  // Check if SSO should be used (Issue #9)
+  const useSSO = options.sso || isSSOProfile(options.profile);
 
-  providerConfig = {
-    provider: CloudProvider.AWS,
-    credentials: awsConfig.credentials,
-    region: awsConfig.region
-  };
+  if (useSSO) {
+    // Use SSO credential provider
+    const profileInfo = getSSOProfileInfo(options.profile);
+    if (!profileInfo || !profileInfo.isSSO) {
+      console.error(chalk.red(`Profile "${options.profile}" is not configured for SSO.`));
+      console.log(getSSOLoginInstructions(options.profile));
+      process.exit(1);
+    }
+
+    // Validate SSO credentials first
+    const ssoResult = await validateSSOCredentials(options.profile);
+    if (!ssoResult.success) {
+      console.error(chalk.red('SSO authentication required.'));
+      console.log(getSSOLoginInstructions(options.profile));
+      process.exit(1);
+    }
+
+    // Create SSO credential provider
+    const ssoCredentials = createAutoCredentialProvider(options.profile);
+    const region = options.region || profileInfo.region || 'us-east-1';
+
+    providerConfig = {
+      provider: CloudProvider.AWS,
+      credentials: ssoCredentials,
+      region: region
+    };
+
+    console.log(chalk.green(`Using SSO profile: ${options.profile}`));
+    if (ssoResult.expiresAt) {
+      console.log(chalk.gray(`Token expires: ${ssoResult.expiresAt.toLocaleString()}`));
+    }
+  } else {
+    // Use existing AWS configuration for backward compatibility
+    const awsConfig = await getAwsConfigFromOptionsOrFile({
+      profile: options.profile,
+      accessKey: options.accessKey,
+      secretKey: options.secretKey,
+      sessionToken: options.sessionToken,
+      region: options.region,
+    });
+
+    providerConfig = {
+      provider: CloudProvider.AWS,
+      credentials: awsConfig.credentials,
+      region: awsConfig.region
+    };
+  }
 } else {
   // Create configuration for other providers
   const credentials: Record<string, any> = {};
@@ -3618,7 +3848,7 @@ if (options.monitor || options.monitorSetup || options.monitorStart || options.m
 
 // For backward compatibility with existing printers, convert to legacy format
 const alias = accountInfo.name;
-const costs: TotalCosts = {
+let costs: TotalCostsWithDelta = {
   totals: {
     lastMonth: costBreakdown.totals.lastMonth || 0,
     thisMonth: costBreakdown.totals.thisMonth || 0,
@@ -3628,8 +3858,44 @@ const costs: TotalCosts = {
   totalsByService: costBreakdown.totalsByService
 };
 
+// Add cost delta analysis if enabled (Issue #7)
+let deltaAnalysis: CostDeltaAnalysis | null = null;
+if (options.delta) {
+  try {
+    // Get raw cost data for delta analysis
+    const rawCostData = await provider.getRawCostData();
+    const deltaThreshold = parseFloat(options.deltaThreshold) || 10;
+
+    deltaAnalysis = analyzeCostDelta(rawCostData, {
+      significantChangeThreshold: deltaThreshold,
+      topN: 5,
+    });
+
+    // Enhance costs with delta information
+    costs = {
+      ...costs,
+      delta: deltaAnalysis,
+    };
+
+    // Print delta summary if there are significant changes
+    if (deltaAnalysis.insights.anomalyDetected) {
+      console.log(chalk.yellow('\n⚠️  Cost Anomaly Detected'));
+      console.log(chalk.gray('━'.repeat(50)));
+      console.log(generateDeltaSummary(deltaAnalysis));
+      console.log('');
+    }
+  } catch (error) {
+    console.warn(`Warning: Could not calculate cost delta: ${(error as Error).message}`);
+  }
+}
+
 if (options.json) {
-  printJson(alias, costs, options.summary);
+  // Include delta in JSON output if available
+  if (deltaAnalysis) {
+    printJson(alias, { ...costs, delta: deltaAnalysis } as any, options.summary);
+  } else {
+    printJson(alias, costs, options.summary);
+  }
 } else if (options.text) {
   printPlainText(alias, costs, options.summary);
 } else {
