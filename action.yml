@@ -1,0 +1,354 @@
+name: 'Infra Cost'
+description: 'Comprehensive cost analysis and infrastructure optimization across AWS, GCP, Azure, Alibaba Cloud, and Oracle Cloud'
+author: 'Code Collab'
+
+branding:
+  icon: 'dollar-sign'
+  color: 'green'
+
+inputs:
+  # Cloud Provider Configuration
+  provider:
+    description: 'Cloud provider (aws, gcp, azure, alicloud, oracle)'
+    required: false
+    default: 'aws'
+
+  profile:
+    description: 'Cloud provider profile to use'
+    required: false
+    default: 'default'
+
+  region:
+    description: 'Cloud provider region'
+    required: false
+    default: 'us-east-1'
+
+  # AWS Credentials
+  aws-access-key-id:
+    description: 'AWS Access Key ID'
+    required: false
+
+  aws-secret-access-key:
+    description: 'AWS Secret Access Key'
+    required: false
+
+  aws-session-token:
+    description: 'AWS Session Token (for temporary credentials)'
+    required: false
+
+  # GCP Credentials
+  gcp-project-id:
+    description: 'GCP Project ID'
+    required: false
+
+  gcp-key-file:
+    description: 'Path to GCP service account key file'
+    required: false
+
+  # Azure Credentials
+  azure-subscription-id:
+    description: 'Azure Subscription ID'
+    required: false
+
+  azure-tenant-id:
+    description: 'Azure Tenant ID'
+    required: false
+
+  azure-client-id:
+    description: 'Azure Client ID'
+    required: false
+
+  azure-client-secret:
+    description: 'Azure Client Secret'
+    required: false
+
+  # Analysis Options
+  analysis-type:
+    description: 'Type of analysis to run (summary, detailed, delta, forecast, anomaly, finops, audit)'
+    required: false
+    default: 'summary'
+
+  forecast-days:
+    description: 'Number of days for cost forecast (default: 30)'
+    required: false
+    default: '30'
+
+  trend-months:
+    description: 'Number of months for trend analysis (default: 6)'
+    required: false
+    default: '6'
+
+  # Output Options
+  output-format:
+    description: 'Output format (text, json)'
+    required: false
+    default: 'text'
+
+  export-format:
+    description: 'Export format for reports (json, csv, xlsx)'
+    required: false
+
+  # Alerting
+  budget-threshold:
+    description: 'Budget threshold for alerts (e.g., 1000 for $1000)'
+    required: false
+
+  delta-threshold:
+    description: 'Alert threshold for cost changes in percentage (default: 10)'
+    required: false
+    default: '10'
+
+  # Notifications
+  slack-webhook:
+    description: 'Slack webhook URL for notifications'
+    required: false
+
+  slack-channel:
+    description: 'Slack channel for notifications'
+    required: false
+
+  # PR Comment
+  comment-on-pr:
+    description: 'Post cost analysis as PR comment (true/false)'
+    required: false
+    default: 'false'
+
+  fail-on-threshold:
+    description: 'Fail the action if costs exceed threshold (true/false)'
+    required: false
+    default: 'false'
+
+  # Additional CLI arguments
+  additional-args:
+    description: 'Additional CLI arguments to pass to infra-cost'
+    required: false
+
+outputs:
+  total-cost:
+    description: 'Total cost for the analysis period'
+
+  cost-change:
+    description: 'Cost change percentage compared to previous period'
+
+  forecast-cost:
+    description: 'Forecasted cost for the specified period'
+
+  anomalies-detected:
+    description: 'Number of cost anomalies detected'
+
+  optimization-savings:
+    description: 'Potential savings from optimization recommendations'
+
+  report-json:
+    description: 'Full report in JSON format'
+
+  exit-code:
+    description: 'Exit code of the analysis (0 = success, 1 = threshold exceeded)'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install infra-cost
+      shell: bash
+      run: npm install -g infra-cost@${{ github.action_ref || '0.3.0' }}
+
+    - name: Run Cost Analysis
+      id: analysis
+      shell: bash
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        AWS_SESSION_TOKEN: ${{ inputs.aws-session-token }}
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.gcp-key-file }}
+        AZURE_SUBSCRIPTION_ID: ${{ inputs.azure-subscription-id }}
+        AZURE_TENANT_ID: ${{ inputs.azure-tenant-id }}
+        AZURE_CLIENT_ID: ${{ inputs.azure-client-id }}
+        AZURE_CLIENT_SECRET: ${{ inputs.azure-client-secret }}
+      run: |
+        # Build the command
+        CMD="infra-cost --provider ${{ inputs.provider }}"
+
+        # Add profile if specified
+        if [ -n "${{ inputs.profile }}" ] && [ "${{ inputs.profile }}" != "default" ]; then
+          CMD="$CMD --profile ${{ inputs.profile }}"
+        fi
+
+        # Add region
+        CMD="$CMD --region ${{ inputs.region }}"
+
+        # Add analysis type flags
+        case "${{ inputs.analysis-type }}" in
+          "detailed")
+            CMD="$CMD"
+            ;;
+          "delta")
+            CMD="$CMD --delta --delta-threshold ${{ inputs.delta-threshold }}"
+            ;;
+          "forecast")
+            CMD="$CMD --forecast ${{ inputs.forecast-days }}"
+            ;;
+          "anomaly")
+            CMD="$CMD --anomaly-detect"
+            ;;
+          "finops")
+            CMD="$CMD --finops"
+            ;;
+          "audit")
+            CMD="$CMD --audit"
+            ;;
+          "trend")
+            CMD="$CMD --trend"
+            ;;
+          "summary"|*)
+            CMD="$CMD --summary"
+            ;;
+        esac
+
+        # Add output format
+        if [ "${{ inputs.output-format }}" = "json" ]; then
+          CMD="$CMD --json"
+        fi
+
+        # Add export format if specified
+        if [ -n "${{ inputs.export-format }}" ]; then
+          CMD="$CMD --forecast-export ${{ inputs.export-format }}"
+        fi
+
+        # Add GCP project ID
+        if [ -n "${{ inputs.gcp-project-id }}" ]; then
+          CMD="$CMD --project-id ${{ inputs.gcp-project-id }}"
+        fi
+
+        # Add additional arguments
+        if [ -n "${{ inputs.additional-args }}" ]; then
+          CMD="$CMD ${{ inputs.additional-args }}"
+        fi
+
+        echo "Running: $CMD"
+
+        # Run the analysis and capture output
+        OUTPUT_FILE=$(mktemp)
+        set +e
+        $CMD > "$OUTPUT_FILE" 2>&1
+        EXIT_CODE=$?
+        set -e
+
+        # Display output
+        cat "$OUTPUT_FILE"
+
+        # Parse JSON output if available
+        if [ "${{ inputs.output-format }}" = "json" ]; then
+          echo "report-json=$(cat "$OUTPUT_FILE" | tr -d '\n')" >> $GITHUB_OUTPUT
+        fi
+
+        echo "exit-code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+        # Clean up
+        rm -f "$OUTPUT_FILE"
+
+        # Check threshold if enabled
+        if [ "${{ inputs.fail-on-threshold }}" = "true" ] && [ $EXIT_CODE -ne 0 ]; then
+          echo "::error::Cost analysis failed or threshold exceeded"
+          exit 1
+        fi
+
+    - name: Comment on PR
+      if: inputs.comment-on-pr == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+
+          // Build comment body
+          let body = '## 💰 Infra Cost Analysis\n\n';
+          body += '| Metric | Value |\n';
+          body += '|--------|-------|\n';
+          body += `| Provider | ${{ inputs.provider }} |\n`;
+          body += `| Region | ${{ inputs.region }} |\n`;
+          body += `| Analysis Type | ${{ inputs.analysis-type }} |\n`;
+          body += '\n<details><summary>Full Report</summary>\n\n```\n';
+          body += 'See workflow logs for full report\n';
+          body += '```\n</details>\n';
+          body += '\n---\n*Generated by [infra-cost](https://github.com/codecollab-co/infra-cost)*';
+
+          // Find existing comment
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const botComment = comments.find(comment =>
+            comment.user.type === 'Bot' &&
+            comment.body.includes('Infra Cost Analysis')
+          );
+
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: body
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+          }
+
+    - name: Send Slack Notification
+      if: inputs.slack-webhook != ''
+      shell: bash
+      run: |
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "text": "💰 Infra Cost Analysis Complete",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "💰 Infra Cost Analysis"
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Provider:*\n${{ inputs.provider }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Region:*\n${{ inputs.region }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Analysis:*\n${{ inputs.analysis-type }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Repository:*\n${{ github.repository }}"
+                  }
+                ]
+              },
+              {
+                "type": "context",
+                "elements": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "Triggered by: ${{ github.actor }} | <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+                  }
+                ]
+              }
+            ]
+          }' \
+          ${{ inputs.slack-webhook }}

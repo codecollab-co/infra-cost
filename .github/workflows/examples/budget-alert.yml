@@ -1,0 +1,43 @@
+# Example: Budget Alert Workflow
+# Monitors costs and fails if budget threshold is exceeded
+
+name: Budget Alert
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  budget-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Budget
+        id: budget
+        uses: codecollab-co/infra-cost@v0.3.0
+        with:
+          provider: aws
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          analysis-type: anomaly
+          budget-threshold: '5000'
+          fail-on-threshold: 'true'
+          slack-webhook: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Alert on Failure
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": ":rotating_light: BUDGET ALERT: Monthly costs have exceeded the $5000 threshold!",
+              "attachments": [{
+                "color": "danger",
+                "fields": [{
+                  "title": "Action Required",
+                  "value": "Please review your cloud spending immediately.",
+                  "short": false
+                }]
+              }]
+            }' \
+            ${{ secrets.SLACK_WEBHOOK }}
