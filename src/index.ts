@@ -671,14 +671,15 @@ if (options.configFile || options.configProfile || AppConfigManager.findConfigFi
       options.configProfile
     );
 
-    // Apply resolved config to options if not already set by CLI
-    if (!options.provider || options.provider === 'aws') {
+    // Apply resolved config to options if not explicitly set by CLI
+    // Use getOptionValueSource to distinguish CLI-provided values from defaults
+    if (program.getOptionValueSource('provider') === 'default' && resolvedConfig.provider) {
       options.provider = resolvedConfig.provider;
     }
-    if (!options.profile || options.profile === 'default') {
+    if (program.getOptionValueSource('profile') === 'default' && resolvedConfig.profile) {
       options.profile = resolvedConfig.profile;
     }
-    if (!options.region || options.region === 'us-east-1') {
+    if (program.getOptionValueSource('region') === 'default' && resolvedConfig.region) {
       options.region = resolvedConfig.region;
     }
     if (!options.slackToken && resolvedConfig.slackToken) {

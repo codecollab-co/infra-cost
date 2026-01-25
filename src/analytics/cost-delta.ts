@@ -1,5 +1,5 @@
 import { TotalCosts, RawCostByService } from '../cost';
-import { CostBreakdown, RawCostData } from '../types/providers';
+import { RawCostData } from '../types/providers';
 
 /**
  * Cost Delta Analysis
@@ -109,28 +109,24 @@ export function analyzeCostDelta(
 ): CostDeltaAnalysis {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
+  // Use UTC dates for consistent timezone-independent comparisons with AWS cost data
   const now = new Date();
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const dayBeforeYesterday = new Date(now);
-  dayBeforeYesterday.setDate(dayBeforeYesterday.getDate() - 2);
+  const yesterday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
+  const dayBeforeYesterday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 2));
 
   // Calculate date ranges
   const yesterdayStr = formatDate(yesterday);
   const dayBeforeYesterdayStr = formatDate(dayBeforeYesterday);
 
-  // Calculate 7-day periods
-  const last7DaysStart = new Date(now);
-  last7DaysStart.setDate(last7DaysStart.getDate() - 7);
-  const previous7DaysStart = new Date(now);
-  previous7DaysStart.setDate(previous7DaysStart.getDate() - 14);
-  const previous7DaysEnd = new Date(now);
-  previous7DaysEnd.setDate(previous7DaysEnd.getDate() - 7);
+  // Calculate 7-day periods (using UTC)
+  const last7DaysStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 7));
+  const previous7DaysStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 14));
+  const previous7DaysEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 7));
 
-  // Calculate monthly periods
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+  // Calculate monthly periods (using UTC)
+  const thisMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  const lastMonthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0));
 
   // Aggregate costs by period
   let yesterdayCost = 0;
@@ -279,21 +275,21 @@ export function enhanceCostsWithDelta(
  * Format delta for display
  */
 export function formatDelta(delta: CostDelta): string {
-  const sign = delta.absolute >= 0 ? '+' : '';
+  const sign = delta.absolute >= 0 ? '+' : '-';
   const arrow = delta.trend === 'increasing' ? '↑' : delta.trend === 'decreasing' ? '↓' : '→';
 
   if (delta.trend === 'stable') {
     return `${arrow} $${Math.abs(delta.absolute).toFixed(2)} (0%)`;
   }
 
-  return `${arrow} ${sign}$${delta.absolute.toFixed(2)} (${sign}${delta.percentage.toFixed(1)}%)`;
+  return `${arrow} ${sign}$${Math.abs(delta.absolute).toFixed(2)} (${sign}${Math.abs(delta.percentage).toFixed(1)}%)`;
 }
 
 /**
  * Format delta for display with color indicators (for terminal)
  */
 export function formatDeltaWithColor(delta: CostDelta): { text: string; color: 'green' | 'red' | 'gray' } {
-  const sign = delta.absolute >= 0 ? '+' : '';
+  const sign = delta.absolute >= 0 ? '+' : '-';
   const arrow = delta.trend === 'increasing' ? '↑' : delta.trend === 'decreasing' ? '↓' : '→';
 
   let color: 'green' | 'red' | 'gray';
@@ -307,7 +303,7 @@ export function formatDeltaWithColor(delta: CostDelta): { text: string; color: '
 
   const text = delta.trend === 'stable'
     ? `${arrow} 0%`
-    : `${arrow} ${sign}${delta.percentage.toFixed(1)}%`;
+    : `${arrow} ${sign}${Math.abs(delta.percentage).toFixed(1)}%`;
 
   return { text, color };
 }
@@ -334,11 +330,19 @@ function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
+/**
+ * Normalize a date to start of day in UTC for consistent comparisons
+ */
+function normalizeToUTCDay(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
 function isSameDay(date1: Date, date2: Date): boolean {
+  // Use UTC methods for consistent timezone-independent comparison
   return (
-    date1.getFullYear() === date2.getFullYear() &&
-    date1.getMonth() === date2.getMonth() &&
-    date1.getDate() === date2.getDate()
+    date1.getUTCFullYear() === date2.getUTCFullYear() &&
+    date1.getUTCMonth() === date2.getUTCMonth() &&
+    date1.getUTCDate() === date2.getUTCDate()
   );
 }
 
@@ -397,7 +401,7 @@ export function generateDeltaSummary(deltaAnalysis: CostDeltaAnalysis): string {
     lines.push('');
     lines.push('Top cost decreases:');
     topDecreases.slice(0, 3).forEach(service => {
-      lines.push(`  - ${service.serviceName}: $${service.delta.absolute.toFixed(2)} (${service.delta.percentage.toFixed(1)}%)`);
+      lines.push(`  - ${service.serviceName}: -$${Math.abs(service.delta.absolute).toFixed(2)} (${service.delta.percentage.toFixed(1)}%)`);
     });
   }
 

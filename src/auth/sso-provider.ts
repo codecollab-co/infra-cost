@@ -1,7 +1,7 @@
 import { fromSSO } from '@aws-sdk/credential-providers';
 import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
 import type { AwsCredentialIdentityProvider } from '@aws-sdk/types';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import { parse as parseIni } from 'ini';
@@ -233,7 +233,6 @@ export function checkSSOTokenCache(profileName: string): { valid: boolean; expir
   // The cache file is named based on the hash of the SSO start URL
   // We'll try to find a valid token
   try {
-    const { readdirSync } = require('fs');
     const files = readdirSync(cacheDir);
 
     for (const file of files) {

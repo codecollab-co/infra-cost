@@ -369,10 +369,17 @@ export class AppConfigManager {
     const profile = configProfileName ? config.profiles[configProfileName] : null;
 
     // Resolve environment variable references in config values
+    // Supports both ${VAR} and $VAR patterns
     const resolveEnvVar = (value: string | undefined): string | undefined => {
       if (!value) return value;
+      // Handle ${VAR} pattern
       if (value.startsWith('${') && value.endsWith('}')) {
         const envVar = value.slice(2, -1);
+        return process.env[envVar] || value;
+      }
+      // Handle $VAR pattern (must be the entire value and a valid env var name)
+      if (value.startsWith('$') && /^\$[A-Z_][A-Z0-9_]*$/i.test(value)) {
+        const envVar = value.slice(1);
         return process.env[envVar] || value;
       }
       return value;
