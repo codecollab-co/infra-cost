@@ -56,7 +56,9 @@ export interface SSOLoginResult {
 }
 
 /**
- * AWS Config and Credentials file paths
+ * Get the filesystem paths for the AWS config and shared credentials files.
+ *
+ * @returns An object with `configPath` — the path to the AWS config file, and `credentialsPath` — the path to the AWS shared credentials file. Each value uses the corresponding environment variable (`AWS_CONFIG_FILE`, `AWS_SHARED_CREDENTIALS_FILE`) if set; otherwise it defaults to `~/.aws/config` and `~/.aws/credentials`.
  */
 function getAwsConfigPaths(): { configPath: string; credentialsPath: string } {
   return {
@@ -66,7 +68,12 @@ function getAwsConfigPaths(): { configPath: string; credentialsPath: string } {
 }
 
 /**
- * Parse AWS config file
+ * Read and parse the AWS CLI config file into INI sections.
+ *
+ * Returns an object whose keys are section names and whose values are key/value maps from that section.
+ * If the config file does not exist or cannot be read/parsed, an empty object is returned.
+ *
+ * @returns An object mapping INI section names to their key/value pairs, or an empty object when missing or unreadable
  */
 function parseAwsConfig(): Record<string, Record<string, string>> {
   const { configPath } = getAwsConfigPaths();
@@ -85,7 +92,10 @@ function parseAwsConfig(): Record<string, Record<string, string>> {
 }
 
 /**
- * Check if a profile is configured for SSO
+ * Determine whether an AWS profile is configured to use SSO.
+ *
+ * @param profileName - The profile name to check; the literal string `default` maps to the `default` config section, other names map to `profile <name>`.
+ * @returns `true` if the profile contains SSO configuration (e.g., `sso_start_url`, `sso_session`, or `sso_account_id`), `false` otherwise.
  */
 export function isSSOProfile(profileName: string): boolean {
   const config = parseAwsConfig();
@@ -105,7 +115,10 @@ export function isSSOProfile(profileName: string): boolean {
 }
 
 /**
- * Get SSO profile information
+ * Retrieve SSO-related configuration for an AWS profile.
+ *
+ * @param profileName - Name of the AWS profile to inspect (use "default" for the default section)
+ * @returns The profile's SSO information and derived fields, or `null` if the profile does not exist
  */
 export function getSSOProfileInfo(profileName: string): SSOProfileInfo | null {
   const config = parseAwsConfig();
@@ -156,7 +169,9 @@ export function getSSOProfileInfo(profileName: string): SSOProfileInfo | null {
 }
 
 /**
- * Discover all SSO profiles from AWS config
+ * Retrieve all AWS profiles configured for SSO from the current AWS config.
+ *
+ * @returns An array of `SSOProfileInfo` objects for each profile that is configured for SSO
  */
 export function discoverSSOProfiles(): SSOProfileInfo[] {
   const config = parseAwsConfig();
@@ -183,7 +198,11 @@ export function discoverSSOProfiles(): SSOProfileInfo[] {
 }
 
 /**
- * Create an SSO credential provider for the specified profile
+ * Creates an AWS SSO credential provider for the given AWS profile.
+ *
+ * @param profileName - The AWS profile name to use from the shared config
+ * @returns An AWS credential provider that sources credentials via SSO for the specified profile
+ * @throws Error if the profile does not exist or is not configured for SSO
  */
 export function createSSOCredentialProvider(profileName: string): AwsCredentialIdentityProvider {
   const profileInfo = getSSOProfileInfo(profileName);
@@ -197,7 +216,10 @@ export function createSSOCredentialProvider(profileName: string): AwsCredentialI
 }
 
 /**
- * Create a credential provider that automatically handles SSO profiles
+ * Selects and returns an AWS credential provider appropriate for the given profile.
+ *
+ * @param profileName - The AWS profile name to resolve (use `"default"` to use the default chain)
+ * @returns An AWS credential provider configured for the specified profile. Uses the SSO provider if the profile is configured for SSO; otherwise uses the standard Node provider chain.
  */
 export function createAutoCredentialProvider(profileName: string): AwsCredentialIdentityProvider {
   const profileInfo = getSSOProfileInfo(profileName);
@@ -214,7 +236,10 @@ export function createAutoCredentialProvider(profileName: string): AwsCredential
 }
 
 /**
- * Check if SSO token is valid/cached
+ * Determine whether a cached SSO token exists and is still valid for the given profile.
+ *
+ * @param profileName - The AWS profile name to check for a cached SSO token
+ * @returns An object with `valid: true` and `expiresAt` when a matching cached token is present and not expired; otherwise `{ valid: false }`
  */
 export function checkSSOTokenCache(profileName: string): { valid: boolean; expiresAt?: Date } {
   const profileInfo = getSSOProfileInfo(profileName);
@@ -260,7 +285,10 @@ export function checkSSOTokenCache(profileName: string): { valid: boolean; expir
 }
 
 /**
- * Get instructions for SSO login
+ * Produce formatted, user-facing SSO login instructions for the given AWS profile.
+ *
+ * @param profileName - The AWS profile name to generate instructions for
+ * @returns A multi-line string containing profile details and the command to run to authenticate via AWS SSO; if the profile is not configured for SSO, a message indicating that
  */
 export function getSSOLoginInstructions(profileName: string): string {
   const profileInfo = getSSOProfileInfo(profileName);
@@ -300,7 +328,12 @@ export function getSSOLoginInstructions(profileName: string): string {
 }
 
 /**
- * Validate SSO credentials by attempting to resolve them
+ * Validate that an AWS SSO profile can obtain usable credentials.
+ *
+ * Attempts to resolve credentials for the given AWS profile and reports whether authentication succeeded, including token expiry when available.
+ *
+ * @param profileName - The name of the AWS profile to validate
+ * @returns An `SSOLoginResult` describing the outcome. On success includes `profileName`, `accountId`, `roleName`, and `expiresAt`. On failure includes `profileName` and an `error` message.
  */
 export async function validateSSOCredentials(profileName: string): Promise<SSOLoginResult> {
   const profileInfo = getSSOProfileInfo(profileName);
@@ -364,7 +397,15 @@ export async function validateSSOCredentials(profileName: string): Promise<SSOLo
 }
 
 /**
- * Print SSO profile information
+ * Display detailed SSO configuration and token status for the named AWS profile to the console.
+ *
+ * Prints an error if the profile does not exist and a warning if the profile exists but is not configured for SSO.
+ *
+ * When the profile is an SSO profile, shows profile name, SSO start URL, SSO region, account ID, role name, default region,
+ * optional SSO session, and the cached token status including expiration when available. If the token is missing or expired,
+ * prints a hint to run the SSO login command.
+ *
+ * @param profileName - The AWS profile name to inspect
  */
 export function printSSOProfileInfo(profileName: string): void {
   const profileInfo = getSSOProfileInfo(profileName);
@@ -410,7 +451,12 @@ export function printSSOProfileInfo(profileName: string): void {
 }
 
 /**
- * List all available SSO profiles
+ * Display all discovered AWS SSO profiles and their token status.
+ *
+ * Prints a list of discovered SSO profiles to stdout. For each profile shows
+ * an active/inactive indicator (based on the local SSO token cache), the
+ * profile name, account ID, and role. If no SSO profiles are found, prints
+ * a guidance message and a sample ~/.aws/config snippet for configuring SSO.
  */
 export function listSSOProfiles(): void {
   const profiles = discoverSSOProfiles();

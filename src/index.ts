@@ -263,6 +263,18 @@ program
   .option('-h, --help', 'Get the help of the CLI')
   .parse(process.argv);
 
+/**
+ * Entry point that parses CLI options and executes requested cloud analysis, reporting, and management commands.
+ *
+ * This function orchestrates the entire CLI workflow: it parses and resolves configuration/SSO settings,
+ * initializes and validates the selected cloud provider, and conditionally runs features requested via
+ * command-line options (for example: configuration management, inventory, forecasting, optimization,
+ * auditing/compliance, rightsizing, sustainability, security analysis, integrations, analytics, monitoring,
+ * cross-cloud comparison, multi-tenant/enterprise operations, API/webhook server management, AI anomaly
+ * detection, visualization/dashboarding, and preset reports). It performs I/O (network, filesystem, stdout),
+ * may export files, send notifications (e.g., Slack), and can terminate the process with non-zero exit codes
+ * on fatal errors or after completing selected commands.
+ */
 async function main() {
 
 type OptionsType = {

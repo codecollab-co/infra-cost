@@ -6,6 +6,15 @@ export interface TotalCostsWithDelta extends TotalCosts {
   delta?: CostDeltaAnalysis;
 }
 
+/**
+ * Prints a concise plain-text cost summary for an account to the console.
+ *
+ * When a delta is present on `costs`, the "Yesterday" line includes an emoji and a formatted
+ * delta description; otherwise it prints the plain yesterday total.
+ *
+ * @param accountAlias - Human-readable account label displayed in the header
+ * @param costs - Aggregated cost totals and optional delta analysis used to enrich the "Yesterday" line
+ */
 function printPlainSummary(accountAlias: string, costs: TotalCostsWithDelta) {
   hideSpinner();
   console.clear();
@@ -27,6 +36,17 @@ function printPlainSummary(accountAlias: string, costs: TotalCostsWithDelta) {
   }
 }
 
+/**
+ * Print a plain-text cost report for an account, including per-service breakdowns and optional delta insights.
+ *
+ * When `isSummary` is true, only the high-level summary is printed; otherwise the function prints totals by service
+ * for last month, this month, last 7 days, and yesterday. If `totals.delta` is present, per-service yesterday lines
+ * and the summary may include change emojis, formatted deltas, a "Significant Changes" list, and an anomaly warning.
+ *
+ * @param accountAlias - Human-readable account name shown in the report header
+ * @param totals - Aggregated cost totals and optional delta analysis to drive per-service and summary deltas
+ * @param isSummary - If true, print only the summary and skip the per-service sections
+ */
 export function printPlainText(accountAlias: string, totals: TotalCostsWithDelta, isSummary: boolean = false) {
   printPlainSummary(accountAlias, totals);
   if (isSummary) {

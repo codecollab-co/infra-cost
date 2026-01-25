@@ -608,11 +608,24 @@ export class AppConfigManager {
   }
 }
 
-// CLI helper functions
+/**
+ * Initialize the infra-cost configuration file, creating a new sample config if none exists.
+ *
+ * Creates a configuration file at the given path or in the standard config locations. If `force` is true, an existing file will be overwritten.
+ *
+ * @param configPath - Optional filesystem path to write the configuration file; if omitted a default location is used
+ * @param force - When true, overwrite any existing configuration file
+ */
 export function configInit(configPath?: string, force: boolean = false): void {
   AppConfigManager.initializeConfig(configPath, force);
 }
 
+/**
+ * Validates the application configuration at the given path (or discovered default) and prints the outcome to the console.
+ *
+ * @param configPath - Optional path to a configuration file; if omitted the manager searches standard locations.
+ * @returns `true` if the configuration is valid, `false` otherwise.
+ */
 export function configValidate(configPath?: string): boolean {
   try {
     const config = AppConfigManager.loadConfiguration(configPath);
@@ -632,6 +645,14 @@ export function configValidate(configPath?: string): boolean {
   }
 }
 
+/**
+ * Print the list of configured profiles and their basic details to the console.
+ *
+ * If no profiles exist, prints a notice and a suggestion to initialize a sample configuration.
+ *
+ * Each listed profile shows the profile name and its provider and region; when a profile lacks
+ * provider or region values, `aws` and `default` are shown respectively.
+ */
 export function configListProfiles(): void {
   const profiles = AppConfigManager.listProfiles();
 
@@ -650,6 +671,11 @@ export function configListProfiles(): void {
   });
 }
 
+/**
+ * Print the loaded configuration as pretty-printed JSON to standard output.
+ *
+ * @param configPath - Optional path to a configuration file; if omitted the default search locations are used
+ */
 export function configShow(configPath?: string): void {
   const config = AppConfigManager.loadConfiguration(configPath);
   console.log(JSON.stringify(config, null, 2));
