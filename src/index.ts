@@ -32,6 +32,9 @@ import { AdvancedVisualizationEngine, ChartConfiguration, Dashboard, ChartData, 
 import { MultiCloudDashboard } from './visualization/multi-cloud-dashboard';
 import chalk from 'chalk';
 import { join } from 'path';
+// Caching imports (Issue #28)
+import { CostCacheManager, getGlobalCache, parseTTL, formatCacheStats } from './cache/cost-cache';
+import { CachedProviderWrapper, wrapWithCache } from './cache/cached-provider';
 
 
 const program = new Command();
@@ -240,6 +243,14 @@ program
   .option('--auto-profile', 'Automatically select best available profile')
   .option('--smart-alerts', 'Enable intelligent cost alerting with visual indicators')
   .option('--compact', 'Use compact display mode for large datasets')
+  // Caching options (Issue #28)
+  .option('--cache', 'Use cached data if available (default: enabled)')
+  .option('--no-cache', 'Disable caching, always fetch fresh data')
+  .option('--refresh-cache', 'Force refresh cache with fresh data')
+  .option('--clear-cache', 'Clear all cached data')
+  .option('--cache-stats', 'Show cache statistics')
+  .option('--cache-ttl [duration]', 'Cache TTL (e.g., 30m, 2h, 1d)', '4h')
+  .option('--cache-type [type]', 'Cache type: file, memory', 'file')
   // Other options
   .option('-h, --help', 'Get the help of the CLI')
   .parse(process.argv);
@@ -447,6 +458,13 @@ type OptionsType = {
   autoProfile: boolean;
   smartAlerts: boolean;
   compact: boolean;
+  // Caching options (Issue #28)
+  cache: boolean;
+  refreshCache: boolean;
+  clearCache: boolean;
+  cacheStats: boolean;
+  cacheTtl: string;
+  cacheType: string;
   // Other options
   help: boolean;
 };
@@ -541,6 +559,31 @@ if (options.help) {
   process.exit(0);
 }
 
+// Handle cache management commands (Issue #28)
+if (options.clearCache || options.cacheStats) {
+  const cacheConfig = {
+    type: (options.cacheType || 'file') as 'file' | 'memory',
+    ttl: parseTTL(options.cacheTtl || '4h'),
+  };
+  const cache = getGlobalCache(cacheConfig);
+
+  if (options.clearCache) {
+    await cache.clear();
+    console.log(chalk.green('Cache cleared successfully'));
+    process.exit(0);
+  }
+
+  if (options.cacheStats) {
+    const stats = await cache.getStats();
+    console.log('');
+    console.log(chalk.bold('Cache Statistics'));
+    console.log(chalk.gray('━'.repeat(40)));
+    console.log(formatCacheStats(stats));
+    console.log('');
+    process.exit(0);
+  }
+}
+
 // Handle configuration management commands
 if (options.configInit || options.configValidate || options.configSample) {
   if (options.configInit) {
@@ -622,7 +665,23 @@ if (providerType === CloudProvider.AWS) {
 
 // Create provider instance
 const providerFactory = new CloudProviderFactory();
-const provider = providerFactory.createProvider(providerConfig);
+const baseProvider = providerFactory.createProvider(providerConfig);
+
+// Wrap provider with caching if enabled (Issue #28)
+const useCache = options.cache !== false && !options.refreshCache;
+const provider = wrapWithCache(baseProvider, {
+  profile: options.profile,
+  region: options.region,
+  useCache,
+  cacheTtl: options.cacheTtl || '4h',
+  cacheType: (options.cacheType || 'file') as 'file' | 'memory',
+  verbose: false,
+});
+
+// Handle cache refresh
+if (options.refreshCache) {
+  console.log(chalk.yellow('Refreshing cache...'));
+}
 
 // Validate credentials
 const credentialsValid = await provider.validateCredentials();
@@ -634,6 +693,11 @@ if (!credentialsValid) {
 // Get account information and costs
 const accountInfo = await provider.getAccountInfo();
 const costBreakdown = await provider.getCostBreakdown();
+
+// Show cache status if verbose or refresh was requested
+if (options.refreshCache) {
+  console.log(chalk.green('Cache refreshed with fresh data'));
+}
 
 // Handle budget and trends requests
 if (options.budgets || options.trends || options.finops || options.alerts) {
