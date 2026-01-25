@@ -77,15 +77,16 @@
     "@aws-sdk/client-sts": "^3.621.0",
     "@aws-sdk/credential-providers": "^3.621.0",
     "@slack/web-api": "^7.5.0",
+    "callsites": "^3.1.0",
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.5",
     "commander": "^12.1.0",
-    "yauzl": "^3.0.0",
-    "pend": "^1.2.0",
     "fd-slicer": "^1.1.0",
+    "ini": "^6.0.0",
     "pako": "^2.1.0",
-    "zod": "^3.23.8",
-    "callsites": "^3.1.0"
+    "pend": "^1.2.0",
+    "yauzl": "^3.0.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
