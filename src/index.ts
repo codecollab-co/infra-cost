@@ -12,6 +12,7 @@ import { InventoryExporter } from './exporters/inventory';
 import { CloudProviderFactory } from './providers/factory';
 import { CloudProvider, ProviderConfig, InventoryFilters, ResourceType, InventoryExportOptions } from './types/providers';
 import { CrossCloudOptimizer } from './optimization/cross-cloud-optimizer';
+import { CostOptimizationEngine, OptimizationCategory, formatOptimizationReport, formatRecommendationDetail, OptimizationEngineConfig, RiskLevel } from './optimization/cost-optimization-engine';
 import { TotalCosts } from './cost';
 import { CostMonitor, AlertThresholdType, NotificationChannel } from './monitoring/cost-monitor';
 import { DependencyMapper, TaggingStandardsAnalyzer } from './analytics/dependency-mapper';
@@ -116,6 +117,16 @@ program
   .option('--optimize-stats', 'Show optimization statistics and history')
   .option('--optimize-stop', 'Stop all active optimizations')
   .option('--optimize-create-plan [file]', 'Create a new optimization plan template')
+  // Cost Optimization Recommendations Engine (Issue #31)
+  .option('--recommendations', 'Generate comprehensive cost optimization recommendations')
+  .option('--recommendations-category [category]', 'Filter by category (compute, storage, database, network, serverless, reserved_capacity, unused_resources, architecture)')
+  .option('--recommendations-min-savings [amount]', 'Minimum monthly savings threshold (default: $10)', '10')
+  .option('--recommendations-max-risk [level]', 'Maximum risk level (none, low, medium, high)', 'high')
+  .option('--recommendations-sort [field]', 'Sort by: savings, effort, risk, confidence (default: savings)', 'savings')
+  .option('--recommendations-top [n]', 'Show top N recommendations (default: 10)', '10')
+  .option('--recommendations-detail [id]', 'Show detailed view for a specific recommendation')
+  .option('--recommendations-export [format]', 'Export recommendations (json, csv)')
+  .option('--recommendations-quick-wins', 'Show only quick win opportunities')
   // Audit and compliance
   .option('--audit-query [filters]', 'Query audit logs with JSON filters')
   .option('--audit-export [format]', 'Export audit logs (json, csv, xml, syslog)')
@@ -1275,6 +1286,155 @@ if (options.optimize || options.optimizePlan || options.optimizeStats || options
   }
 
   console.log(''); // Add spacing
+}
+
+// Handle cost optimization recommendations (Issue #31)
+if (options.recommendations || options.recommendationsQuickWins || options.recommendationsDetail || options.recommendationsExport) {
+  try {
+    console.log('🔍 Analyzing infrastructure for cost optimization opportunities...');
+    console.log('');
+
+    // Build configuration from CLI options
+    const engineConfig: Partial<OptimizationEngineConfig> = {
+      minSavingsThreshold: parseFloat(options.recommendationsMinSavings) || 10,
+      topN: parseInt(options.recommendationsTop) || 10,
+      sortBy: (options.recommendationsSort as 'savings' | 'effort' | 'risk' | 'confidence') || 'savings',
+    };
+
+    // Parse max risk level
+    if (options.recommendationsMaxRisk) {
+      const riskMap: Record<string, RiskLevel> = {
+        none: RiskLevel.NONE,
+        low: RiskLevel.LOW,
+        medium: RiskLevel.MEDIUM,
+        high: RiskLevel.HIGH,
+      };
+      engineConfig.maxRiskLevel = riskMap[options.recommendationsMaxRisk.toLowerCase()] || RiskLevel.HIGH;
+    }
+
+    // Parse category filter
+    if (options.recommendationsCategory) {
+      const categoryMap: Record<string, OptimizationCategory> = {
+        compute: OptimizationCategory.COMPUTE,
+        storage: OptimizationCategory.STORAGE,
+        database: OptimizationCategory.DATABASE,
+        network: OptimizationCategory.NETWORK,
+        serverless: OptimizationCategory.SERVERLESS,
+        reserved_capacity: OptimizationCategory.RESERVED_CAPACITY,
+        unused_resources: OptimizationCategory.UNUSED_RESOURCES,
+        architecture: OptimizationCategory.ARCHITECTURE,
+      };
+      const category = categoryMap[options.recommendationsCategory.toLowerCase()];
+      if (category) {
+        engineConfig.categories = [category];
+        console.log(`📁 Filtering by category: ${options.recommendationsCategory}`);
+      }
+    }
+
+    // Initialize the optimization engine
+    const optimizationEngine = new CostOptimizationEngine(engineConfig);
+
+    // Get inventory and cost data for analysis
+    console.log('📊 Fetching resource inventory...');
+    const inventory = await provider.getInventory();
+
+    console.log('💰 Fetching cost breakdown...');
+    const costBreakdown = await provider.getCostBreakdown();
+
+    // Run the analysis
+    console.log('⚙️  Running optimization analysis...');
+    const report = await optimizationEngine.analyze(provider, inventory, costBreakdown);
+
+    // Handle detail view for specific recommendation
+    if (options.recommendationsDetail) {
+      const recommendation = report.recommendations.find(r => r.id === options.recommendationsDetail);
+      if (recommendation) {
+        console.log(formatRecommendationDetail(recommendation));
+      } else {
+        console.log(`❌ Recommendation not found: ${options.recommendationsDetail}`);
+        console.log('');
+        console.log('Available recommendation IDs:');
+        report.recommendations.slice(0, 20).forEach(r => {
+          console.log(`  • ${r.id}: ${r.title}`);
+        });
+      }
+      process.exit(0);
+    }
+
+    // Handle quick wins only
+    if (options.recommendationsQuickWins) {
+      console.log('');
+      console.log('═'.repeat(70));
+      console.log('  QUICK WIN OPPORTUNITIES');
+      console.log('═'.repeat(70));
+      console.log('');
+
+      if (report.quickWins.length === 0) {
+        console.log('No quick wins found matching your criteria.');
+      } else {
+        const totalQuickWinSavings = report.quickWins.reduce((sum, r) => sum + r.savings.monthly, 0);
+        console.log(`Found ${report.quickWins.length} quick wins with $${totalQuickWinSavings.toFixed(2)}/month potential savings`);
+        console.log('');
+
+        report.quickWins.forEach((rec, index) => {
+          console.log(`${index + 1}. ⚡ ${rec.title}`);
+          console.log(`   💰 Savings: $${rec.savings.monthly.toFixed(2)}/month ($${rec.savings.annual.toFixed(2)}/year)`);
+          console.log(`   📊 Effort: ${rec.effort} | Risk: ${rec.risk} | Confidence: ${rec.confidence}`);
+          console.log(`   📍 Resource: ${rec.resource.name} (${rec.resource.region})`);
+          console.log('');
+        });
+      }
+      process.exit(0);
+    }
+
+    // Handle export
+    if (options.recommendationsExport) {
+      const format = options.recommendationsExport.toLowerCase();
+      const filename = `optimization-recommendations-${Date.now()}.${format}`;
+
+      if (format === 'json') {
+        require('fs').writeFileSync(filename, JSON.stringify(report, null, 2));
+        console.log(`✅ Recommendations exported to ${filename}`);
+      } else if (format === 'csv') {
+        const csvLines = [
+          'ID,Title,Category,Resource,Region,Monthly Savings,Annual Savings,Risk,Effort,Confidence'
+        ];
+        report.recommendations.forEach(rec => {
+          csvLines.push([
+            rec.id,
+            `"${rec.title.replace(/"/g, '""')}"`,
+            rec.category,
+            `"${rec.resource.name.replace(/"/g, '""')}"`,
+            rec.resource.region,
+            rec.savings.monthly.toFixed(2),
+            rec.savings.annual.toFixed(2),
+            rec.risk,
+            rec.effort,
+            rec.confidenceScore
+          ].join(','));
+        });
+        require('fs').writeFileSync(filename, csvLines.join('\n'));
+        console.log(`✅ Recommendations exported to ${filename}`);
+      } else {
+        console.log(`❌ Unsupported export format: ${format}. Use 'json' or 'csv'.`);
+      }
+      process.exit(0);
+    }
+
+    // Default: Show full report
+    console.log(formatOptimizationReport(report));
+
+    // Show hint for detailed view
+    if (report.recommendations.length > 0) {
+      console.log('💡 Tip: Use --recommendations-detail <id> to see full details for a recommendation');
+      console.log(`   Example: infra-cost --recommendations-detail ${report.recommendations[0].id}`);
+      console.log('');
+    }
+
+  } catch (error) {
+    console.error(`Failed to generate recommendations: ${error.message}`);
+    process.exit(1);
+  }
 }
 
 // Handle audit and compliance requests
