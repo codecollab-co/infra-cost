@@ -60,6 +60,8 @@ export interface CostDeltaOptions {
   topN?: number;
   // Threshold for significant change (percentage)
   significantChangeThreshold?: number;
+  // Threshold for anomaly detection (percentage) - defaults to 25%
+  anomalyThreshold?: number;
   // Include services with zero cost
   includeZeroCost?: boolean;
 }
@@ -67,6 +69,7 @@ export interface CostDeltaOptions {
 const DEFAULT_OPTIONS: CostDeltaOptions = {
   topN: 5,
   significantChangeThreshold: 10, // 10% change is significant
+  anomalyThreshold: 25, // 25% change triggers anomaly detection
   includeZeroCost: false,
 };
 
@@ -159,8 +162,8 @@ export function analyzeCostDelta(
         serviceDayBefore += costValue;
       }
 
-      // Last 7 days
-      if (date >= last7DaysStart && date < yesterday) {
+      // Last 7 days (includes yesterday)
+      if (date >= last7DaysStart && date <= yesterday) {
         last7DaysCost += costValue;
       }
 
@@ -225,7 +228,9 @@ export function analyzeCostDelta(
   // Calculate volatility score (0-100)
   const volatilityScore = calculateVolatilityScore(serviceDeltas);
   const yesterdayDelta = calculateDelta(yesterdayCost, dayBeforeYesterdayCost);
-  const anomalyDetected = Math.abs(yesterdayDelta.percentage) > 25;
+  // Use configurable anomaly threshold (defaults to 25%)
+  const anomalyThreshold = opts.anomalyThreshold || 25;
+  const anomalyDetected = Math.abs(yesterdayDelta.percentage) > anomalyThreshold;
 
   return {
     totals: {
@@ -408,7 +413,7 @@ export function generateDeltaSummary(deltaAnalysis: CostDeltaAnalysis): string {
   // Anomaly warning
   if (insights.anomalyDetected) {
     lines.push('');
-    lines.push('⚠️ Anomaly detected: Cost change exceeds 25% threshold');
+    lines.push('⚠️ Anomaly detected: Cost change exceeds configured threshold');
   }
 
   return lines.join('\n');

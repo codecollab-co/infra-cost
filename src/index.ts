@@ -668,7 +668,8 @@ if (options.configFile || options.configProfile || AppConfigManager.findConfigFi
         slackToken: options.slackToken,
         slackChannel: options.slackChannel,
       },
-      options.configProfile
+      options.configProfile,
+      options.configFile // Pass configFile path to honor --config-file option
     );
 
     // Apply resolved config to options if not explicitly set by CLI
@@ -682,6 +683,47 @@ if (options.configFile || options.configProfile || AppConfigManager.findConfigFi
     if (program.getOptionValueSource('region') === 'default' && resolvedConfig.region) {
       options.region = resolvedConfig.region;
     }
+    // Propagate all credential fields from resolved config when not set via CLI
+    if (!options.accessKey && resolvedConfig.accessKey) {
+      options.accessKey = resolvedConfig.accessKey;
+    }
+    if (!options.secretKey && resolvedConfig.secretKey) {
+      options.secretKey = resolvedConfig.secretKey;
+    }
+    if (!options.sessionToken && resolvedConfig.sessionToken) {
+      options.sessionToken = resolvedConfig.sessionToken;
+    }
+    // GCP settings
+    if (!options.projectId && resolvedConfig.projectId) {
+      options.projectId = resolvedConfig.projectId;
+    }
+    if (!options.keyFile && resolvedConfig.keyFile) {
+      options.keyFile = resolvedConfig.keyFile;
+    }
+    // Azure settings
+    if (!options.subscriptionId && resolvedConfig.subscriptionId) {
+      options.subscriptionId = resolvedConfig.subscriptionId;
+    }
+    if (!options.tenantId && resolvedConfig.tenantId) {
+      options.tenantId = resolvedConfig.tenantId;
+    }
+    if (!options.clientId && resolvedConfig.clientId) {
+      options.clientId = resolvedConfig.clientId;
+    }
+    if (!options.clientSecret && resolvedConfig.clientSecret) {
+      options.clientSecret = resolvedConfig.clientSecret;
+    }
+    // Oracle settings
+    if (!options.userId && resolvedConfig.userId) {
+      options.userId = resolvedConfig.userId;
+    }
+    if (!options.tenancyId && resolvedConfig.tenancyId) {
+      options.tenancyId = resolvedConfig.tenancyId;
+    }
+    if (!options.fingerprint && resolvedConfig.fingerprint) {
+      options.fingerprint = resolvedConfig.fingerprint;
+    }
+    // Slack settings
     if (!options.slackToken && resolvedConfig.slackToken) {
       options.slackToken = resolvedConfig.slackToken;
     }

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { CloudProvider } from '../types/providers';
@@ -211,6 +211,9 @@ export class AppConfigManager {
       }
 
       writeFileSync(path, JSON.stringify(config, null, 2));
+      // Set restrictive permissions (owner read/write only) for security
+      // Config files may contain sensitive credentials
+      chmodSync(path, 0o600);
       console.log(`Configuration saved to ${path}`);
     } catch (error) {
       throw new Error(`Failed to save configuration: ${(error as Error).message}`);
@@ -363,9 +366,10 @@ export class AppConfigManager {
    */
   static resolveConfig(
     cliOptions: Partial<ResolvedConfig>,
-    configProfileName?: string
+    configProfileName?: string,
+    configFilePath?: string
   ): ResolvedConfig {
-    const config = this.loadConfiguration();
+    const config = this.loadConfiguration(configFilePath);
     const profile = configProfileName ? config.profiles[configProfileName] : null;
 
     // Resolve environment variable references in config values
