@@ -30,6 +30,8 @@ import { WebhookManager, WebhookEvent, WebhookDelivery } from './api/webhook-man
 import { CostAnomalyDetectorAI, AIAnomalyDetectionConfiguration, AIAnomaly, AIAnomalyInput, AIAnomalyDetectionReport } from './analytics/anomaly-detector';
 import { AdvancedVisualizationEngine, ChartConfiguration, Dashboard, ChartData, OutputFormat, VisualizationConfiguration } from './visualization/dashboard-engine';
 import { MultiCloudDashboard } from './visualization/multi-cloud-dashboard';
+import { StructuredLogger, initializeLogger, parseLogLevel, parseLogOutputs, LogLevel, AuditEventType as LogAuditEventType } from './logging/structured-logger';
+import { CostAllocationEngine, formatChargebackReport, exportChargebackCsv, AllocationConfig } from './allocation/chargeback';
 import chalk from 'chalk';
 import { join } from 'path';
 
@@ -162,6 +164,23 @@ program
   .option('--integrations-test [integration]', 'Test connection to a specific integration')
   .option('--integrations-export [format]', 'Export integration report (json, csv)')
   .option('--integrations-category [category]', 'Filter integrations by category (ci_cd, monitoring, collaboration)')
+  // Structured Logging (Issue #32)
+  .option('--log-level [level]', 'Log level: error, warn, info, debug, trace (default: info)', 'info')
+  .option('--log-format [format]', 'Log format: json, pretty, compact (default: pretty)', 'pretty')
+  .option('--log-output [outputs]', 'Log outputs: console,file:./app.log,http://logger.example.com')
+  .option('--enable-audit', 'Enable audit logging for compliance')
+  .option('--audit-output [path]', 'Audit log output path')
+  .option('--quiet', 'Suppress all non-error output')
+  .option('--verbose', 'Enable verbose debug logging')
+  .option('--enable-profiling', 'Enable performance profiling')
+  // Cost Allocation and Chargeback (Issue #30)
+  .option('--chargeback', 'Generate cost allocation and chargeback report')
+  .option('--allocate-by [dimensions]', 'Allocate costs by dimensions: team,project,environment,department,costCenter')
+  .option('--chargeback-export [format]', 'Export chargeback report (json, csv, xlsx)')
+  .option('--tag-compliance', 'Show resource tagging compliance analysis')
+  .option('--untagged-resources', 'List untagged resources with their costs')
+  .option('--allocation-config [path]', 'Path to allocation configuration file')
+  .option('--handle-untagged [strategy]', 'Handle untagged resources: shared, unassigned, proportional')
   // Advanced analytics and business intelligence
   .option('--analytics', 'Generate comprehensive cost intelligence report')
   .option('--analytics-executive', 'Generate executive summary report')
@@ -540,6 +559,26 @@ if (options.help) {
   program.help();
   process.exit(0);
 }
+
+// Initialize structured logging (Issue #32)
+const logLevel = options.verbose ? LogLevel.DEBUG : (options.quiet ? LogLevel.ERROR : parseLogLevel(options.logLevel || 'info'));
+const logOutputs = options.logOutput ? parseLogOutputs(options.logOutput) : [{ type: 'console' as const }];
+const logger = initializeLogger({
+  level: logLevel,
+  format: (options.logFormat as 'json' | 'pretty' | 'compact') || 'pretty',
+  outputs: logOutputs,
+  enableAudit: options.enableAudit || false,
+  auditOutput: options.auditOutput,
+  enablePerformance: options.enableProfiling || false,
+  silent: options.quiet || false,
+});
+
+// Log startup
+logger.info('infra-cost CLI started', {
+  component: 'main',
+  operation: 'startup',
+  version: packageJson.version,
+});
 
 // Handle configuration management commands
 if (options.configInit || options.configValidate || options.configSample) {
@@ -1275,6 +1314,163 @@ if (options.optimize || options.optimizePlan || options.optimizeStats || options
   }
 
   console.log(''); // Add spacing
+}
+
+// Handle cost allocation and chargeback (Issue #30)
+if (options.chargeback || options.allocateBy || options.tagCompliance || options.untaggedResources || options.chargebackExport) {
+  try {
+    logger.info('Starting cost allocation analysis', { operation: 'chargeback' });
+
+    console.log('💰 Analyzing cost allocation and tagging compliance...');
+    console.log('');
+
+    // Build allocation configuration
+    const allocationConfig: Partial<AllocationConfig> = {
+      dimensions: options.allocateBy
+        ? options.allocateBy.split(',').map((d: string) => d.trim())
+        : ['team', 'project', 'environment'],
+      handleUntagged: options.handleUntagged || 'unassigned',
+      includeSharedCosts: true,
+      sharedCostAllocation: 'proportional',
+    };
+
+    // Load configuration from file if provided
+    if (options.allocationConfig) {
+      try {
+        const configContent = require('fs').readFileSync(options.allocationConfig, 'utf8');
+        const fileConfig = JSON.parse(configContent);
+        Object.assign(allocationConfig, fileConfig);
+        console.log(`📋 Loaded allocation config from: ${options.allocationConfig}`);
+      } catch (err) {
+        console.warn(`⚠️  Could not load allocation config: ${(err as Error).message}`);
+      }
+    }
+
+    // Initialize allocation engine
+    const allocationEngine = new CostAllocationEngine(allocationConfig);
+
+    // Get inventory and cost data
+    console.log('📊 Fetching resource inventory...');
+    const inventory = await provider.getInventory();
+
+    console.log('💵 Fetching cost breakdown...');
+    const costBreakdown = await provider.getCostBreakdown();
+
+    // Run analysis
+    console.log('⚙️  Running cost allocation analysis...');
+    const report = await allocationEngine.analyze(provider, inventory, costBreakdown);
+
+    // Log audit event
+    logger.audit(LogAuditEventType.REPORT_GENERATED, {
+      action: 'chargeback_report_generated',
+      resource: { type: 'report', id: 'chargeback', region: options.region },
+      result: 'success',
+      metadata: {
+        totalCost: report.totalCost,
+        allocationAccuracy: report.allocationAccuracy,
+        dimensions: allocationConfig.dimensions,
+      },
+    });
+
+    // Handle tag compliance view
+    if (options.tagCompliance) {
+      console.log('');
+      console.log('═'.repeat(70));
+      console.log('  TAGGING COMPLIANCE ANALYSIS');
+      console.log('═'.repeat(70));
+      console.log('');
+      console.log(`Total Resources:      ${report.taggingCompliance.totalResources}`);
+      console.log(`Fully Compliant:      ${report.taggingCompliance.compliantResources} (${report.taggingCompliance.compliancePercentage.toFixed(1)}%)`);
+      console.log(`Partially Compliant:  ${report.taggingCompliance.partiallyCompliantResources}`);
+      console.log(`Non-Compliant:        ${report.taggingCompliance.nonCompliantResources}`);
+      console.log('');
+      console.log('Tag Coverage:');
+      for (const [tag, coverage] of Object.entries(report.taggingCompliance.tagCoverage)) {
+        const bar = '█'.repeat(Math.floor(coverage / 5)) + '░'.repeat(20 - Math.floor(coverage / 5));
+        console.log(`  ${tag.padEnd(15)} ${bar} ${coverage.toFixed(1)}%`);
+      }
+      console.log('');
+
+      if (report.recommendations.length > 0) {
+        console.log('Top Recommendations:');
+        for (const rec of report.recommendations.slice(0, 5)) {
+          const priorityIcon = rec.priority === 'high' ? '🔴' : rec.priority === 'medium' ? '🟡' : '🟢';
+          console.log(`  ${priorityIcon} ${rec.reason}`);
+          console.log(`     Resource: ${rec.resourceId}`);
+        }
+      }
+      process.exit(0);
+    }
+
+    // Handle untagged resources view
+    if (options.untaggedResources) {
+      console.log('');
+      console.log('═'.repeat(70));
+      console.log('  UNTAGGED RESOURCES');
+      console.log('═'.repeat(70));
+      console.log('');
+
+      if (report.untaggedResources.length === 0) {
+        console.log('✅ All resources are properly tagged!');
+      } else {
+        const totalUntaggedCost = report.untaggedResources.reduce((sum, r) => sum + r.monthlyCost, 0);
+        console.log(`Found ${report.untaggedResources.length} untagged resources`);
+        console.log(`Total untagged cost: $${totalUntaggedCost.toFixed(2)}/month`);
+        console.log('');
+        console.log(' #  │ Resource                          │ Type         │ Monthly Cost');
+        console.log('────┼───────────────────────────────────┼──────────────┼─────────────');
+
+        report.untaggedResources.slice(0, 20).forEach((resource, index) => {
+          const name = resource.resourceName.length > 31
+            ? resource.resourceName.substring(0, 28) + '...'
+            : resource.resourceName.padEnd(31);
+          const type = resource.resourceType.substring(0, 12).padEnd(12);
+          const cost = `$${resource.monthlyCost.toFixed(2)}`.padStart(11);
+          console.log(` ${(index + 1).toString().padStart(2)} │ ${name} │ ${type} │ ${cost}`);
+        });
+
+        if (report.untaggedResources.length > 20) {
+          console.log(`     ... and ${report.untaggedResources.length - 20} more untagged resources`);
+        }
+      }
+      console.log('');
+      process.exit(0);
+    }
+
+    // Handle export
+    if (options.chargebackExport) {
+      const format = options.chargebackExport.toLowerCase();
+      const filename = `chargeback-report-${Date.now()}.${format}`;
+
+      if (format === 'json') {
+        require('fs').writeFileSync(filename, JSON.stringify(report, null, 2));
+        console.log(`✅ Chargeback report exported to ${filename}`);
+      } else if (format === 'csv') {
+        const csvContent = exportChargebackCsv(report);
+        require('fs').writeFileSync(filename, csvContent);
+        console.log(`✅ Chargeback report exported to ${filename}`);
+      } else {
+        console.log(`❌ Unsupported export format: ${format}. Use 'json' or 'csv'.`);
+      }
+      process.exit(0);
+    }
+
+    // Default: Show full report
+    console.log(formatChargebackReport(report));
+
+    // Show tips
+    console.log('💡 Tips:');
+    console.log('   • Use --tag-compliance for detailed tagging analysis');
+    console.log('   • Use --untagged-resources to see resources without required tags');
+    console.log('   • Use --allocate-by team,project to customize allocation dimensions');
+    console.log('   • Use --chargeback-export csv to export for finance tools');
+    console.log('');
+
+  } catch (error) {
+    logger.error('Cost allocation analysis failed', { error: error as Error });
+    console.error(`❌ Failed to generate chargeback report: ${(error as Error).message}`);
+    process.exit(1);
+  }
 }
 
 // Handle audit and compliance requests
