@@ -4785,16 +4785,6 @@ if (options.anomalyDetect || options.anomalyReport || options.anomalyConfig || o
       console.log(`   🎯 Detection Accuracy: ${(report.summary.detectionAccuracy * 100).toFixed(1)}%`);
       console.log(`   📊 False Positive Rate: ${(report.summary.falsePositiveRate * 100).toFixed(1)}%`);
 
-      if (report.modelPerformance) {
-        console.log('\n🧠 AI Model Performance:');
-        console.log(`   🎯 Accuracy: ${(report.modelPerformance.accuracy * 100).toFixed(1)}%`);
-        console.log(`   📈 Precision: ${(report.modelPerformance.precision * 100).toFixed(1)}%`);
-        console.log(`   📊 Recall: ${(report.modelPerformance.recall * 100).toFixed(1)}%`);
-        console.log(`   🔢 F1 Score: ${(report.modelPerformance.f1Score * 100).toFixed(1)}%`);
-        console.log(`   🤖 Model Version: ${report.modelPerformance.modelVersion}`);
-        console.log(`   📚 Training Data: ${report.modelPerformance.trainingDataSize.toLocaleString()} samples`);
-      }
-
       if (report.trends.length > 0) {
         console.log('\n📈 Anomaly Trends:');
         report.trends.forEach(trend => {
