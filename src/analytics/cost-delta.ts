@@ -71,7 +71,12 @@ const DEFAULT_OPTIONS: CostDeltaOptions = {
 };
 
 /**
- * Calculate delta between two cost values
+ * Compute the dollar delta, percent change, and trend between two cost values.
+ *
+ * @returns An object with:
+ * - `absolute`: the dollar difference (current - previous).
+ * - `percentage`: percent change relative to `previous` (if `previous` is 0, yields `100` when `current` > 0, otherwise `0`).
+ * - `trend`: `'stable'` when the absolute percent change is less than 1, `'increasing'` when `absolute` > 0, otherwise `'decreasing'`.
  */
 export function calculateDelta(current: number, previous: number): CostDelta {
   const absolute = current - previous;
@@ -101,7 +106,20 @@ export function calculateDelta(current: number, previous: number): CostDelta {
 }
 
 /**
- * Calculate cost delta analysis from raw cost data
+ * Analyze raw cost-by-service data and produce a CostDeltaAnalysis covering totals, per-service deltas, top changes, and insights.
+ *
+ * Aggregates costs into periods (yesterday, previous day, last 7 days, previous 7 days, this month, last month), computes per-service day-over-day deltas, ranks top increases and decreases, and derives insights such as volatility score, anomaly detection, and significant changes.
+ *
+ * @param rawCostData - Mapping of service name to an object whose keys are date strings (ISO YYYY-MM-DD) and values are costs (number or numeric string).
+ * @param options - Optional analysis controls. Recognized fields:
+ *   - topN: number of top services to return for increases/decreases (default 5)
+ *   - significantChangeThreshold: percentage threshold to mark a service change as significant (default 10)
+ *   - includeZeroCost: whether to include services with zero cost in the analysis (default false)
+ * @returns A CostDeltaAnalysis containing:
+ *   - totals for yesterday, last7Days, and thisMonth (each with current, previous, and delta)
+ *   - an array of per-service ServiceCostDelta entries
+ *   - topIncreases and topDecreases arrays limited by `topN`
+ *   - insights including `volatilityScore`, `anomalyDetected`, and up to five `significantChanges`
  */
 export function analyzeCostDelta(
   rawCostData: RawCostByService | RawCostData,
@@ -257,7 +275,11 @@ export function analyzeCostDelta(
 }
 
 /**
- * Enhance TotalCosts with delta information
+ * Attach cost-delta analysis to a TotalCosts object.
+ *
+ * @param costs - The aggregated cost totals to augment
+ * @param rawCostData - Raw per-service cost data used to compute the delta analysis
+ * @returns The original `costs` object augmented with a `delta` property containing the computed `CostDeltaAnalysis`
  */
 export function enhanceCostsWithDelta(
   costs: TotalCosts,
@@ -272,7 +294,10 @@ export function enhanceCostsWithDelta(
 }
 
 /**
- * Format delta for display
+ * Produce a concise, human-readable representation of a cost delta.
+ *
+ * @param delta - The cost delta containing `absolute`, `percentage`, and `trend` fields
+ * @returns A formatted string combining a trend arrow, dollar change, and percentage (e.g. "↑ +$12.34 (+10.0%)" or "→ $0.00 (0%)")
  */
 export function formatDelta(delta: CostDelta): string {
   const sign = delta.absolute >= 0 ? '+' : '-';
@@ -286,7 +311,10 @@ export function formatDelta(delta: CostDelta): string {
 }
 
 /**
- * Format delta for display with color indicators (for terminal)
+ * Produce a terminal-friendly text snippet and a color label representing a cost delta.
+ *
+ * @param delta - The cost delta to format.
+ * @returns An object with `text` (arrow plus percentage or `0%`) and `color` where `red` indicates an increase, `green` indicates a decrease, and `gray` indicates stable.
  */
 export function formatDeltaWithColor(delta: CostDelta): { text: string; color: 'green' | 'red' | 'gray' } {
   const sign = delta.absolute >= 0 ? '+' : '-';
@@ -309,7 +337,10 @@ export function formatDeltaWithColor(delta: CostDelta): { text: string; color: '
 }
 
 /**
- * Get delta indicator emoji
+ * Selects an emoji that represents the delta's trend and magnitude.
+ *
+ * @param delta - The cost delta whose `trend` and `percentage` determine the emoji
+ * @returns An emoji representing the delta: '➡️' for stable; for increasing use '↗️' (small), '📈' (percentage > 20%), '🔺' (percentage > 50%); for decreasing use '↘️' (small), '📉' (percentage < -20%), '🔻' (percentage < -50%).
  */
 export function getDeltaEmoji(delta: CostDelta): string {
   if (delta.trend === 'stable') return '➡️';
@@ -324,19 +355,34 @@ export function getDeltaEmoji(delta: CostDelta): string {
   return '↘️';
 }
 
-// Helper functions
+/**
+ * Format a Date as a UTC date string in `YYYY-MM-DD` form.
+ *
+ * @param date - The date to format
+ * @returns The UTC date formatted as `YYYY-MM-DD`
+ */
 
 function formatDate(date: Date): string {
   return date.toISOString().split('T')[0];
 }
 
 /**
- * Normalize a date to start of day in UTC for consistent comparisons
+ * Normalize a Date to the start of its UTC day.
+ *
+ * @param date - The Date to normalize
+ * @returns A new Date representing 00:00:00 UTC on the same UTC year, month, and day as `date`
  */
 function normalizeToUTCDay(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
+/**
+ * Determines whether two Date objects represent the same calendar day using UTC.
+ *
+ * @param date1 - The first date to compare (compared by UTC year, month, and day)
+ * @param date2 - The second date to compare (compared by UTC year, month, and day)
+ * @returns `true` if both dates fall on the same UTC calendar day, `false` otherwise
+ */
 function isSameDay(date1: Date, date2: Date): boolean {
   // Use UTC methods for consistent timezone-independent comparison
   return (
@@ -346,6 +392,11 @@ function isSameDay(date1: Date, date2: Date): boolean {
   );
 }
 
+/**
+ * Computes a volatility score for a set of service cost deltas.
+ *
+ * @param serviceDeltas - Array of service cost delta objects to analyze.
+ * @returns An integer score from 0 to 100 where higher values indicate greater variability in percentage changes across services; 50 corresponds approximately to a 20% standard deviation.
 function calculateVolatilityScore(serviceDeltas: ServiceCostDelta[]): number {
   if (serviceDeltas.length === 0) return 0;
 
@@ -367,7 +418,10 @@ function calculateVolatilityScore(serviceDeltas: ServiceCostDelta[]): number {
 }
 
 /**
- * Generate delta summary for Slack/text output
+ * Builds a multi-line human-readable summary of a cost delta analysis suitable for Slack or plain-text output.
+ *
+ * @param deltaAnalysis - Analysis results containing totals, per-service deltas, and insights used to compose the summary
+ * @returns A newline-separated string that includes yesterday's total with an emoji and formatted delta, a list of significant changes (if any), the top cost increases and decreases (up to three each), and an anomaly warning line when an anomaly is detected
  */
 export function generateDeltaSummary(deltaAnalysis: CostDeltaAnalysis): string {
   const { totals, topIncreases, topDecreases, insights } = deltaAnalysis;

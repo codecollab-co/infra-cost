@@ -615,11 +615,22 @@ export class AppConfigManager {
   }
 }
 
-// CLI helper functions
+/**
+ * Initialize a sample InfraCostConfiguration file at the specified path.
+ *
+ * @param configPath - Filesystem path to write the sample configuration; uses the default user config location when omitted
+ * @param force - When `true`, overwrite an existing configuration file at `configPath`; when `false`, do not overwrite existing files
+ */
 export function configInit(configPath?: string, force: boolean = false): void {
   AppConfigManager.initializeConfig(configPath, force);
 }
 
+/**
+ * Validate the application configuration file and report the results to the console.
+ *
+ * @param configPath - Optional path to a specific configuration file; when omitted the manager searches the standard config locations
+ * @returns `true` if the configuration is valid, `false` otherwise
+ */
 export function configValidate(configPath?: string): boolean {
   try {
     const config = AppConfigManager.loadConfiguration(configPath);
@@ -639,6 +650,12 @@ export function configValidate(configPath?: string): boolean {
   }
 }
 
+/**
+ * Prints configured profile names and their provider and region to the console.
+ *
+ * If no profiles are configured, prints a message indicating that and guidance
+ * for creating a sample configuration.
+ */
 export function configListProfiles(): void {
   const profiles = AppConfigManager.listProfiles();
 
@@ -657,6 +674,11 @@ export function configListProfiles(): void {
   });
 }
 
+/**
+ * Prints the resolved application configuration as formatted JSON to standard output.
+ *
+ * @param configPath - Optional path to a configuration file; when provided, that file is loaded instead of searching default locations
+ */
 export function configShow(configPath?: string): void {
   const config = AppConfigManager.loadConfiguration(configPath);
   console.log(JSON.stringify(config, null, 2));

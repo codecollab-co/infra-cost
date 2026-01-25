@@ -263,6 +263,11 @@ program
   .option('-h, --help', 'Get the help of the CLI')
   .parse(process.argv);
 
+/**
+ * Orchestrates CLI option parsing, configuration resolution, provider initialization, and execution of requested commands and workflows.
+ *
+ * This is the single entry point for the CLI: it applies app configuration and SSO handling, constructs and validates cloud provider clients, retrieves account and cost data, and routes to feature-specific workflows such as inventory, forecasting, optimization, monitoring, analytics, auditing/compliance, rightsizing, sustainability and security analyses, integrations management, anomaly detection, visualization/dashboarding, enterprise/multi-tenant operations, and API/webhook management. It also handles exports, reporting, and notification delivery as driven by CLI options.
+ */
 async function main() {
 
 type OptionsType = {
