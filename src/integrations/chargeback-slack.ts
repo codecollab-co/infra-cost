@@ -1,0 +1,264 @@
+/**
+ * Chargeback Slack Integration
+ * Sprint 6: UX Improvements
+ *
+ * Enables sending cost allocation/chargeback reports to Slack
+ * for finance teams and stakeholders.
+ */
+
+// Chargeback Report Interface (matches allocation/chargeback.ts)
+export interface ChargebackSlackReport {
+  period: {
+    start: Date;
+    end: Date;
+    label: string;
+  };
+  totalCost: number;
+  allocatedCost: number;
+  unallocatedCost: number;
+  allocationAccuracy: number;
+  allocations: Record<string, AllocationSummary[]>;
+  taggingCompliance: {
+    compliancePercentage: number;
+    totalResources: number;
+    compliantResources: number;
+  };
+  generatedAt: Date;
+}
+
+export interface AllocationSummary {
+  dimension: string;
+  value: string;
+  totalCost: number;
+  percentage: number;
+  trend?: {
+    changePercent: number;
+    trend: 'up' | 'down' | 'stable';
+  };
+}
+
+export interface ChargebackSlackOptions {
+  token: string;
+  channel: string;
+  includeDetails: boolean;
+  mentionOnHighCosts?: string[];  // User IDs to mention
+  costThreshold?: number;          // Threshold for mentions
+}
+
+/**
+ * Format chargeback report for Slack
+ */
+export function formatChargebackSlackMessage(
+  report: ChargebackSlackReport,
+  options: Partial<ChargebackSlackOptions> = {}
+): object {
+  const blocks: any[] = [];
+
+  // Header
+  blocks.push({
+    type: 'header',
+    text: {
+      type: 'plain_text',
+      text: '💰 Cost Allocation & Chargeback Report',
+      emoji: true,
+    },
+  });
+
+  // Period and summary
+  blocks.push({
+    type: 'section',
+    text: {
+      type: 'mrkdwn',
+      text: `*Period:* ${report.period.label}\n*Generated:* ${report.generatedAt.toLocaleDateString()}`,
+    },
+  });
+
+  blocks.push({ type: 'divider' });
+
+  // Cost Summary
+  blocks.push({
+    type: 'section',
+    fields: [
+      {
+        type: 'mrkdwn',
+        text: `*Total Cost*\n$${report.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      },
+      {
+        type: 'mrkdwn',
+        text: `*Allocated*\n$${report.allocatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${report.allocationAccuracy.toFixed(1)}%)`,
+      },
+      {
+        type: 'mrkdwn',
+        text: `*Unallocated*\n$${report.unallocatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      },
+      {
+        type: 'mrkdwn',
+        text: `*Tagging Compliance*\n${report.taggingCompliance.compliancePercentage.toFixed(1)}%`,
+      },
+    ],
+  });
+
+  blocks.push({ type: 'divider' });
+
+  // Allocations by dimension
+  for (const [dimension, allocations] of Object.entries(report.allocations)) {
+    // Section header
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*Cost by ${dimension.charAt(0).toUpperCase() + dimension.slice(1)}:*`,
+      },
+    });
+
+    // Top allocations
+    const topAllocations = allocations.slice(0, 5);
+    let allocationText = '';
+
+    for (const alloc of topAllocations) {
+      const trendEmoji = alloc.trend?.trend === 'up' ? '🔺' :
+                         alloc.trend?.trend === 'down' ? '🔻' : '➡️';
+      const trendText = alloc.trend ?
+        ` ${trendEmoji} ${alloc.trend.changePercent >= 0 ? '+' : ''}${alloc.trend.changePercent.toFixed(1)}%` : '';
+
+      allocationText += `• *${alloc.value}*: $${alloc.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${alloc.percentage.toFixed(1)}%)${trendText}\n`;
+    }
+
+    if (allocations.length > 5) {
+      allocationText += `_...and ${allocations.length - 5} more_`;
+    }
+
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: allocationText,
+      },
+    });
+  }
+
+  // Tagging compliance warning
+  if (report.taggingCompliance.compliancePercentage < 80) {
+    blocks.push({ type: 'divider' });
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `⚠️ *Tagging Compliance Alert*\nOnly ${report.taggingCompliance.compliancePercentage.toFixed(1)}% of resources are properly tagged. ${report.taggingCompliance.totalResources - report.taggingCompliance.compliantResources} resources need attention.`,
+      },
+    });
+  }
+
+  // Mention users if cost exceeds threshold
+  if (options.mentionOnHighCosts && options.costThreshold && report.totalCost > options.costThreshold) {
+    const mentions = options.mentionOnHighCosts.map(id => `<@${id}>`).join(' ');
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `🚨 *High Cost Alert* - Total cost exceeds $${options.costThreshold.toLocaleString()}\n${mentions}`,
+      },
+    });
+  }
+
+  // Footer
+  blocks.push({
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: `Generated by infra-cost | Run \`infra-cost --chargeback\` for full report`,
+      },
+    ],
+  });
+
+  return { blocks };
+}
+
+/**
+ * Format a simple text summary for Slack
+ */
+export function formatChargebackSlackSummary(report: ChargebackSlackReport): string {
+  let summary = `💰 *Cost Allocation Report - ${report.period.label}*\n`;
+  summary += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  summary += `📊 *Summary*\n`;
+  summary += `• Total Cost: *$${report.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*\n`;
+  summary += `• Allocated: $${report.allocatedCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${report.allocationAccuracy.toFixed(1)}%)\n`;
+  summary += `• Tagging Compliance: ${report.taggingCompliance.compliancePercentage.toFixed(1)}%\n\n`;
+
+  // Add top allocations for first dimension
+  const firstDimension = Object.keys(report.allocations)[0];
+  if (firstDimension) {
+    summary += `📋 *Top by ${firstDimension}*\n`;
+    const allocations = report.allocations[firstDimension].slice(0, 5);
+    for (const alloc of allocations) {
+      summary += `• ${alloc.value}: $${alloc.totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    }
+  }
+
+  return summary;
+}
+
+/**
+ * Send chargeback report to Slack
+ */
+export async function sendChargebackToSlack(
+  report: ChargebackSlackReport,
+  options: ChargebackSlackOptions
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const fetch = (await import('node-fetch')).default;
+
+    const message = options.includeDetails
+      ? formatChargebackSlackMessage(report, options)
+      : { text: formatChargebackSlackSummary(report) };
+
+    const response = await fetch('https://slack.com/api/chat.postMessage', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${options.token}`,
+      },
+      body: JSON.stringify({
+        channel: options.channel,
+        ...message,
+      }),
+    });
+
+    const result = await response.json() as any;
+
+    if (result.ok) {
+      return { ok: true };
+    } else {
+      return { ok: false, error: result.error };
+    }
+  } catch (error) {
+    return { ok: false, error: (error as Error).message };
+  }
+}
+
+/**
+ * Format chargeback alert for Slack
+ */
+export function formatChargebackAlert(
+  dimension: string,
+  value: string,
+  currentCost: number,
+  previousCost: number,
+  threshold: number
+): object {
+  const change = currentCost - previousCost;
+  const changePercent = previousCost > 0 ? (change / previousCost) * 100 : 100;
+
+  return {
+    blocks: [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `🚨 *Cost Alert: ${dimension} - ${value}*\n\nCost increased by *${changePercent.toFixed(1)}%* (threshold: ${threshold}%)\n• Previous: $${previousCost.toFixed(2)}\n• Current: $${currentCost.toFixed(2)}\n• Change: +$${change.toFixed(2)}`,
+        },
+      },
+    ],
+  };
+}

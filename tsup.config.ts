@@ -12,5 +12,28 @@ export default defineConfig([
     minify: false,
     shims: false,
     dts: false,
+    external: [
+      // AWS SDK clients
+      '@aws-sdk/client-cost-explorer',
+      '@aws-sdk/client-iam',
+      '@aws-sdk/client-sts',
+      '@aws-sdk/client-ec2',
+      '@aws-sdk/client-s3',
+      '@aws-sdk/client-rds',
+      '@aws-sdk/client-lambda',
+      '@aws-sdk/client-budgets',
+      '@aws-sdk/client-organizations',
+      '@aws-sdk/credential-providers',
+      '@aws-sdk/types',
+      // Third-party dependencies
+      'chalk',
+      'ora',
+      'node-fetch',
+      'commander',
+      'cli-progress',
+      'moment',
+      'exceljs',
+      'puppeteer',
+    ],
   },
 ]);
