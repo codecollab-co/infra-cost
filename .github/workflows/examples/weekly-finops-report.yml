@@ -1,0 +1,33 @@
+# Example: Weekly FinOps Report
+# Comprehensive weekly analysis with forecasting and optimization recommendations
+
+name: Weekly FinOps Report
+
+on:
+  schedule:
+    # Run every Monday at 8 AM UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  finops-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate FinOps Report
+        uses: codecollab-co/infra-cost@v0.3.0
+        with:
+          provider: aws
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          analysis-type: finops
+          slack-webhook: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Generate Forecast
+        uses: codecollab-co/infra-cost@v0.3.0
+        with:
+          provider: aws
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          analysis-type: forecast
+          forecast-days: '30'
+          output-format: json
