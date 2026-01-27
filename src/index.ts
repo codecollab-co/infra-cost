@@ -13,7 +13,7 @@ import { CloudProviderFactory } from './providers/factory';
 import { CloudProvider, ProviderConfig, InventoryFilters, ResourceType, InventoryExportOptions } from './types/providers';
 import { CrossCloudOptimizer } from './optimization/cross-cloud-optimizer';
 import { TotalCosts } from './cost';
-import { CostMonitor, AlertThresholdType, NotificationChannel } from './monitoring/cost-monitor';
+import { CostMonitor, AlertThresholdType, NotificationChannelType, AlertSeverity } from './monitoring/cost-monitor';
 import { DependencyMapper, TaggingStandardsAnalyzer } from './analytics/dependency-mapper';
 import { MonitoringConfigManager, initializeMonitoringConfig, validateMonitoringConfig } from './monitoring/config';
 import { CostForecastingEngine } from './analytics/cost-forecasting';
@@ -3768,7 +3768,7 @@ if (options.monitor || options.monitorSetup || options.monitorStart || options.m
         builder.addAlert('cli-alert', {
           thresholdType,
           thresholdValue,
-          severity: 'MEDIUM',
+          severity: AlertSeverity.MEDIUM,
           enabled: true,
           cooldownMinutes: 15,
           description: `CLI-configured ${thresholdType.toLowerCase()} alert`
@@ -3777,29 +3777,30 @@ if (options.monitor || options.monitorSetup || options.monitorStart || options.m
 
       // Add notification channel if specified
       if (options.alertChannel) {
-        const channel = options.alertChannel.toLowerCase() as NotificationChannel;
+        const channelStr = options.alertChannel.toUpperCase();
+        const channel = channelStr as NotificationChannelType;
         const channelConfig: any = { type: channel };
 
         // Add channel-specific configuration based on environment variables
-        switch (channel) {
-          case 'slack':
+        switch (channelStr) {
+          case 'SLACK':
             channelConfig.webhookUrl = process.env.SLACK_WEBHOOK_URL || options.slackToken;
             channelConfig.channel = process.env.SLACK_CHANNEL || options.slackChannel;
             break;
-          case 'email':
+          case 'EMAIL':
             channelConfig.to = process.env.ALERT_EMAIL_TO;
             channelConfig.from = process.env.ALERT_EMAIL_FROM;
             break;
-          case 'webhook':
+          case 'WEBHOOK':
             channelConfig.url = process.env.ALERT_WEBHOOK_URL;
             break;
-          case 'teams':
+          case 'TEAMS':
             channelConfig.webhookUrl = process.env.TEAMS_WEBHOOK_URL;
             break;
-          case 'sms':
+          case 'SMS':
             channelConfig.phoneNumber = process.env.ALERT_PHONE_NUMBER;
             break;
-          case 'discord':
+          case 'DISCORD':
             channelConfig.webhookUrl = process.env.DISCORD_WEBHOOK_URL;
             break;
         }
@@ -4350,8 +4351,8 @@ if (options.enterprise || options.tenants || options.tenantCreate || options.ten
         console.log(`   🏢 Tenant: ${user.tenantId}`);
         console.log(`   🔑 API Keys: ${user.apiKeys?.length || 0}`);
         console.log(`   📅 Created: ${new Date(user.createdAt).toLocaleDateString()}`);
-        if (user.lastLoginAt) {
-          console.log(`   🕐 Last Login: ${new Date(user.lastLoginAt).toLocaleDateString()}`);
+        if (user.lastLogin) {
+          console.log(`   🕐 Last Login: ${new Date(user.lastLogin).toLocaleDateString()}`);
         }
         console.log('');
       });
@@ -4393,7 +4394,7 @@ if (options.enterprise || options.tenants || options.tenantCreate || options.ten
       const [userId, keyName] = options.apiKeyGenerate.split(':');
       console.log(`🔑 Generating API key: ${keyName || 'default'} for user ${userId}`);
 
-      const apiKey = await multiTenantManager.generateAPIKey(userId, keyName || 'default');
+      const apiKey = await multiTenantManager.generateApiKey(userId, keyName || 'default');
       console.log('✅ API key generated successfully!');
       console.log(`   🔑 API Key: ${apiKey.key}`);
       console.log(`   📛 Name: ${apiKey.name}`);
@@ -4497,7 +4498,7 @@ if (options.enterprise || options.tenants || options.tenantCreate || options.ten
           role: u.role,
           status: u.status,
           createdAt: u.createdAt,
-          lastLoginAt: u.lastLoginAt
+          lastLogin: u.lastLogin
         }))
       };
 

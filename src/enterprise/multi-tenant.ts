@@ -1272,19 +1272,28 @@ export class MultiTenantManager extends EventEmitter {
   async getPlatformMetrics(): Promise<{
     totalTenants: number;
     activeTenants: number;
+    suspendedTenants?: number;
     totalUsers: number;
     activeUsers: number;
+    dailyActiveUsers?: number;
+    newUsersThisMonth?: number;
     totalRevenue: number;
+    revenueGrowthRate?: number;
+    enterpriseRevenue?: number;
+    averageRevenuePerUser?: number;
     subscriptionsByPlan: Record<string, number>;
     utilizationMetrics: any;
     totalAPIKeys?: number;
     monthlyGrowthRate?: number;
     healthScore?: number;
+    averageResponseTime?: number;
+    uptime?: number;
     subscriptionDistribution?: any;
     totalCostAnalyses?: number;
     totalReports?: number;
     totalAPIRequests?: number;
     storageUsage?: number;
+    alerts?: any;
   }> {
     const tenants = this.getTenants();
     const users = this.getUsers();
