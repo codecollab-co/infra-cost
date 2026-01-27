@@ -21,7 +21,7 @@ import { AutomatedOptimizer, OptimizationRule, OptimizationPlan } from './optimi
 import { AuditLogger, AuditEventType, AuditSeverity, ComplianceFramework as AuditComplianceFramework } from './audit/audit-logger';
 import { RightsizingEngine, RightsizingRecommendation } from './analytics/rightsizing-engine';
 import { SustainabilityAnalyzer, SustainabilityMetrics, SustainabilityConfiguration } from './analytics/sustainability-analyzer';
-import { SecurityCostAnalyzer, SecurityCostMetrics, SecurityCostConfiguration, ComplianceFramework } from './analytics/security-cost-analyzer';
+import { SecurityCostAnalyzer, SecurityCostMetrics, SecurityCostConfiguration } from './analytics/security-cost-analyzer';
 import { ToolIntegrationsManager, ToolIntegration, IntegrationCategory, IntegrationStatus, IntegrationConfig } from './integrations/tool-integrations';
 import { AdvancedCostAnalytics, CostIntelligenceReport, DashboardConfiguration, ExecutiveSummary, CohortAnalysis, UnitEconomicsReport } from './analytics/business-intelligence';
 import { MultiTenantManager, Tenant, User, SubscriptionPlan, UserRole, EnterpriseFeature, MultiTenantMetrics } from './enterprise/multi-tenant';
@@ -1730,7 +1730,7 @@ if (options.auditQuery || options.auditExport || options.auditReport || options.
 
       // Log the compliance check event
       await auditLogger.logComplianceCheck(
-        framework as ComplianceFramework,
+        framework as AuditComplianceFramework,
         ['access_control', 'data_protection', 'audit_logging'],
         [], // No violations for demo
         {
@@ -1780,7 +1780,7 @@ if (options.auditQuery || options.auditExport || options.auditReport || options.
 
       try {
         const report = await auditLogger.generateComplianceReport(
-          framework as ComplianceFramework,
+          framework as AuditComplianceFramework,
           startDate,
           endDate
         );
@@ -1947,7 +1947,7 @@ if (options.auditQuery || options.auditExport || options.auditReport || options.
         }
       },
       compliance: {
-        frameworks: [ComplianceFramework.SOC2],
+        frameworks: [AuditComplianceFramework.SOC2],
         controlsAffected: ['audit_logging'],
         riskLevel: 'low',
         requiresReview: false
@@ -2499,12 +2499,12 @@ if (options.securityAnalysis || options.securityVulnerabilities || options.secur
     if (options.securityCompliance) {
       const framework = options.securityCompliance.toUpperCase();
       const frameworkMap = {
-        'SOC2': ComplianceFramework.SOC2,
-        'ISO27001': ComplianceFramework.ISO27001,
-        'PCI_DSS': ComplianceFramework.PCI_DSS,
-        'HIPAA': ComplianceFramework.HIPAA,
-        'GDPR': ComplianceFramework.GDPR,
-        'NIST': ComplianceFramework.NIST
+        'SOC2': AuditComplianceFramework.SOC2,
+        'ISO27001': AuditComplianceFramework.ISO27001,
+        'PCI_DSS': AuditComplianceFramework.PCI_DSS,
+        'HIPAA': AuditComplianceFramework.HIPAA,
+        'GDPR': AuditComplianceFramework.GDPR,
+        'NIST': AuditComplianceFramework.NIST
       };
 
       if (frameworkMap[framework]) {
@@ -2628,10 +2628,10 @@ if (options.securityAnalysis || options.securityVulnerabilities || options.secur
       console.log('─'.repeat(40));
 
       Array.from(securityMetrics.complianceBreakdown.entries()).forEach(([framework, metrics]) => {
-        const frameworkIcon = framework === 'SOC2' ? '📋' :
-                             framework === 'ISO27001' ? '🌐' :
-                             framework === 'PCI_DSS' ? '💳' :
-                             framework === 'HIPAA' ? '🏥' : '📊';
+        const frameworkIcon = framework === AuditComplianceFramework.SOC2 ? '📋' :
+                             framework === AuditComplianceFramework.ISO27001 ? '🌐' :
+                             framework === AuditComplianceFramework.PCI_DSS ? '💳' :
+                             framework === AuditComplianceFramework.HIPAA ? '🏥' : '📊';
 
         console.log(`   ${frameworkIcon} ${framework}:`);
         console.log(`     Overall Score: ${metrics.overallScore.toFixed(1)}/100`);

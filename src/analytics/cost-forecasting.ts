@@ -554,7 +554,7 @@ export class CostForecastingEngine {
    * Seasonal decomposition forecasting
    */
   private seasonalDecomposition(data: CostDataPoint[]): ForecastResult {
-    const seasonalPeriod = this.configuration.seasonalPeriod || 7; // Weekly by default
+    const seasonalPeriod = this.configuration.seasonalityPeriod || 7; // Weekly by default
     const costs = data.map(d => d.totalCost);
     const n = costs.length;
 

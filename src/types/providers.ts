@@ -1,9 +1,12 @@
 export enum CloudProvider {
   AWS = 'aws',
   GOOGLE_CLOUD = 'gcp',
+  GCP = 'gcp', // Alias for GOOGLE_CLOUD
   AZURE = 'azure',
   ALIBABA_CLOUD = 'alicloud',
-  ORACLE_CLOUD = 'oracle'
+  ALIBABA = 'alicloud', // Alias for ALIBABA_CLOUD
+  ORACLE_CLOUD = 'oracle',
+  OCI = 'oracle' // Alias for ORACLE_CLOUD
 }
 
 export interface ProviderCredentials {

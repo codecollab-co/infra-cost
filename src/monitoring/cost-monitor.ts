@@ -11,13 +11,13 @@ export enum AlertThresholdType {
   BUDGET_FORECAST = 'BUDGET_FORECAST'
 }
 
-export enum NotificationChannel {
-  EMAIL = 'email',
-  SLACK = 'slack',
-  WEBHOOK = 'webhook',
-  SMS = 'sms',
-  TEAMS = 'teams',
-  DISCORD = 'discord'
+export enum NotificationChannelType {
+  EMAIL = 'EMAIL',
+  SLACK = 'SLACK',
+  WEBHOOK = 'WEBHOOK',
+  SMS = 'SMS',
+  TEAMS = 'TEAMS',
+  DISCORD = 'DISCORD'
 }
 
 export enum AlertSeverity {
@@ -38,7 +38,7 @@ export interface AlertConfiguration {
 }
 
 export interface NotificationChannelConfig {
-  type: NotificationChannel;
+  type: NotificationChannelType;
   enabled: boolean;
   webhookUrl?: string;
   channel?: string;
@@ -123,6 +123,19 @@ export interface MonitoringMetrics {
     change: number;
   }>;
   healthScore: number; // 0-100
+  dataCollections?: number;
+  alertsTriggered?: number;
+  notificationsSent?: number;
+  avgCollectionTime?: number;
+}
+
+export interface HealthStatus {
+  status: 'healthy' | 'warning' | 'critical';
+  uptime: number;
+  memoryUsage: number;
+  activeAlerts: number;
+  processedNotifications: number;
+  lastError?: string;
 }
 
 export class CostMonitor extends EventEmitter {
@@ -134,12 +147,27 @@ export class CostMonitor extends EventEmitter {
   private alertHistory: CostAlert[] = [];
   private providerFactory: CloudProviderFactory;
   private lastAlertTimes: Map<string, Date> = new Map();
+  private startTime: Date = new Date();
+  private metricsCollector = {
+    dataCollections: 0,
+    alertsTriggered: 0,
+    notificationsSent: 0,
+    collectionTimes: [] as number[]
+  };
 
   constructor(config: MonitoringConfig) {
     super();
     this.config = config;
     this.providerFactory = new CloudProviderFactory();
     this.setupEventHandlers();
+  }
+
+  public async start(): Promise<void> {
+    return this.startMonitoring();
+  }
+
+  public stop(): void {
+    this.stopMonitoring();
   }
 
   public async startMonitoring(): Promise<void> {
@@ -182,6 +210,17 @@ export class CostMonitor extends EventEmitter {
     this.isMonitoring = false;
     this.emit('monitoringStopped');
     console.log('🛑 Cost monitoring stopped');
+  }
+
+  public getHealthStatus(): HealthStatus {
+    return {
+      status: this.activeAlerts.size === 0 ? 'healthy' : this.activeAlerts.size < 3 ? 'warning' : 'critical',
+      uptime: Date.now() - this.startTime.getTime(),
+      memoryUsage: process.memoryUsage().heapUsed,
+      activeAlerts: this.activeAlerts.size,
+      processedNotifications: this.metricsCollector.notificationsSent,
+      lastError: undefined
+    };
   }
 
   public getMetrics(): MonitoringMetrics {
@@ -245,6 +284,10 @@ export class CostMonitor extends EventEmitter {
     // Calculate health score
     const healthScore = this.calculateHealthScore(costChangePercentage, this.activeAlerts.size);
 
+    const avgCollectionTime = this.metricsCollector.collectionTimes.length > 0
+      ? this.metricsCollector.collectionTimes.reduce((a, b) => a + b, 0) / this.metricsCollector.collectionTimes.length
+      : 0;
+
     return {
       totalCostToday,
       costChangeToday,
@@ -253,7 +296,11 @@ export class CostMonitor extends EventEmitter {
       resolvedAlerts: resolvedAlerts.length,
       averageResolutionTime: avgResolutionTime,
       topCostDrivers,
-      healthScore
+      healthScore,
+      dataCollections: this.metricsCollector.dataCollections,
+      alertsTriggered: this.metricsCollector.alertsTriggered,
+      notificationsSent: this.metricsCollector.notificationsSent,
+      avgCollectionTime
     };
   }
 
@@ -301,6 +348,8 @@ export class CostMonitor extends EventEmitter {
   }
 
   private async collectCostData(): Promise<void> {
+    const startTime = Date.now();
+
     for (const provider of this.config.providers) {
       try {
         const providerInstance = this.providerFactory.createProvider({
@@ -335,6 +384,13 @@ export class CostMonitor extends EventEmitter {
         this.emit('dataCollectionError', { provider, error });
       }
     }
+
+    const collectionTime = Date.now() - startTime;
+    this.metricsCollector.dataCollections++;
+    this.metricsCollector.collectionTimes.push(collectionTime);
+    if (this.metricsCollector.collectionTimes.length > 100) {
+      this.metricsCollector.collectionTimes.shift();
+    }
   }
 
   private async evaluateAlerts(): Promise<void> {
@@ -368,6 +424,7 @@ export class CostMonitor extends EventEmitter {
 
         this.activeAlerts.set(alert.id, alert);
         this.lastAlertTimes.set(threshold.id, new Date());
+        this.metricsCollector.alertsTriggered++;
         await this.sendAlert(alert);
         this.emit('alertTriggered', alert);
       }
@@ -624,6 +681,7 @@ export class CostMonitor extends EventEmitter {
     for (const channel of applicableChannels) {
       try {
         await this.sendNotification(alert, channel);
+        this.metricsCollector.notificationsSent++;
       } catch (error) {
         console.error(`Failed to send alert via ${channel.type}:`, error);
         this.emit('notificationError', { channel, alert, error });
@@ -718,7 +776,7 @@ export class CostMonitor extends EventEmitter {
   }
 
   private severityMeetsMinimum(alertSeverity: string, minSeverity: string): boolean {
-    const severityOrder = { 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4 };
+    const severityOrder: Record<string, number> = { 'LOW': 1, 'MEDIUM': 2, 'HIGH': 3, 'CRITICAL': 4 };
     return severityOrder[alertSeverity] >= severityOrder[minSeverity];
   }
 
@@ -844,6 +902,13 @@ export class CostMonitor extends EventEmitter {
   }
 
   /**
+   * Builder pattern for CostMonitor
+   */
+  static builder(): CostMonitorBuilder {
+    return new CostMonitorBuilder();
+  }
+
+  /**
    * Create CostMonitor instance from configuration object
    */
   static fromConfiguration(config: any): CostMonitor {
@@ -940,5 +1005,95 @@ export class MonitoringConfigBuilder {
       enablePredictiveAlerts: this.config.enablePredictiveAlerts || false,
       dataRetentionDays: this.config.dataRetentionDays || 30
     };
+  }
+}
+
+// Builder class for CostMonitor
+export class CostMonitorBuilder {
+  private interval: number = 60000;
+  private retentionDays: number = 30;
+  private providers: CloudProvider[] = [];
+  private alerts: Map<string, AlertConfiguration> = new Map();
+  private channels: Map<string, NotificationChannelConfig> = new Map();
+  private anomalyDetectionEnabled: boolean = false;
+  private anomalySensitivity: number = 2.0;
+
+  setDataCollectionInterval(interval: number): this {
+    this.interval = interval;
+    return this;
+  }
+
+  setRetentionDays(days: number): this {
+    this.retentionDays = days;
+    return this;
+  }
+
+  setProvider(provider: any): this {
+    if (provider && provider.type) {
+      this.providers.push(provider.type);
+    }
+    return this;
+  }
+
+  addAlert(id: string, config: AlertConfiguration): this {
+    this.alerts.set(id, config);
+    return this;
+  }
+
+  addNotificationChannel(id: string, config: NotificationChannelConfig | any): this {
+    this.channels.set(id, config);
+    return this;
+  }
+
+  enableAnomalyDetection(enabled: boolean, sensitivity?: number): this {
+    this.anomalyDetectionEnabled = enabled;
+    if (sensitivity !== undefined) {
+      this.anomalySensitivity = sensitivity;
+    }
+    return this;
+  }
+
+  build(): CostMonitor {
+    const alertThresholds: AlertThreshold[] = [];
+    this.alerts.forEach((config, id) => {
+      alertThresholds.push({
+        id,
+        name: id,
+        type: config.thresholdType as any,
+        condition: 'GREATER_THAN',
+        value: config.thresholdValue,
+        timeWindow: 60,
+        severity: config.severity as any,
+        enabled: config.enabled,
+        cooldownPeriod: config.cooldownMinutes,
+        description: config.description
+      });
+    });
+
+    const notificationChannels: NotificationChannel[] = [];
+    this.channels.forEach((config, id) => {
+      notificationChannels.push({
+        id,
+        type: (config.type?.toUpperCase() || 'EMAIL') as any,
+        config: config as any,
+        enabled: true,
+        filters: {
+          minSeverity: 'LOW',
+          providers: this.providers.length > 0 ? this.providers : undefined,
+          services: undefined
+        }
+      });
+    });
+
+    const monitoringConfig: MonitoringConfig = {
+      interval: this.interval,
+      providers: this.providers.length > 0 ? this.providers : [CloudProvider.AWS],
+      alertThresholds,
+      notificationChannels,
+      enablePredictiveAlerts: this.anomalyDetectionEnabled,
+      dataRetentionDays: this.retentionDays
+    };
+
+    return new CostMonitor(monitoringConfig);
   }
 }

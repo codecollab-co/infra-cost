@@ -10,8 +10,37 @@ export interface BusinessIntelligenceEngine extends EventEmitter {
   calculateUnitEconomics(metrics: UnitEconomicsConfig): Promise<UnitEconomicsReport>;
 }
 
+export interface DailyCostData {
+  date: string;
+  totalCost: number;
+  currency: string;
+  breakdown: {
+    compute: number;
+    storage: number;
+    network: number;
+    database: number;
+    other: number;
+  };
+  provider: CloudProvider;
+  region: string;
+  tags?: Record<string, string>;
+  // Include CostBreakdown properties
+  totals: {
+    lastMonth: number;
+    thisMonth: number;
+    last7Days: number;
+    yesterday: number;
+  };
+  totalsByService: {
+    lastMonth: { [key: string]: number };
+    thisMonth: { [key: string]: number };
+    last7Days: { [key: string]: number };
+    yesterday: { [key: string]: number };
+  };
+}
+
 export interface CostAnalyticsInput {
-  costData: CostBreakdown[];
+  costData: DailyCostData[];
   resourceInventory: ResourceInventory[];
   timeframe: TimeframeConfig;
   businessMetrics?: BusinessMetric[];
@@ -1509,7 +1538,7 @@ export class AdvancedCostAnalytics extends EventEmitter {
   }
 
   generateMockAnalyticsData(): CostAnalyticsInput {
-    const costData: CostBreakdown[] = [];
+    const costData: DailyCostData[] = [];
     const resourceInventory: ResourceInventory[] = [];
 
     // Generate mock cost data
@@ -1517,9 +1546,10 @@ export class AdvancedCostAnalytics extends EventEmitter {
       const date = new Date();
       date.setDate(date.getDate() - i);
 
+      const dailyCost = Math.random() * 10000 + 5000;
       costData.push({
         date: date.toISOString().split('T')[0],
-        totalCost: Math.random() * 10000 + 5000,
+        totalCost: dailyCost,
         currency: 'USD',
         breakdown: {
           compute: Math.random() * 4000 + 2000,
@@ -1533,6 +1563,18 @@ export class AdvancedCostAnalytics extends EventEmitter {
         tags: {
           environment: 'production',
           team: 'platform'
+        },
+        totals: {
+          lastMonth: 0,
+          thisMonth: dailyCost,
+          last7Days: 0,
+          yesterday: 0
+        },
+        totalsByService: {
+          lastMonth: {},
+          thisMonth: {},
+          last7Days: {},
+          yesterday: {}
         }
       });
     }
