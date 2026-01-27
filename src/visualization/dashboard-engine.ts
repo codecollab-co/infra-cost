@@ -468,7 +468,7 @@ export class AdvancedVisualizationEngine extends EventEmitter {
       },
       fonts: {
         title: { family: 'system-ui, sans-serif', size: 24, weight: 'bold' },
-        subtitle: { family: 'system-ui, sans-serif', size: 18, weight: '500' },
+        subtitle: { family: 'system-ui, sans-serif', size: 18, weight: 500 },
         body: { family: 'system-ui, sans-serif', size: 14, weight: 'normal' },
         caption: { family: 'system-ui, sans-serif', size: 12, weight: 'normal' }
       },
@@ -649,7 +649,7 @@ export class AdvancedVisualizationEngine extends EventEmitter {
         gap: 16,
         padding: 20,
         responsive: this.config.responsive.enabled
-      },
+      } as any,
       charts,
       filters: options.filters || [],
       theme: options.theme || this.config.colorScheme,
@@ -1031,15 +1031,17 @@ export class AdvancedVisualizationEngine extends EventEmitter {
             color: theme.colors.text.primary
           }
         }
-      },
+      } as any,
       scales: {
         ...options.scales,
         x: {
           ...options.scales?.x,
           grid: {
+            display: true,
             color: theme.colors.grid
           },
           ticks: {
+            display: true,
             color: theme.colors.text.secondary,
             font: theme.fonts.caption
           }
@@ -1047,9 +1049,11 @@ export class AdvancedVisualizationEngine extends EventEmitter {
         y: {
           ...options.scales?.y,
           grid: {
+            display: true,
             color: theme.colors.grid
           },
           ticks: {
+            display: true,
             color: theme.colors.text.secondary,
             font: theme.fonts.caption
           }

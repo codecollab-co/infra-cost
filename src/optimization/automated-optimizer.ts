@@ -143,7 +143,7 @@ export class AutomatedOptimizer extends EventEmitter {
   private activeExecutions: Map<string, OptimizationResult> = new Map();
 
   private isRunning: boolean = false;
-  private scheduledJobs: Map<string, NodeJS.Timer> = new Map();
+  private scheduledJobs: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
     super();
@@ -420,11 +420,11 @@ export class AutomatedOptimizer extends EventEmitter {
    * Execute action on a specific resource
    */
   private async executeActionOnResource(action: OptimizationAction, resource: any): Promise<any> {
-    const result = {
+    const result: any = {
       resourceId: resource.id,
       resourceType: resource.resourceType || resource.type,
       action: action.type,
-      status: 'SUCCESS' as const,
+      status: 'SUCCESS',
       beforeState: { ...resource },
       afterState: {} as any
     };
