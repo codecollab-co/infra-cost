@@ -59,7 +59,7 @@ export interface BusinessMetric {
   value: number;
   unit: string;
   timestamp: Date;
-  metadata?: { [key: string]: any };
+  metadata?: Record<string, unknown>;
 }
 
 export interface CustomDimension {
@@ -126,7 +126,7 @@ export interface InsightImpact {
 
 export interface Evidence {
   type: 'METRIC' | 'TREND' | 'CORRELATION' | 'ANOMALY';
-  value: any;
+  value: number | string | boolean | Record<string, unknown>;
   description: string;
   confidence: number;
 }
@@ -334,7 +334,7 @@ export interface ScenarioAnalysis {
 export interface Scenario {
   name: string;
   probability: number;
-  assumptions: { [key: string]: any };
+  assumptions: Record<string, number | string | boolean>;
   projectedCost: number;
   impact: string;
 }
@@ -525,7 +525,7 @@ export enum WidgetType {
 export interface WidgetConfig {
   metrics: string[];
   dimensions: string[];
-  filters: { [key: string]: any };
+  filters: Record<string, string | number | boolean | string[]>;
   timeframe: TimeframeConfig;
   aggregation: 'SUM' | 'AVG' | 'COUNT' | 'MIN' | 'MAX';
   visualization: VisualizationOptions;
@@ -560,12 +560,12 @@ export interface DashboardFilter {
   name: string;
   type: 'DATE_RANGE' | 'DROPDOWN' | 'MULTI_SELECT' | 'SLIDER';
   options: FilterOption[];
-  defaultValue: any;
+  defaultValue: string | number | Date | string[] | number[];
 }
 
 export interface FilterOption {
   label: string;
-  value: any;
+  value: string | number | boolean;
 }
 
 export interface Permission {
@@ -589,7 +589,7 @@ export interface DashboardData {
 
 export interface WidgetData {
   widgetId: string;
-  data: any;
+  data: unknown;
   metadata: {
     lastUpdated: Date;
     dataPoints: number;
@@ -712,13 +712,13 @@ export interface CohortCriteria {
 export interface CohortDefinition {
   name: string;
   groupBy: 'PROJECT' | 'TEAM' | 'ENVIRONMENT' | 'SERVICE' | 'REGION' | 'CUSTOM';
-  criteria: { [key: string]: any };
+  criteria: Record<string, string | number | boolean | string[]>;
 }
 
 export interface CohortFilter {
   field: string;
   operator: 'IN' | 'NOT_IN' | 'EQUALS' | 'CONTAINS';
-  values: any[];
+  values: Array<string | number | boolean>;
 }
 
 export interface CohortAnalysis {
@@ -733,7 +733,7 @@ export interface CohortGroup {
   name: string;
   size: number;
   metrics: CohortMetric[];
-  characteristics: { [key: string]: any };
+  characteristics: Record<string, string | number | boolean>;
   performance: CohortPerformance;
 }
 
@@ -870,7 +870,7 @@ export interface UnitOptimizationOpportunity {
 
 export interface UnitOptimizationScenario {
   name: string;
-  changes: { [key: string]: any };
+  changes: Record<string, string | number | boolean>;
   projectedCostPerUnit: number;
   savings: number;
   feasibility: number;
@@ -1492,7 +1492,7 @@ export class AdvancedCostAnalytics extends EventEmitter {
     };
   }
 
-  private async generateWidgetData(widget: DashboardWidget): Promise<any> {
+  private async generateWidgetData(widget: DashboardWidget): Promise<unknown> {
     // Mock widget data generation based on widget type
     switch (widget.type) {
       case WidgetType.COST_TREND:
@@ -1506,8 +1506,8 @@ export class AdvancedCostAnalytics extends EventEmitter {
     }
   }
 
-  private generateTrendData(): any[] {
-    const data = [];
+  private generateTrendData(): Array<{ date: Date; value: number }> {
+    const data: Array<{ date: Date; value: number }> = [];
     const baseDate = new Date();
 
     for (let i = 0; i < 30; i++) {
@@ -1520,7 +1520,7 @@ export class AdvancedCostAnalytics extends EventEmitter {
     return data.reverse();
   }
 
-  private generatePieChartData(): any[] {
+  private generatePieChartData(): Array<{ name: string; value: number }> {
     return [
       { name: 'Compute', value: 45 },
       { name: 'Storage', value: 25 },
@@ -1529,7 +1529,7 @@ export class AdvancedCostAnalytics extends EventEmitter {
     ];
   }
 
-  private generateMetricData(): any {
+  private generateMetricData(): { value: number; change: number; trend: string } {
     return {
       value: 125000,
       change: 12.5,

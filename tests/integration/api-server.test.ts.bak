@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { jest } from '@jest/globals';
 import request from 'supertest';
 import { APIServer } from '../../src/api/api-server.js';

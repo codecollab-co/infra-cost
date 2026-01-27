@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { jest } from '@jest/globals';
 import { AWSProvider } from '../../../src/providers/aws.js';
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { jest } from '@jest/globals';
 import { AdvancedVisualizationEngine } from '../../../src/visualization/dashboard-engine.js';
 

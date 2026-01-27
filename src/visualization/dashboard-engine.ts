@@ -110,7 +110,7 @@ export interface ChartOptions {
   scales?: ScalesConfig;
   plugins?: PluginConfig;
   theme?: ColorScheme;
-  customStyles?: Record<string, any>;
+  customStyles?: Record<string, unknown>;
 }
 
 export interface LegendConfig {
@@ -135,9 +135,9 @@ export interface TooltipConfig {
   borderWidth?: number;
   displayColors?: boolean;
   callbacks?: {
-    title?: (context: any) => string;
-    label?: (context: any) => string;
-    footer?: (context: any) => string;
+    title?: (context: { label?: string; dataset?: { label?: string }; dataIndex?: number }) => string;
+    label?: (context: { label?: string; parsed?: { y?: number }; dataset?: { label?: string }; dataIndex?: number }) => string;
+    footer?: (context: { label?: string; dataset?: { label?: string }; dataIndex?: number }) => string;
   };
 }
 
@@ -166,7 +166,7 @@ export interface AxisConfig {
     display: boolean;
     color?: string;
     font?: FontConfig;
-    callback?: (value: any, index: number, values: any[]) => string;
+    callback?: (value: number | string, index: number, values: Array<{ value: number }>) => string;
   };
   min?: number;
   max?: number;
@@ -178,7 +178,7 @@ export interface PluginConfig {
     display: boolean;
     color?: string;
     font?: FontConfig;
-    formatter?: (value: any, context: any) => string;
+    formatter?: (value: number | string, context: { dataIndex?: number; dataset?: { label?: string } }) => string;
   };
   zoom?: {
     zoom: {
@@ -226,7 +226,7 @@ export interface FontConfig {
 export interface DrillDownConfig {
   enabled: boolean;
   levels: DrillDownLevel[];
-  onDrillDown?: (level: number, data: any) => ChartData;
+  onDrillDown?: (level: number, data: { label?: string; value?: number; index?: number }) => ChartData;
 }
 
 export interface DrillDownLevel {
@@ -277,12 +277,12 @@ export interface DashboardFilter {
   name: string;
   type: 'date' | 'select' | 'multiselect' | 'range' | 'search';
   options?: FilterOption[];
-  defaultValue?: any;
+  defaultValue?: string | number | Date | string[] | number[];
   affectedCharts: string[];
 }
 
 export interface FilterOption {
-  value: any;
+  value: string | number | boolean;
   label: string;
   group?: string;
 }
@@ -645,11 +645,10 @@ export class AdvancedVisualizationEngine extends EventEmitter {
       layout: options.layout || {
         type: this.config.dashboardLayout,
         columns: 12,
-        rows: 'auto',
         gap: 16,
         padding: 20,
         responsive: this.config.responsive.enabled
-      } as any,
+      },
       charts,
       filters: options.filters || [],
       theme: options.theme || this.config.colorScheme,
@@ -1031,7 +1030,7 @@ export class AdvancedVisualizationEngine extends EventEmitter {
             color: theme.colors.text.primary
           }
         }
-      } as any,
+      },
       scales: {
         ...options.scales,
         x: {
@@ -1062,7 +1061,11 @@ export class AdvancedVisualizationEngine extends EventEmitter {
     };
   }
 
-  private processChartOptions(options: ChartOptions, theme: ThemeDefinition): any {
+  private processChartOptions(options: ChartOptions, theme: ThemeDefinition): ChartOptions & {
+    backgroundColor: string;
+    borderColor: string;
+    color: string;
+  } {
     return {
       ...options,
       backgroundColor: theme.colors.background,

@@ -3,6 +3,35 @@ import { CostForecastingEngine, ForecastResult } from '../analytics/cost-forecas
 import { CloudProviderFactory } from '../providers/factory';
 import EventEmitter from 'events';
 
+// Type for cloud resources
+interface CloudResource {
+  id: string;
+  type: string;
+  region?: string;
+  cost?: number;
+  utilization?: number;
+  age?: number;
+  tags?: Record<string, string>;
+  state?: string;
+  [key: string]: unknown;
+}
+
+// Type for cloud provider instances used in optimization
+interface CloudProviderInstance {
+  getResourceInventory(): Promise<ResourceInventory>;
+  getResourceState?(resource: CloudResource): Promise<Record<string, unknown>>;
+  stopInstance?(resourceId: string, parameters: Record<string, unknown>): Promise<void>;
+  resizeInstance?(resourceId: string, parameters: Record<string, unknown>): Promise<void>;
+  scheduleInstance?(resourceId: string, parameters: Record<string, unknown>): Promise<void>;
+  changeStorageClass?(resourceId: string, parameters: Record<string, unknown>): Promise<void>;
+  reserveCapacity?(parameters: Record<string, unknown>): Promise<void>;
+  replaceWithSpotInstance?(resourceId: string, parameters: Record<string, unknown>): Promise<void>;
+  deleteResource?(resourceId: string, parameters: Record<string, unknown>): Promise<void>;
+  rightsizeDatabase?(resourceId: string, parameters: Record<string, unknown>): Promise<void>;
+  consolidateResources?(resourceIds: string[], parameters: Record<string, unknown>): Promise<void>;
+  [key: string]: unknown;
+}
+
 export interface OptimizationRule {
   id: string;
   name: string;
@@ -45,7 +74,7 @@ export interface OptimizationAction {
         'CHANGE_STORAGE_CLASS' | 'RESERVE_CAPACITY' | 'SPOT_REPLACEMENT' | 'RIGHTSIZE_DATABASE' |
         'CONSOLIDATE_RESOURCES' | 'UPDATE_CONFIGURATION' | 'MIGRATE_REGION';
 
-  parameters: Record<string, any>;
+  parameters: Record<string, string | number | boolean | string[]>;
 
   // Execution settings
   execution: {
@@ -79,8 +108,8 @@ export interface OptimizationResult {
       action: string;
       status: 'SUCCESS' | 'FAILED' | 'SKIPPED';
       errorMessage?: string;
-      beforeState: Record<string, any>;
-      afterState: Record<string, any>;
+      beforeState: Record<string, unknown>;
+      afterState: Record<string, unknown>;
     }>;
 
     validationResults: Array<{
@@ -137,7 +166,7 @@ export interface OptimizationPlan {
 }
 
 export class AutomatedOptimizer extends EventEmitter {
-  private providers: Map<CloudProvider, any> = new Map();
+  private providers: Map<CloudProvider, CloudProviderInstance> = new Map();
   private rules: Map<string, OptimizationRule> = new Map();
   private executionHistory: Map<string, OptimizationResult> = new Map();
   private activeExecutions: Map<string, OptimizationResult> = new Map();
@@ -153,7 +182,7 @@ export class AutomatedOptimizer extends EventEmitter {
   /**
    * Add a cloud provider for optimization
    */
-  addProvider(provider: CloudProvider, providerInstance: any): void {
+  addProvider(provider: CloudProvider, providerInstance: CloudProviderInstance): void {
     this.providers.set(provider, providerInstance);
   }
 
@@ -343,8 +372,8 @@ export class AutomatedOptimizer extends EventEmitter {
   /**
    * Find resources that match rule conditions
    */
-  private async findApplicableResources(rule: OptimizationRule): Promise<any[]> {
-    const applicableResources: any[] = [];
+  private async findApplicableResources(rule: OptimizationRule): Promise<CloudResource[]> {
+    const applicableResources: CloudResource[] = [];
 
     for (const [provider, providerInstance] of this.providers) {
       try {
@@ -352,7 +381,7 @@ export class AutomatedOptimizer extends EventEmitter {
 
         // Filter resources based on rule conditions
         for (const [resourceType, resources] of Object.entries(inventory.resources)) {
-          for (const resource of resources as any[]) {
+          for (const resource of resources as CloudResource[]) {
             if (this.resourceMatchesConditions(resource, rule.conditions)) {
               applicableResources.push({
                 ...resource,
@@ -373,7 +402,7 @@ export class AutomatedOptimizer extends EventEmitter {
   /**
    * Check if resource matches rule conditions
    */
-  private resourceMatchesConditions(resource: any, conditions: OptimizationRule['conditions']): boolean {
+  private resourceMatchesConditions(resource: CloudResource, conditions: OptimizationRule['conditions']): boolean {
     // Cost threshold check
     if (conditions.costThreshold && resource.costToDate < conditions.costThreshold) {
       return false;
@@ -419,14 +448,22 @@ export class AutomatedOptimizer extends EventEmitter {
   /**
    * Execute action on a specific resource
    */
-  private async executeActionOnResource(action: OptimizationAction, resource: any): Promise<any> {
-    const result: any = {
+  private async executeActionOnResource(action: OptimizationAction, resource: CloudResource): Promise<{
+    resourceId: string;
+    resourceType: string;
+    action: string;
+    status: 'SUCCESS' | 'FAILED' | 'SKIPPED';
+    errorMessage?: string;
+    beforeState: Record<string, unknown>;
+    afterState: Record<string, unknown>;
+  }> {
+    const result = {
       resourceId: resource.id,
       resourceType: resource.resourceType || resource.type,
       action: action.type,
-      status: 'SUCCESS',
+      status: 'SUCCESS' as const,
       beforeState: { ...resource },
-      afterState: {} as any
+      afterState: {}
     };
 
     try {
@@ -498,7 +535,7 @@ export class AutomatedOptimizer extends EventEmitter {
   /**
    * Stop instance optimization action
    */
-  private async stopInstance(provider: any, resource: any, parameters: Record<string, any>): Promise<void> {
+  private async stopInstance(provider: CloudProviderInstance, resource: CloudResource, parameters: Record<string, string | number | boolean | string[]>): Promise<void> {
     // Implementation would depend on the specific provider
     // This is a placeholder for the actual implementation
 
@@ -516,7 +553,7 @@ export class AutomatedOptimizer extends EventEmitter {
   /**
    * Resize instance optimization action
    */
-  private async resizeInstance(provider: any, resource: any, parameters: Record<string, any>): Promise<void> {
+  private async resizeInstance(provider: CloudProviderInstance, resource: CloudResource, parameters: Record<string, string | number | boolean | string[]>): Promise<void> {
     const { newInstanceType, newSize } = parameters;
 
     this.emit('instanceResizing', {
@@ -534,7 +571,7 @@ export class AutomatedOptimizer extends EventEmitter {
   /**
    * Schedule instance optimization action
    */
-  private async scheduleInstance(provider: any, resource: any, parameters: Record<string, any>): Promise<void> {
+  private async scheduleInstance(provider: CloudProviderInstance, resource: CloudResource, parameters: Record<string, string | number | boolean | string[]>): Promise<void> {
     const { schedule } = parameters; // e.g., "start: 09:00, stop: 18:00"
 
     this.emit('instanceScheduled', { resourceId: resource.id, schedule });
@@ -546,7 +583,7 @@ export class AutomatedOptimizer extends EventEmitter {
   /**
    * Change storage class optimization action
    */
-  private async changeStorageClass(provider: any, resource: any, parameters: Record<string, any>): Promise<void> {
+  private async changeStorageClass(provider: CloudProviderInstance, resource: CloudResource, parameters: Record<string, string | number | boolean | string[]>): Promise<void> {
     const { newStorageClass } = parameters; // e.g., "STANDARD_IA", "GLACIER"
 
     this.emit('storageClassChanging', {
@@ -562,7 +599,7 @@ export class AutomatedOptimizer extends EventEmitter {
   /**
    * Reserve capacity optimization action
    */
-  private async reserveCapacity(provider: any, resource: any, parameters: Record<string, any>): Promise<void> {
+  private async reserveCapacity(provider: CloudProviderInstance, resource: CloudResource, parameters: Record<string, string | number | boolean | string[]>): Promise<void> {
     const { reservationType, term } = parameters; // e.g., "all_upfront", "1_year"
 
     this.emit('capacityReserving', { resourceId: resource.id, reservationType, term });
@@ -573,7 +610,7 @@ export class AutomatedOptimizer extends EventEmitter {
   /**
    * Replace with spot instance optimization action
    */
-  private async replaceWithSpotInstance(provider: any, resource: any, parameters: Record<string, any>): Promise<void> {
+  private async replaceWithSpotInstance(provider: CloudProviderInstance, resource: CloudResource, parameters: Record<string, string | number | boolean | string[]>): Promise<void> {
     const { spotPrice, interruptionHandling } = parameters;
 
     this.emit('spotReplacement', { resourceId: resource.id, spotPrice });
@@ -725,7 +762,7 @@ export class AutomatedOptimizer extends EventEmitter {
     return `exec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  private isWithinExecutionWindow(window: any): boolean {
+  private isWithinExecutionWindow(window: { start: string; end: string; days: string[] }): boolean {
     const now = new Date();
     const currentDay = now.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
     const currentTime = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
@@ -751,17 +788,22 @@ export class AutomatedOptimizer extends EventEmitter {
     }
   }
 
-  private calculateResourceSavings(resource: any, rule: OptimizationRule): number {
+  private calculateResourceSavings(resource: CloudResource, rule: OptimizationRule): number {
     // Simplified calculation - in practice this would be more sophisticated
     return resource.costToDate * 0.3; // Assume 30% savings
   }
 
-  private async getResourceState(provider: any, resource: any): Promise<any> {
+  private async getResourceState(provider: CloudProviderInstance, resource: CloudResource): Promise<Record<string, unknown>> {
     // Implementation would fetch current resource state
     return resource;
   }
 
-  private async rollbackResourceAction(resourceResult: any): Promise<void> {
+  private async rollbackResourceAction(resourceResult: {
+    resourceId: string;
+    resourceType: string;
+    action: string;
+    beforeState: Record<string, unknown>;
+  }): Promise<void> {
     // Implementation would reverse the action performed on the resource
   }
 
@@ -774,23 +816,23 @@ export class AutomatedOptimizer extends EventEmitter {
   }
 
   // Additional optimization action implementations would go here...
-  private async deleteResource(provider: any, resource: any, parameters: Record<string, any>): Promise<void> {
+  private async deleteResource(provider: CloudProviderInstance, resource: CloudResource, parameters: Record<string, string | number | boolean | string[]>): Promise<void> {
     // Implementation for resource deletion
   }
 
-  private async rightsizeDatabase(provider: any, resource: any, parameters: Record<string, any>): Promise<void> {
+  private async rightsizeDatabase(provider: CloudProviderInstance, resource: CloudResource, parameters: Record<string, string | number | boolean | string[]>): Promise<void> {
     // Implementation for database rightsizing
   }
 
-  private async consolidateResources(provider: any, resource: any, parameters: Record<string, any>): Promise<void> {
+  private async consolidateResources(provider: CloudProviderInstance, resource: CloudResource, parameters: Record<string, string | number | boolean | string[]>): Promise<void> {
     // Implementation for resource consolidation
   }
 
-  private async updateConfiguration(provider: any, resource: any, parameters: Record<string, any>): Promise<void> {
+  private async updateConfiguration(provider: CloudProviderInstance, resource: CloudResource, parameters: Record<string, string | number | boolean | string[]>): Promise<void> {
     // Implementation for configuration updates
   }
 
-  private async migrateToRegion(provider: any, resource: any, parameters: Record<string, any>): Promise<void> {
+  private async migrateToRegion(provider: CloudProviderInstance, resource: CloudResource, parameters: Record<string, string | number | boolean | string[]>): Promise<void> {
     // Implementation for region migration
   }
 

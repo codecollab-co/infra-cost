@@ -10,7 +10,29 @@ export enum CloudProvider {
 }
 
 export interface ProviderCredentials {
-  [key: string]: any;
+  // AWS credentials
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  sessionToken?: string;
+
+  // Azure credentials
+  clientId?: string;
+  clientSecret?: string;
+  tenantId?: string;
+  subscriptionId?: string;
+
+  // GCP credentials
+  projectId?: string;
+  keyFile?: string;
+
+  // Oracle Cloud credentials
+  userId?: string;
+  tenancyId?: string;
+  fingerprint?: string;
+  privateKey?: string;
+
+  // Generic/other credentials
+  [key: string]: string | undefined;
 }
 
 export interface CostBreakdown {
@@ -26,6 +48,7 @@ export interface CostBreakdown {
     last7Days: { [key: string]: number };
     yesterday: { [key: string]: number };
   };
+  services?: { [key: string]: number }; // Total cost per service (for tests)
 }
 
 export interface RawCostData {
@@ -318,8 +341,18 @@ export interface GCPStorageBucket extends StorageResource {
   location: string;
   storageClass: string;
   versioning?: boolean;
-  lifecycle?: any;
-  cors?: any[];
+  lifecycle?: {
+    rule?: Array<{
+      action: { type: string };
+      condition?: Record<string, unknown>;
+    }>;
+  };
+  cors?: Array<{
+    origin?: string[];
+    method?: string[];
+    responseHeader?: string[];
+    maxAgeSeconds?: number;
+  }>;
 }
 
 export interface GCPCloudSQLInstance extends DatabaseResource {
@@ -332,8 +365,15 @@ export interface GCPCloudSQLInstance extends DatabaseResource {
     type: string;
     ipAddress: string;
   }>;
-  backupConfiguration?: any;
-  maintenanceWindow?: any;
+  backupConfiguration?: {
+    enabled?: boolean;
+    startTime?: string;
+    binaryLogEnabled?: boolean;
+  };
+  maintenanceWindow?: {
+    day?: number;
+    hour?: number;
+  };
 }
 
 export interface GCPCloudFunction extends ResourceBase {
@@ -341,8 +381,16 @@ export interface GCPCloudFunction extends ResourceBase {
   runtime: string;
   entryPoint: string;
   sourceArchiveUrl?: string;
-  httpsTrigger?: any;
-  eventTrigger?: any;
+  httpsTrigger?: {
+    url?: string;
+    securityLevel?: string;
+  };
+  eventTrigger?: {
+    eventType: string;
+    resource: string;
+    service?: string;
+    failurePolicy?: Record<string, unknown>;
+  };
   timeout?: string;
   availableMemoryMb?: number;
 }
@@ -359,7 +407,14 @@ export interface GCPGKECluster extends ResourceBase {
   nodePools?: Array<{
     name: string;
     nodeCount: number;
-    config: any;
+    config: {
+      machineType?: string;
+      diskSizeGb?: number;
+      imageType?: string;
+      oauthScopes?: string[];
+      preemptible?: boolean;
+      [key: string]: unknown;
+    };
   }>;
 }
 
@@ -542,7 +597,12 @@ export interface OracleAutonomousDatabase extends DatabaseResource {
   isAutoScalingEnabled: boolean;
   cpuCoreCount: number;
   dataStorageSizeInTBs: number;
-  connectionStrings?: any;
+  connectionStrings?: {
+    high?: string;
+    medium?: string;
+    low?: string;
+    [key: string]: string | undefined;
+  };
   licenseModel: string;
   isPreview?: boolean;
 }
