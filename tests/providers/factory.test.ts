@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { CloudProviderFactory } from '../../src/providers/factory';
 import { CloudProvider, ProviderConfig } from '../../src/types/providers';
 

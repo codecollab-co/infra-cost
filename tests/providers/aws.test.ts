@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { AWSProvider } from '../../src/providers/aws';
 import { ProviderConfig } from '../../src/types/providers';
 

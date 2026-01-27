@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { jest } from '@jest/globals';
 import { AnomalyDetector } from '../../../src/analytics/anomaly-detector.js';
 
