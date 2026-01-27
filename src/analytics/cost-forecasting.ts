@@ -472,9 +472,21 @@ export class CostForecastingEngine {
       meanAbsoluteError: mae,
       rootMeanSquareError: rmse,
       rSquared,
-      insights: {} as any, // Will be filled by generateInsights
-      recommendations: [] as any, // Will be filled by generateRecommendations
-      dataQuality: {} as any // Will be filled by assessDataQuality
+      insights: {
+        trendDirection: 'stable',
+        trendStrength: 0,
+        seasonalPattern: false,
+        growthRate: 0,
+        volatility: 0,
+        costDrivers: []
+      },
+      recommendations: [],
+      dataQuality: {
+        completeness: 0,
+        consistency: 0,
+        outlierCount: 0,
+        dataPoints: 0
+      }
     };
   }
 
@@ -544,9 +556,21 @@ export class CostForecastingEngine {
       meanAbsoluteError: mae,
       rootMeanSquareError: rmse,
       rSquared,
-      insights: {} as any,
-      recommendations: [] as any,
-      dataQuality: {} as any
+      insights: {
+        trendDirection: 'stable',
+        trendStrength: 0,
+        seasonalPattern: false,
+        growthRate: 0,
+        volatility: 0,
+        costDrivers: []
+      },
+      recommendations: [],
+      dataQuality: {
+        completeness: 0,
+        consistency: 0,
+        outlierCount: 0,
+        dataPoints: 0
+      }
     };
   }
 
@@ -644,9 +668,21 @@ export class CostForecastingEngine {
       meanAbsoluteError: mae,
       rootMeanSquareError: rmse,
       rSquared,
-      insights: {} as any,
-      recommendations: [] as any,
-      dataQuality: {} as any
+      insights: {
+        trendDirection: 'stable',
+        trendStrength: 0,
+        seasonalPattern: false,
+        growthRate: 0,
+        volatility: 0,
+        costDrivers: []
+      },
+      recommendations: [],
+      dataQuality: {
+        completeness: 0,
+        consistency: 0,
+        outlierCount: 0,
+        dataPoints: 0
+      }
     };
   }
 
@@ -710,9 +746,21 @@ export class CostForecastingEngine {
       meanAbsoluteError: combinedMAE,
       rootMeanSquareError: combinedRMSE,
       rSquared: combinedRSquared,
-      insights: {} as any,
-      recommendations: [] as any,
-      dataQuality: {} as any
+      insights: {
+        trendDirection: 'stable',
+        trendStrength: 0,
+        seasonalPattern: false,
+        growthRate: 0,
+        volatility: 0,
+        costDrivers: []
+      },
+      recommendations: [],
+      dataQuality: {
+        completeness: 0,
+        consistency: 0,
+        outlierCount: 0,
+        dataPoints: 0
+      }
     };
   }
 

@@ -23,7 +23,7 @@ import { RightsizingEngine, RightsizingRecommendation } from './analytics/rights
 import { SustainabilityAnalyzer, SustainabilityMetrics, SustainabilityConfiguration } from './analytics/sustainability-analyzer';
 import { SecurityCostAnalyzer, SecurityCostMetrics, SecurityCostConfiguration } from './analytics/security-cost-analyzer';
 import { ToolIntegrationsManager, ToolIntegration, IntegrationCategory, IntegrationStatus, IntegrationConfig } from './integrations/tool-integrations';
-import { AdvancedCostAnalytics, CostIntelligenceReport, DashboardConfiguration, ExecutiveSummary, CohortAnalysis, UnitEconomicsReport } from './analytics/business-intelligence';
+import { AdvancedCostAnalytics, CostIntelligenceReport, DashboardConfiguration, ExecutiveSummary, CohortAnalysis, UnitEconomicsReport, TrendDirection, WidgetType } from './analytics/business-intelligence';
 import { MultiTenantManager, Tenant, User, SubscriptionPlan, UserRole, EnterpriseFeature, MultiTenantMetrics } from './enterprise/multi-tenant';
 import { APIServer, APIConfiguration, APIKey } from './api/api-server';
 import { WebhookManager, WebhookEvent, WebhookDelivery } from './api/webhook-manager';
@@ -1904,7 +1904,7 @@ if (options.auditQuery || options.auditExport || options.auditReport || options.
 
       try {
         const exportFile = await auditLogger.exportLogs(
-          format as any,
+          format as 'json' | 'csv' | 'xml' | 'syslog',
           { startDate, endDate },
           `audit-export-${format}-${new Date().toISOString().split('T')[0]}.${format === 'syslog' ? 'log' : format}`
         );
@@ -2265,7 +2265,7 @@ if (options.sustainability || options.carbonFootprint || options.greenRecommenda
     if (options.carbonPricing) {
       const pricingModel = options.carbonPricing.toUpperCase();
       if (['SOCIAL_COST', 'CARBON_TAX', 'MARKET_PRICE'].includes(pricingModel)) {
-        sustainabilityConfig.carbonPricingModel = pricingModel as any;
+        sustainabilityConfig.carbonPricingModel = pricingModel as 'SOCIAL_COST' | 'CARBON_TAX' | 'MARKET_PRICE';
       }
     }
 
@@ -2441,7 +2441,7 @@ if (options.sustainability || options.carbonFootprint || options.greenRecommenda
       console.log(`\n📁 Exporting sustainability analysis to ${format} format...`);
 
       try {
-        const exportPath = await analyzer.exportSustainabilityReport(sustainabilityMetrics, format as any);
+        const exportPath = await analyzer.exportSustainabilityReport(sustainabilityMetrics, format as 'json' | 'csv' | 'xlsx' | 'pdf');
         console.log(`✅ Report exported to: ${exportPath}`);
       } catch (exportError) {
         console.error(`❌ Export failed: ${exportError.message}`);
@@ -2485,14 +2485,14 @@ if (options.securityAnalysis || options.securityVulnerabilities || options.secur
     if (options.securityRiskTolerance) {
       const tolerance = options.securityRiskTolerance.toUpperCase();
       if (['LOW', 'MEDIUM', 'HIGH'].includes(tolerance)) {
-        securityConfig.riskTolerance = tolerance as any;
+        securityConfig.riskTolerance = tolerance as 'LOW' | 'MEDIUM' | 'HIGH';
       }
     }
 
     if (options.securityIndustry) {
       const industry = options.securityIndustry.toUpperCase();
       if (['FINANCE', 'HEALTHCARE', 'RETAIL', 'TECHNOLOGY', 'GOVERNMENT'].includes(industry)) {
-        securityConfig.industryVertical = industry as any;
+        securityConfig.industryVertical = industry as 'FINANCE' | 'HEALTHCARE' | 'RETAIL' | 'TECHNOLOGY' | 'GOVERNMENT';
       }
     }
 
@@ -3186,7 +3186,7 @@ if (options.analytics || options.analyticsExecutive || options.analyticsInsights
             unit: 'USD',
             change: 8750,
             changePercent: 7.5,
-            trend: 'INCREASING' as any,
+            trend: TrendDirection.INCREASING,
             context: 'Monthly cloud infrastructure spending'
           },
           {
@@ -3195,7 +3195,7 @@ if (options.analytics || options.analyticsExecutive || options.analyticsInsights
             unit: '%',
             change: 3,
             changePercent: 4.1,
-            trend: 'INCREASING' as any,
+            trend: TrendDirection.INCREASING,
             context: 'Resource utilization efficiency'
           },
           {
@@ -3204,7 +3204,7 @@ if (options.analytics || options.analyticsExecutive || options.analyticsInsights
             unit: 'USD',
             change: 5200,
             changePercent: 28.4,
-            trend: 'INCREASING' as any,
+            trend: TrendDirection.INCREASING,
             context: 'Monthly cost optimization opportunities'
           }
         ],
@@ -3398,7 +3398,7 @@ if (options.analytics || options.analyticsExecutive || options.analyticsInsights
         widgets: [
           {
             id: 'cost-trend-widget',
-            type: 'COST_TREND' as any,
+            type: WidgetType.COST_TREND,
             title: 'Cost Trend Analysis',
             dataSource: 'cost-data',
             configuration: {
@@ -3421,7 +3421,7 @@ if (options.analytics || options.analyticsExecutive || options.analyticsInsights
           },
           {
             id: 'efficiency-gauge',
-            type: 'GAUGE' as any,
+            type: WidgetType.GAUGE,
             title: 'Cost Efficiency',
             dataSource: 'efficiency-metrics',
             configuration: {

@@ -53,7 +53,13 @@ export class MultiCloudDashboard {
       totalProviders: 0,
       totalResources: 0,
       totalCost: 0,
-      providerBreakdown: {} as any,
+      providerBreakdown: {} as Record<CloudProvider, {
+        inventory: ResourceInventory | null;
+        status: 'active' | 'unavailable' | 'error';
+        errorMessage?: string;
+        resourceCount: number;
+        cost: number;
+      }>,
       consolidatedResourcesByType: {
         [ResourceType.COMPUTE]: 0,
         [ResourceType.STORAGE]: 0,

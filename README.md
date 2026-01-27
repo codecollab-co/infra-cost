@@ -12,7 +12,7 @@
 
 *Take control of your cloud costs across AWS, Google Cloud, Azure, Alibaba Cloud, and Oracle Cloud* 🚀
 
-[Installation](#-installation) • [Quick Start](#-quick-start) • [Features](#-features) • [Documentation](#-documentation) • [Contributing](#-contributing)
+[Installation](#-installation) • [Quick Start](#-quick-start) • [Features](#-features) • [Documentation](#-documentation) • [Development](#-development) • [Contributing](#-contributing)
 
 </div>
 
@@ -449,6 +449,8 @@ src/
 
 ## 🧪 Development
 
+> 📚 **Developer Resources**: See the [`docs/`](./docs) folder for comprehensive technical documentation including architecture guides, testing reports, and release procedures.
+
 ### Local Development Setup
 ```bash
 # Clone repository
@@ -550,6 +552,28 @@ For enterprise deployments, custom integrations, and professional support:
 - 🔒 SLA-backed support available
 - 🎨 Custom branding and whitelabeling
 - 🏗️ Professional services and consulting
+
+## 📚 Documentation
+
+### 📖 User Documentation
+- **[README.md](./README.md)** - Main project documentation (you are here)
+- **[CHANGELOG.md](./CHANGELOG.md)** - Version history and release notes
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Contribution guidelines
+
+### 🔧 Developer Documentation
+Comprehensive technical documentation is available in the [`docs/`](./docs) folder:
+
+- **[docs/RELEASE_SUMMARY.md](./docs/RELEASE_SUMMARY.md)** - Complete release guide for GitHub, npm, and Homebrew
+- **[docs/PRODUCTION_READINESS.md](./docs/PRODUCTION_READINESS.md)** - Production readiness assessment and checklist
+- **[docs/TEST_RESULTS.md](./docs/TEST_RESULTS.md)** - Comprehensive test results and analysis
+- **[docs/NPM_PUBLISHING.md](./docs/NPM_PUBLISHING.md)** - npm publishing workflow and best practices
+- **[docs/HOMEBREW_SETUP.md](./docs/HOMEBREW_SETUP.md)** - Homebrew formula creation guide
+- **[docs/code_flow.md](./docs/code_flow.md)** - Codebase architecture and flow
+- **[docs/infra_cost_cli.md](./docs/infra_cost_cli.md)** - CLI implementation details
+- **[docs/MULTI-CLOUD-INVENTORY.md](./docs/MULTI-CLOUD-INVENTORY.md)** - Multi-cloud features
+- **[docs/ENHANCED-FEATURES.md](./docs/ENHANCED-FEATURES.md)** - Advanced capabilities
+
+See [docs/README.md](./docs/README.md) for the complete documentation index.
 
 ## 📄 License
 

@@ -1059,11 +1059,11 @@ export class CostMonitorBuilder {
       alertThresholds.push({
         id,
         name: id,
-        type: config.thresholdType as any,
+        type: config.thresholdType.toString() as AlertThreshold['type'],
         condition: 'GREATER_THAN',
         value: config.thresholdValue,
         timeWindow: 60,
-        severity: config.severity as any,
+        severity: config.severity.toString() as AlertThreshold['severity'],
         enabled: config.enabled,
         cooldownPeriod: config.cooldownMinutes,
         description: config.description
@@ -1072,10 +1072,18 @@ export class CostMonitorBuilder {
 
     const notificationChannels: NotificationChannel[] = [];
     this.channels.forEach((config, id) => {
+      const channelConfig: Record<string, any> = {};
+      if (config.webhookUrl) channelConfig.webhookUrl = config.webhookUrl;
+      if (config.channel) channelConfig.channel = config.channel;
+      if (config.to) channelConfig.to = config.to;
+      if (config.from) channelConfig.from = config.from;
+      if (config.url) channelConfig.url = config.url;
+      if (config.phoneNumber) channelConfig.phoneNumber = config.phoneNumber;
+
       notificationChannels.push({
         id,
-        type: (config.type?.toUpperCase() || 'EMAIL') as any,
-        config: config as any,
+        type: config.type.toString() as NotificationChannel['type'],
+        config: channelConfig,
         enabled: true,
         filters: {
           minSeverity: 'LOW',
