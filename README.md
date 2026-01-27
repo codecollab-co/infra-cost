@@ -4,7 +4,7 @@
 
 **Multi-cloud FinOps CLI tool for comprehensive cost analysis and infrastructure optimization**
 
-[![npm version](https://badge.fury.io/js/infra-cost.svg)](https://d25lcipzij17d.cloudfront.net/badge.svg?c=eyJhbGciOiJub25lIn0.eyJiIjp7IngiOmZhbHNlLCJ0IjoidjZlIiwibCI6Im5wbSBwYWNrYWdlIiwiciI6IjAuMy4yIn19)
+[![npm version](https://badge.fury.io/js/infra-cost.svg)](https://badge.fury.io/js/infra-cost.svg)
 [![Downloads](https://img.shields.io/npm/dm/infra-cost.svg)](https://npmjs.org/package/infra-cost)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub issues](https://img.shields.io/github/issues/codecollab-co/infra-cost)](https://github.com/codecollab-co/infra-cost/issues)
