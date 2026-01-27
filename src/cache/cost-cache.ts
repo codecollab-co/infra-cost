@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, unlinkSync, statSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, unlinkSync, statSync, chmodSync } from 'fs';
 import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { createHash } from 'crypto';
@@ -88,7 +88,10 @@ class FileCacheStorage implements CacheStorage {
 
   private ensureCacheDir(): void {
     if (!existsSync(this.cacheDir)) {
-      mkdirSync(this.cacheDir, { recursive: true });
+      mkdirSync(this.cacheDir, { recursive: true, mode: 0o700 });
+    } else {
+      // Ensure existing directory has correct permissions
+      chmodSync(this.cacheDir, 0o700);
     }
   }
 
@@ -134,7 +137,9 @@ class FileCacheStorage implements CacheStorage {
     const filePath = this.getFilePath(key);
 
     try {
-      writeFileSync(filePath, JSON.stringify(entry, null, 2));
+      writeFileSync(filePath, JSON.stringify(entry, null, 2), { mode: 0o600 });
+      // Ensure the file has correct permissions (in case it already existed)
+      chmodSync(filePath, 0o600);
     } catch (error) {
       console.warn(`Failed to write cache entry: ${(error as Error).message}`);
     }
@@ -380,10 +385,12 @@ export class CostCacheManager {
     profile: string;
     region: string;
     dataType: string;
+    provider?: string;
     dateRange?: { start: string; end: string };
   }): string {
     const parts = [
       this.config.prefix,
+      params.provider || 'aws', // Default to 'aws' for backward compatibility
       params.account,
       params.profile,
       params.region,

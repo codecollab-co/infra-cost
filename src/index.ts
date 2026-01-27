@@ -903,7 +903,9 @@ const useCache = options.cache !== false && !options.refreshCache;
 const provider = wrapWithCache(baseProvider, {
   profile: options.profile,
   region: options.region,
+  providerName: providerType,
   useCache,
+  writeCache: useCache, // Don't write to cache if caching is disabled
   cacheTtl: options.cacheTtl || '4h',
   cacheType: (options.cacheType || 'file') as 'file' | 'memory',
   verbose: false,
@@ -912,6 +914,7 @@ const provider = wrapWithCache(baseProvider, {
 // Handle cache refresh
 if (options.refreshCache) {
   console.log(chalk.yellow('Refreshing cache...'));
+  await provider.refreshCache();
 }
 
 // Validate credentials

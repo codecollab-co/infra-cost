@@ -12,7 +12,9 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
   private accountId: string = '';
   private profile: string;
   private region: string;
+  private providerName: string;
   private useCache: boolean;
+  private writeCache: boolean;
   private verbose: boolean;
 
   constructor(
@@ -20,7 +22,9 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     options: {
       profile: string;
       region: string;
+      providerName?: string;
       useCache?: boolean;
+      writeCache?: boolean;
       cacheConfig?: Partial<CacheConfig>;
       verbose?: boolean;
     }
@@ -29,7 +33,9 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     this.provider = provider;
     this.profile = options.profile;
     this.region = options.region;
+    this.providerName = options.providerName || 'aws';
     this.useCache = options.useCache ?? true;
+    this.writeCache = options.writeCache ?? true;
     this.verbose = options.verbose ?? false;
     this.cache = getGlobalCache(options.cacheConfig);
   }
@@ -40,12 +46,32 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     }
   }
 
+  /**
+   * Stable JSON stringify to ensure consistent cache keys for objects
+   */
+  private stableStringify(value: unknown): string {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const obj = value as Record<string, unknown>;
+      return JSON.stringify(
+        Object.keys(obj)
+          .sort()
+          .reduce((acc, key) => {
+            acc[key] = obj[key];
+            return acc;
+          }, {} as Record<string, unknown>)
+      );
+    }
+    return JSON.stringify(value);
+  }
+
   async getAccountInfo(): Promise<AccountInfo> {
     // Account info is usually fast and changes rarely, cache for 24 hours
+    // Use profile-based key initially since account ID is unknown
     const cacheKey = this.cache.generateKey({
-      account: 'unknown',
+      account: `profile-${this.profile}`,
       profile: this.profile,
       region: this.region,
+      provider: this.providerName,
       dataType: 'account-info',
     });
 
@@ -62,14 +88,16 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     const accountInfo = await this.provider.getAccountInfo();
     this.accountId = accountInfo.id;
 
-    // Cache account info for 24 hours
-    await this.cache.set(cacheKey, accountInfo, {
-      account: accountInfo.id,
-      profile: this.profile,
-      region: this.region,
-      ttl: 24 * 60 * 60 * 1000, // 24 hours
-      metadata: { dataType: 'account-info' },
-    });
+    // Cache account info for 24 hours with profile-based key
+    if (this.writeCache) {
+      await this.cache.set(cacheKey, accountInfo, {
+        account: accountInfo.id,
+        profile: this.profile,
+        region: this.region,
+        ttl: 24 * 60 * 60 * 1000, // 24 hours
+        metadata: { dataType: 'account-info' },
+      });
+    }
 
     return accountInfo;
   }
@@ -84,6 +112,7 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
       account: this.accountId,
       profile: this.profile,
       region: this.region,
+      provider: this.providerName,
       dataType: 'raw-cost-data',
     });
 
@@ -99,12 +128,14 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     const rawCostData = await this.provider.getRawCostData();
 
     // Cache raw cost data with default TTL
-    await this.cache.set(cacheKey, rawCostData, {
-      account: this.accountId,
-      profile: this.profile,
-      region: this.region,
-      metadata: { dataType: 'raw-cost-data' },
-    });
+    if (this.writeCache) {
+      await this.cache.set(cacheKey, rawCostData, {
+        account: this.accountId,
+        profile: this.profile,
+        region: this.region,
+        metadata: { dataType: 'raw-cost-data' },
+      });
+    }
 
     return rawCostData;
   }
@@ -119,6 +150,7 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
       account: this.accountId,
       profile: this.profile,
       region: this.region,
+      provider: this.providerName,
       dataType: 'cost-breakdown',
     });
 
@@ -134,12 +166,14 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     const costBreakdown = await this.provider.getCostBreakdown();
 
     // Cache cost breakdown with default TTL
-    await this.cache.set(cacheKey, costBreakdown, {
-      account: this.accountId,
-      profile: this.profile,
-      region: this.region,
-      metadata: { dataType: 'cost-breakdown' },
-    });
+    if (this.writeCache) {
+      await this.cache.set(cacheKey, costBreakdown, {
+        account: this.accountId,
+        profile: this.profile,
+        region: this.region,
+        metadata: { dataType: 'cost-breakdown' },
+      });
+    }
 
     return costBreakdown;
   }
@@ -155,12 +189,13 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
       await this.getAccountInfo();
     }
 
-    // Create a cache key that includes filter parameters
-    const filterKey = filters ? JSON.stringify(filters) : 'all';
+    // Create a cache key that includes filter parameters with stable serialization
+    const filterKey = filters ? this.stableStringify(filters) : 'all';
     const cacheKey = this.cache.generateKey({
       account: this.accountId,
       profile: this.profile,
       region: this.region,
+      provider: this.providerName,
       dataType: `inventory-${filterKey}`,
     });
 
@@ -176,13 +211,15 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     const inventory = await this.provider.getResourceInventory(filters);
 
     // Cache inventory for 1 hour (resources change more frequently)
-    await this.cache.set(cacheKey, inventory, {
-      account: this.accountId,
-      profile: this.profile,
-      region: this.region,
-      ttl: 60 * 60 * 1000, // 1 hour
-      metadata: { dataType: 'inventory' },
-    });
+    if (this.writeCache) {
+      await this.cache.set(cacheKey, inventory, {
+        account: this.accountId,
+        profile: this.profile,
+        region: this.region,
+        ttl: 60 * 60 * 1000, // 1 hour
+        metadata: { dataType: 'inventory' },
+      });
+    }
 
     return inventory;
   }
@@ -202,6 +239,7 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
       account: this.accountId,
       profile: this.profile,
       region: this.region,
+      provider: this.providerName,
       dataType: 'optimization-recommendations',
     });
 
@@ -217,13 +255,15 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     const recommendations = await this.provider.getOptimizationRecommendations();
 
     // Cache recommendations for 6 hours
-    await this.cache.set(cacheKey, recommendations, {
-      account: this.accountId,
-      profile: this.profile,
-      region: this.region,
-      ttl: 6 * 60 * 60 * 1000, // 6 hours
-      metadata: { dataType: 'optimization-recommendations' },
-    });
+    if (this.writeCache) {
+      await this.cache.set(cacheKey, recommendations, {
+        account: this.accountId,
+        profile: this.profile,
+        region: this.region,
+        ttl: 6 * 60 * 60 * 1000, // 6 hours
+        metadata: { dataType: 'optimization-recommendations' },
+      });
+    }
 
     return recommendations;
   }
@@ -238,6 +278,7 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
       account: this.accountId,
       profile: this.profile,
       region: this.region,
+      provider: this.providerName,
       dataType: 'budgets',
     });
 
@@ -253,13 +294,15 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     const budgets = await this.provider.getBudgets();
 
     // Cache budgets for 2 hours
-    await this.cache.set(cacheKey, budgets, {
-      account: this.accountId,
-      profile: this.profile,
-      region: this.region,
-      ttl: 2 * 60 * 60 * 1000, // 2 hours
-      metadata: { dataType: 'budgets' },
-    });
+    if (this.writeCache) {
+      await this.cache.set(cacheKey, budgets, {
+        account: this.accountId,
+        profile: this.profile,
+        region: this.region,
+        ttl: 2 * 60 * 60 * 1000, // 2 hours
+        metadata: { dataType: 'budgets' },
+      });
+    }
 
     return budgets;
   }
@@ -274,6 +317,7 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
       account: this.accountId,
       profile: this.profile,
       region: this.region,
+      provider: this.providerName,
       dataType: 'budget-alerts',
     });
 
@@ -289,13 +333,15 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     const alerts = await this.provider.getBudgetAlerts();
 
     // Cache alerts for 30 minutes (time-sensitive)
-    await this.cache.set(cacheKey, alerts, {
-      account: this.accountId,
-      profile: this.profile,
-      region: this.region,
-      ttl: 30 * 60 * 1000, // 30 minutes
-      metadata: { dataType: 'budget-alerts' },
-    });
+    if (this.writeCache) {
+      await this.cache.set(cacheKey, alerts, {
+        account: this.accountId,
+        profile: this.profile,
+        region: this.region,
+        ttl: 30 * 60 * 1000, // 30 minutes
+        metadata: { dataType: 'budget-alerts' },
+      });
+    }
 
     return alerts;
   }
@@ -310,6 +356,7 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
       account: this.accountId,
       profile: this.profile,
       region: this.region,
+      provider: this.providerName,
       dataType: `trend-analysis-${months || 6}`,
     });
 
@@ -325,12 +372,14 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     const analysis = await this.provider.getCostTrendAnalysis(months);
 
     // Cache trend analysis for 4 hours
-    await this.cache.set(cacheKey, analysis, {
-      account: this.accountId,
-      profile: this.profile,
-      region: this.region,
-      metadata: { dataType: 'trend-analysis' },
-    });
+    if (this.writeCache) {
+      await this.cache.set(cacheKey, analysis, {
+        account: this.accountId,
+        profile: this.profile,
+        region: this.region,
+        metadata: { dataType: 'trend-analysis' },
+      });
+    }
 
     return analysis;
   }
@@ -345,6 +394,7 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
       account: this.accountId,
       profile: this.profile,
       region: this.region,
+      provider: this.providerName,
       dataType: 'finops-recommendations',
     });
 
@@ -360,13 +410,15 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
     const recommendations = await this.provider.getFinOpsRecommendations();
 
     // Cache recommendations for 6 hours
-    await this.cache.set(cacheKey, recommendations, {
-      account: this.accountId,
-      profile: this.profile,
-      region: this.region,
-      ttl: 6 * 60 * 60 * 1000, // 6 hours
-      metadata: { dataType: 'finops-recommendations' },
-    });
+    if (this.writeCache) {
+      await this.cache.set(cacheKey, recommendations, {
+        account: this.accountId,
+        profile: this.profile,
+        region: this.region,
+        ttl: 6 * 60 * 60 * 1000, // 6 hours
+        metadata: { dataType: 'finops-recommendations' },
+      });
+    }
 
     return recommendations;
   }
@@ -375,6 +427,16 @@ export class CachedProviderWrapper extends CloudProviderAdapter {
    * Force refresh all cached data for this account
    */
   async refreshCache(): Promise<void> {
+    // First, clear the profile-based account-info cache
+    const profileAccountKey = this.cache.generateKey({
+      account: `profile-${this.profile}`,
+      profile: this.profile,
+      region: this.region,
+      provider: this.providerName,
+      dataType: 'account-info',
+    });
+    await this.cache.invalidate(profileAccountKey);
+
     if (!this.accountId) {
       await this.getAccountInfo();
     }
@@ -434,7 +496,9 @@ export function wrapWithCache(
   options: {
     profile: string;
     region: string;
+    providerName?: string;
     useCache?: boolean;
+    writeCache?: boolean;
     cacheTtl?: string;
     cacheType?: 'file' | 'memory' | 'redis';
     verbose?: boolean;
@@ -451,7 +515,9 @@ export function wrapWithCache(
   return new CachedProviderWrapper(provider, {
     profile: options.profile,
     region: options.region,
+    providerName: options.providerName,
     useCache: options.useCache,
+    writeCache: options.writeCache,
     cacheConfig,
     verbose: options.verbose,
   });
