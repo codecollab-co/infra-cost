@@ -606,11 +606,11 @@ export class AdvancedVisualizationEngine extends EventEmitter {
 
   public async createChart(config: Partial<ChartConfiguration>, data: ChartData): Promise<ChartConfiguration> {
     const chart: ChartConfiguration = {
-      id: config.id || this.generateId('chart'),
-      type: config.type || this.config.defaultChartType,
-      title: config.title || 'Untitled Chart',
-      width: config.width || '100%',
-      height: config.height || '400px',
+      id: config.id ?? this.generateId('chart'),
+      type: config.type ?? this.config.defaultChartType,
+      title: config.title ?? 'Untitled Chart',
+      width: config.width ?? '100%',
+      height: config.height ?? '400px',
       data,
       options: {
         responsive: true,
@@ -639,10 +639,10 @@ export class AdvancedVisualizationEngine extends EventEmitter {
     options: Partial<Dashboard> = {}
   ): Promise<Dashboard> {
     const dashboard: Dashboard = {
-      id: options.id || this.generateId('dashboard'),
+      id: options.id ?? this.generateId('dashboard'),
       name,
       description: options.description,
-      layout: options.layout || {
+      layout: options.layout ?? {
         type: this.config.dashboardLayout,
         columns: 12,
         gap: 16,
@@ -650,8 +650,8 @@ export class AdvancedVisualizationEngine extends EventEmitter {
         responsive: this.config.responsive.enabled
       },
       charts,
-      filters: options.filters || [],
-      theme: options.theme || this.config.colorScheme,
+      filters: options.filters ?? [],
+      theme: options.theme ?? this.config.colorScheme,
       settings: {
         autoRefresh: false,
         refreshInterval: 300000,
@@ -665,8 +665,8 @@ export class AdvancedVisualizationEngine extends EventEmitter {
       createdAt: new Date(),
       updatedAt: new Date(),
       owner: options.owner,
-      shared: options.shared || false,
-      tags: options.tags || []
+      shared: options.shared ?? false,
+      tags: options.tags ?? []
     };
 
     this.dashboards.set(dashboard.id, dashboard);
@@ -833,7 +833,7 @@ export class AdvancedVisualizationEngine extends EventEmitter {
   }
 
   private async renderChartAsHTML(chart: ChartConfiguration): Promise<string> {
-    const theme = this.themes.get(chart.options.theme || this.config.colorScheme) || this.themes.get('default')!;
+    const theme = this.themes.get(chart.options.theme ?? this.config.colorScheme) ?? this.themes.get('default')!;
 
     return `
 <!DOCTYPE html>
@@ -898,7 +898,7 @@ export class AdvancedVisualizationEngine extends EventEmitter {
   }
 
   private async renderChartAsSVG(chart: ChartConfiguration): Promise<string> {
-    const theme = this.themes.get(chart.options.theme || this.config.colorScheme) || this.themes.get('default')!;
+    const theme = this.themes.get(chart.options.theme ?? this.config.colorScheme) ?? this.themes.get('default')!;
     const width = typeof chart.width === 'string' ? 800 : chart.width;
     const height = typeof chart.height === 'string' ? 600 : chart.height;
 
@@ -925,7 +925,7 @@ export class AdvancedVisualizationEngine extends EventEmitter {
     chart.data.labels.forEach((label, index) => {
       const row = [label];
       chart.data.datasets.forEach(dataset => {
-        row.push(dataset.data[index]?.toString() || '0');
+        row.push(dataset.data[index]?.toString() ?? '0');
       });
       rows.push(row.join(','));
     });

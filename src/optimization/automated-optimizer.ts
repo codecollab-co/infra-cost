@@ -424,14 +424,14 @@ export class AutomatedOptimizer extends EventEmitter {
     // Tags check
     if (conditions.tags) {
       for (const [key, value] of Object.entries(conditions.tags)) {
-        if (!resource.tags || resource.tags[key] !== value) {
+        if (resource.tags?.[key] !== value) {
           return false;
         }
       }
     }
 
     // Utilization threshold (if available)
-    if (conditions.utilizationThreshold && resource.utilization) {
+    if (conditions.utilizationThreshold && resource.utilization?.average) {
       if (resource.utilization.average > conditions.utilizationThreshold) {
         return false;
       }

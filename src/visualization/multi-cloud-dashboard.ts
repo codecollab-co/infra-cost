@@ -69,7 +69,7 @@ export class MultiCloudDashboard {
 
     // Discover available profiles
     const discoveryResults = await this.discovery.discoverAllProfiles();
-    const targetProviders = providers || this.factory.getSupportedProviders();
+    const targetProviders = providers ?? this.factory.getSupportedProviders();
 
     // Process each provider
     for (const provider of targetProviders) {
@@ -207,7 +207,7 @@ export class MultiCloudDashboard {
           output += `   Top Types: ${chalk.gray(topTypes)}\n`;
         }
       } else if (data.status === 'error') {
-        output += `   ${chalk.red('Error: ' + (data.errorMessage || 'Unknown error'))}\n`;
+        output += `   ${chalk.red('Error: ' + (data.errorMessage ?? 'Unknown error'))}\n`;
       } else if (data.status === 'unavailable') {
         output += `   ${chalk.gray('No credentials or profiles configured')}\n`;
       }
@@ -345,7 +345,7 @@ export class MultiCloudDashboard {
       // construct credentials from the discovered profile
       const config = {
         provider,
-        credentials: profile.credentials || {},
+        credentials: profile.credentials ?? {},
         region: profile.region,
         profile: profile.name
       };
@@ -359,7 +359,7 @@ export class MultiCloudDashboard {
 
   private getProviderDisplayName(provider: CloudProvider): string {
     const names = CloudProviderFactory.getProviderDisplayNames();
-    return names[provider] || provider.toUpperCase();
+    return names[provider] ?? provider.toUpperCase();
   }
 
   private getStatusIcon(status: 'active' | 'unavailable' | 'error'): string {

@@ -38,8 +38,8 @@ export class TerminalUIEngine {
   createTable(columns: TableColumn[], rows: TableRow[]): string {
     const table = new Table({
       head: columns.map(col => chalk.bold(col.header)),
-      colWidths: columns.map(col => col.width || 20),
-      colAligns: columns.map(col => col.align || 'left'),
+      colWidths: columns.map(col => col.width ?? 20),
+      colAligns: columns.map(col => col.align ?? 'left'),
       style: {
         head: [],
         border: [],
@@ -142,7 +142,7 @@ export class TerminalUIEngine {
       .filter(([_, cost]) => cost > 0.01) // Filter out negligible costs for performance
       .sort(([, a], [, b]) => b - a);
 
-    const maxDisplay = options.highlightTop || 15;
+    const maxDisplay = options.highlightTop ?? 15;
     const serviceEntries = significantServices.slice(0, maxDisplay);
 
     // Show stats for large datasets
@@ -166,7 +166,7 @@ export class TerminalUIEngine {
 
     const serviceRows: TableRow[] = serviceEntries.map(([service, cost]) => {
       const share = (cost / totals.thisMonth * 100).toFixed(1);
-      const lastMonthCost = totalsByService.lastMonth[service] || 0;
+      const lastMonthCost = totalsByService.lastMonth[service] ?? 0;
       const trend = this.getTrendIndicator(cost, lastMonthCost);
 
       return {
@@ -364,7 +364,7 @@ export class TerminalUIEngine {
   }
 
   private colorizeBar(bar: string, normalizedValue: number, threshold?: number): string {
-    const thresholdValue = threshold || 0.7;
+    const thresholdValue = threshold ?? 0.7;
 
     if (normalizedValue > thresholdValue) {
       return chalk.red(bar);
