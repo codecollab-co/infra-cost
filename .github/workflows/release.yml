@@ -32,12 +32,8 @@ jobs:
           # Create distribution package
           npm pack
 
-          # Get package info
-          PACKAGE_NAME=$(node -e "console.log(require('./package.json').name)")
-          PACKAGE_VERSION=$(node -e "console.log(require('./package.json').version)")
-
-          # Rename tarball to more standard format
-          mv ${PACKAGE_NAME}-${PACKAGE_VERSION}.tgz infra-cost-${PACKAGE_VERSION}.tgz
+          # The tarball is already named correctly as infra-cost-{version}.tgz
+          # No need to rename
 
       - name: Extract release info
         id: release_info
