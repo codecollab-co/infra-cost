@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-01-27
+
+### Fixed
+
+- NPM website caching issue fully resolved with fresh version publish
+- Version 0.3.3 now displays correctly on npmjs.com website and version history
+- All distribution channels (GitHub, NPM, Homebrew) fully synchronized
+
+### Note
+
+This release contains the same features as 0.3.1 and 0.3.2. Version 0.3.3 was published to definitively resolve persistent NPM CDN caching issues where the npmjs.com website was not displaying versions 0.3.2 correctly in the version history and was showing 0.2.4 in various locations.
+
 ## [0.3.2] - 2026-01-27
 
 ### Fixed
@@ -104,7 +116,8 @@ This release contains the same features as 0.3.1. Version 0.3.1 was unpublished 
 
 ## Release Links
 
-- [0.3.2 on GitHub](https://github.com/codecollab-co/infra-cost/releases/tag/v0.3.2)
+- [0.3.3 on GitHub](https://github.com/codecollab-co/infra-cost/releases/tag/v0.3.3)
+- [0.3.3 on npm](https://www.npmjs.com/package/infra-cost/v/0.3.3)
 - [0.3.2 on npm](https://www.npmjs.com/package/infra-cost/v/0.3.2)
 - [0.3.1 on npm](https://www.npmjs.com/package/infra-cost/v/0.3.1) (unpublished)
 - [0.3.0 on GitHub](https://github.com/codecollab-co/infra-cost/releases/tag/v0.3.0)
@@ -120,7 +133,7 @@ brew tap codecollab-co/tap
 brew install infra-cost
 
 # GitHub Action
-- uses: codecollab-co/infra-cost@v0.3.2
+- uses: codecollab-co/infra-cost@v0.3.3
 ```
 
 ## Documentation
