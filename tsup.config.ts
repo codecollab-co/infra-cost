@@ -13,22 +13,25 @@ export default defineConfig([
     shims: false,
     dts: false,
     external: [
-      // Mark optional dependencies as external
-      'puppeteer',
-      'cli-progress',
-      'moment',
-      'ora',
-      'ini',
+      // Core AWS SDK clients (in package.json dependencies)
       '@aws-sdk/client-cost-explorer',
       '@aws-sdk/client-iam',
       '@aws-sdk/client-sts',
       '@aws-sdk/credential-providers',
+      // Additional AWS SDK clients (peer dependencies)
       '@aws-sdk/client-ec2',
       '@aws-sdk/client-s3',
       '@aws-sdk/client-rds',
       '@aws-sdk/client-lambda',
       '@aws-sdk/client-budgets',
+      '@aws-sdk/client-elasticloadbalancingv2',
       '@aws-sdk/client-elastic-load-balancing-v2',
+      // Optional feature dependencies
+      'puppeteer',
+      'cli-progress',
+      'moment',
+      'ora',
+      'ini',
       'dayjs',
       'express',
       'node-fetch',
