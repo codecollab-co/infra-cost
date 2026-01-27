@@ -1190,7 +1190,7 @@ export class MultiTenantManager extends EventEmitter {
     ];
 
     sampleTenants.forEach(async (tenantData) => {
-      const tenant = await this.createTenant(tenantData);
+      const tenant = await this.createTenant(tenantData as Partial<Tenant>);
       tenant.status = TenantStatus.ACTIVE;
 
       // Create sample users for each tenant

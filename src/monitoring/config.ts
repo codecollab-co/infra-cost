@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { AlertThresholdType, NotificationChannelType, AlertSeverity, AlertConfiguration, NotificationChannelTypeConfig } from './cost-monitor';
+import { AlertThresholdType, NotificationChannelType, AlertSeverity, AlertConfiguration, NotificationChannelConfig } from './cost-monitor';
 
 export interface MonitoringConfiguration {
   // Basic settings
@@ -12,7 +12,7 @@ export interface MonitoringConfiguration {
   alerts: { [alertId: string]: AlertConfiguration };
 
   // Notification channels
-  notificationChannels: { [channelId: string]: NotificationChannelTypeConfig };
+  notificationChannels: { [channelId: string]: NotificationChannelConfig };
 
   // Provider settings
   provider?: {
@@ -271,7 +271,7 @@ export class MonitoringConfigManager {
     }
 
     // Create notification channels from environment
-    const channels: { [key: string]: NotificationChannelTypeConfig } = {};
+    const channels: { [key: string]: NotificationChannelConfig } = {};
 
     if (process.env.SLACK_WEBHOOK_URL) {
       channels['slack'] = {

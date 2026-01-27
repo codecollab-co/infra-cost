@@ -71,7 +71,8 @@ export class TerminalUIEngine {
         const colorKey = col.color;
 
         if (colorKey && typeof value === 'string') {
-          return chalk[colorKey](value);
+          const chalkFn = (chalk as any)[colorKey];
+          return typeof chalkFn === 'function' ? chalkFn(value) : value;
         }
 
         return String(value);
@@ -282,7 +283,8 @@ export class TerminalUIEngine {
       const severityColor = this.getSeverityColor(anomaly.severity);
       const icon = this.getSeverityIcon(anomaly.severity);
 
-      output += chalk[severityColor](`${icon} ${anomaly.date}\n`);
+      const chalkFn = (chalk as any)[severityColor];
+      output += typeof chalkFn === 'function' ? chalkFn(`${icon} ${anomaly.date}\n`) : `${icon} ${anomaly.date}\n`;
       output += `   Expected: ${this.formatCurrency(anomaly.expectedCost, 'USD')}\n`;
       output += `   Actual:   ${this.formatCurrency(anomaly.actualCost, 'USD')}\n`;
       output += `   Deviation: ${anomaly.deviation > 0 ? '+' : ''}${anomaly.deviation.toFixed(1)}%\n`;
