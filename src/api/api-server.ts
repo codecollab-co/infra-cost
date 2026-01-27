@@ -5,6 +5,17 @@ import { WebhookManager, WebhookEvent, WebhookDelivery } from './webhook-manager
 import { MultiTenantManager, User, Tenant } from '../enterprise/multi-tenant';
 import { AdvancedCostAnalytics } from '../analytics/business-intelligence';
 
+// Extend Express Request type with custom properties
+declare global {
+  namespace Express {
+    interface Request {
+      requestId?: string;
+      user?: { id: string; tenantId: string };
+      apiKey?: APIKey;
+    }
+  }
+}
+
 export interface APIConfiguration {
   port: number;
   host: string;
@@ -42,13 +53,13 @@ export interface APIPermission {
   scope?: string; // Optional scope restriction
 }
 
-export interface APIResponse<T = any> {
+export interface APIResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: {
     code: string;
     message: string;
-    details?: any;
+    details?: unknown;
   };
   meta?: {
     requestId: string;
@@ -87,7 +98,7 @@ export interface WebhookSubscription {
 
 export class APIServer extends EventEmitter {
   private app: express.Application;
-  private server: any;
+  private server: ReturnType<express.Application['listen']> | null;
   private config: APIConfiguration;
   private webhookManager: WebhookManager;
   private multiTenantManager?: MultiTenantManager;
@@ -150,7 +161,7 @@ export class APIServer extends EventEmitter {
     // Request logging
     this.app.use((req: Request, res: Response, next: NextFunction) => {
       const requestId = randomBytes(8).toString('hex');
-      (req as any).requestId = requestId;
+      req.requestId = requestId;
 
       if (this.config.logLevel === 'debug') {
         console.log(`[${requestId}] ${req.method} ${req.path} - ${req.ip}`);
@@ -214,14 +225,14 @@ export class APIServer extends EventEmitter {
     keyRecord.usage.requestCount++;
 
     // Attach user and tenant info to request
-    (req as any).user = { id: keyRecord.userId, tenantId: keyRecord.tenantId };
-    (req as any).apiKey = keyRecord;
+    req.user = { id: keyRecord.userId, tenantId: keyRecord.tenantId };
+    req.apiKey = keyRecord;
 
     next();
   }
 
   private rateLimitMiddleware(req: Request, res: Response, next: NextFunction): void {
-    const apiKey = (req as any).apiKey;
+    const apiKey = req.apiKey;
     if (!apiKey) {
       next();
       return;
@@ -309,8 +320,8 @@ export class APIServer extends EventEmitter {
     // Get cost analysis
     this.app.get('/api/costs', async (req: Request, res: Response) => {
       try {
-        const params = req.query as any;
-        const user = (req as any).user;
+        const params = req.query as Record<string, string>;
+        const user = req.user;
 
         // Here you would integrate with your existing cost analysis logic
         const mockData = {
@@ -341,7 +352,7 @@ export class APIServer extends EventEmitter {
     this.app.post('/api/costs/analyze', async (req: Request, res: Response) => {
       try {
         const params = req.body as CostAnalysisRequest;
-        const user = (req as any).user;
+        const user = req.user;
 
         // Emit webhook event
         if (this.config.enableWebhooks) {
@@ -389,7 +400,7 @@ export class APIServer extends EventEmitter {
     this.app.get('/api/tenants/:id', async (req: Request, res: Response) => {
       try {
         const tenantId = req.params.id;
-        const user = (req as any).user;
+        const user = req.user;
 
         // Check permission
         if (user.tenantId !== tenantId) {
@@ -423,7 +434,7 @@ export class APIServer extends EventEmitter {
     // Get user profile
     this.app.get('/api/users/me', async (req: Request, res: Response) => {
       try {
-        const user = (req as any).user;
+        const user = req.user;
 
         // In a real implementation, fetch from database
         const userProfile = {
@@ -449,7 +460,7 @@ export class APIServer extends EventEmitter {
     // List API keys for current user
     this.app.get('/api/api-keys', async (req: Request, res: Response) => {
       try {
-        const user = (req as any).user;
+        const user = req.user;
         const userKeys = Array.from(this.apiKeys.values())
           .filter(key => key.userId === user.id)
           .map(key => ({
@@ -475,7 +486,7 @@ export class APIServer extends EventEmitter {
     this.app.post('/api/api-keys', async (req: Request, res: Response) => {
       try {
         const { name, permissions, expiresAt } = req.body;
-        const user = (req as any).user;
+        const user = req.user;
 
         const apiKey = this.generateAPIKey(user.id, user.tenantId, name, permissions, expiresAt);
 
@@ -498,7 +509,7 @@ export class APIServer extends EventEmitter {
     this.app.delete('/api/api-keys/:id', async (req: Request, res: Response) => {
       try {
         const keyId = req.params.id;
-        const user = (req as any).user;
+        const user = req.user;
 
         const apiKey = this.apiKeys.get(keyId);
         if (!apiKey || apiKey.userId !== user.id) {
@@ -528,7 +539,7 @@ export class APIServer extends EventEmitter {
     // List webhook subscriptions
     this.app.get('/api/webhooks', async (req: Request, res: Response) => {
       try {
-        const user = (req as any).user;
+        const user = req.user;
         const userWebhooks = Array.from(this.webhookSubscriptions.values())
           .filter(webhook => webhook.tenantId === user.tenantId);
 
@@ -545,7 +556,7 @@ export class APIServer extends EventEmitter {
     this.app.post('/api/webhooks', async (req: Request, res: Response) => {
       try {
         const { url, events, secret } = req.body;
-        const user = (req as any).user;
+        const user = req.user;
 
         const webhook: WebhookSubscription = {
           id: randomBytes(8).toString('hex'),
@@ -574,7 +585,7 @@ export class APIServer extends EventEmitter {
     this.app.delete('/api/webhooks/:id', async (req: Request, res: Response) => {
       try {
         const webhookId = req.params.id;
-        const user = (req as any).user;
+        const user = req.user;
 
         const webhook = this.webhookSubscriptions.get(webhookId);
         if (!webhook || webhook.tenantId !== user.tenantId) {
@@ -601,7 +612,7 @@ export class APIServer extends EventEmitter {
     // Get analytics dashboard
     this.app.get('/api/analytics/dashboard', async (req: Request, res: Response) => {
       try {
-        const user = (req as any).user;
+        const user = req.user;
 
         // Mock analytics data
         const dashboard = {
@@ -678,7 +689,7 @@ export class APIServer extends EventEmitter {
     return apiKey;
   }
 
-  private async emitWebhookEvent(eventType: string, data: any): Promise<void> {
+  private async emitWebhookEvent(eventType: string, data: unknown): Promise<void> {
     const relevantWebhooks = Array.from(this.webhookSubscriptions.values())
       .filter(webhook =>
         webhook.active &&
@@ -701,7 +712,7 @@ export class APIServer extends EventEmitter {
   private createResponse<T>(
     success: boolean,
     data?: T,
-    error?: { code: string; message: string; details?: any }
+    error?: { code: string; message: string; details?: unknown }
   ): APIResponse<T> {
     return {
       success,
@@ -747,7 +758,11 @@ export class APIServer extends EventEmitter {
     });
   }
 
-  public getStats(): any {
+  public getStats(): {
+    apiKeys: { total: number; active: number; suspended: number };
+    webhooks: { total: number; active: number };
+    rateLimits: { activeKeys: number };
+  } {
     return {
       apiKeys: {
         total: this.apiKeys.size,

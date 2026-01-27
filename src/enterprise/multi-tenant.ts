@@ -82,7 +82,7 @@ export interface FeatureAccess {
   feature: EnterpriseFeature;
   enabled: boolean;
   limits?: FeatureLimits;
-  customConfig?: { [key: string]: any };
+  customConfig?: Record<string, string | number | boolean>;
 }
 
 export enum EnterpriseFeature {
@@ -200,7 +200,7 @@ export interface BrandingSettings {
 export interface SecuritySettings {
   ssoEnabled: boolean;
   ssoProvider?: string;
-  ssoConfig?: { [key: string]: any };
+  ssoConfig?: Record<string, string | number | boolean>;
   mfaRequired: boolean;
   passwordPolicy: PasswordPolicy;
   sessionTimeout: number; // minutes
@@ -255,7 +255,7 @@ export interface CustomIntegration {
   id: string;
   name: string;
   type: 'WEBHOOK' | 'API' | 'PLUGIN';
-  config: { [key: string]: any };
+  config: Record<string, string | number | boolean>;
   enabled: boolean;
 }
 
@@ -325,7 +325,7 @@ export interface TenantMetadata {
   useCase?: string[];
   deploymentType?: 'CLOUD' | 'ON_PREMISE' | 'HYBRID';
   region?: string;
-  customFields?: { [key: string]: any };
+  customFields?: Record<string, string | number | boolean>;
   tags?: string[];
 }
 
@@ -1282,18 +1282,18 @@ export class MultiTenantManager extends EventEmitter {
     enterpriseRevenue?: number;
     averageRevenuePerUser?: number;
     subscriptionsByPlan: Record<string, number>;
-    utilizationMetrics: any;
+    utilizationMetrics: Record<string, number>;
     totalAPIKeys?: number;
     monthlyGrowthRate?: number;
     healthScore?: number;
     averageResponseTime?: number;
     uptime?: number;
-    subscriptionDistribution?: any;
+    subscriptionDistribution?: Record<string, number>;
     totalCostAnalyses?: number;
     totalReports?: number;
     totalAPIRequests?: number;
     storageUsage?: number;
-    alerts?: any;
+    alerts?: number;
   }> {
     const tenants = this.getTenants();
     const users = this.getUsers();
