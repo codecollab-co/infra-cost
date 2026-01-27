@@ -1,6 +1,14 @@
 import { CloudProviderAdapter, ProviderConfig, AccountInfo, RawCostData, CostBreakdown, CloudProvider, ResourceInventory, InventoryFilters, ResourceType, BudgetInfo, BudgetAlert, CostTrendAnalysis, FinOpsRecommendation } from '../types/providers';
 import { showSpinner } from '../logger';
 
+// Azure-specific type definitions
+type AzureVirtualMachine = any;
+type AzureStorageAccount = any;
+type AzureSQLDatabase = any;
+type AzureFunctionApp = any;
+type AzureAKSCluster = any;
+type AzureVirtualNetwork = any;
+
 export class AzureProvider extends CloudProviderAdapter {
   constructor(config: ProviderConfig) {
     super(config);
