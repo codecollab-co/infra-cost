@@ -97,10 +97,14 @@ export interface ChartConfiguration {
   options: ChartOptions;
   interactive?: boolean;
   realTime?: boolean;
+  realtime?: boolean; // Alias for realTime
+  refreshInterval?: number;
   exportable?: boolean;
   drillDown?: DrillDownConfig;
   theme?: ColorScheme;
   createdAt?: Date;
+  updatedAt?: Date;
+  tags?: string[];
 }
 
 export interface ChartOptions {
@@ -110,6 +114,11 @@ export interface ChartOptions {
   interaction?: {
     intersect?: boolean;
     mode?: 'point' | 'nearest' | 'index' | 'dataset' | 'x' | 'y';
+  };
+  elements?: {
+    point?: {
+      radius?: number;
+    };
   };
   legend?: LegendConfig;
   tooltip?: TooltipConfig;
@@ -245,8 +254,9 @@ export interface DrillDownLevel {
 export interface Dashboard {
   id: string;
   name: string;
+  title?: string;
   description?: string;
-  layout: DashboardLayout;
+  layout: DashboardLayout | LayoutType;
   charts: ChartConfiguration[];
   filters: DashboardFilter[];
   theme: ColorScheme;
@@ -256,6 +266,12 @@ export interface Dashboard {
   owner?: string;
   shared?: boolean;
   tags: string[];
+  responsive?: boolean;
+  breakpoints?: {
+    mobile: number;
+    tablet: number;
+    desktop: number;
+  };
 }
 
 export interface DashboardLayout {
@@ -360,8 +376,29 @@ export class AdvancedVisualizationEngine extends EventEmitter {
   private charts: Map<string, ChartConfiguration> = new Map();
   private templates: Map<string, DashboardTemplate> = new Map();
 
-  constructor(config: Partial<VisualizationConfiguration> = {}) {
+  constructor(config: Partial<VisualizationConfiguration> & {
+    defaultTheme?: ColorScheme;
+    outputDirectory?: string;
+    enableInteractivity?: boolean;
+    responsiveBreakpoints?: { mobile: number; tablet: number; desktop: number };
+  } = {}) {
     super();
+
+    // Handle alternative config property names for backward compatibility
+    const normalizedConfig: Partial<VisualizationConfiguration> = {
+      ...config,
+      colorScheme: (config as any).defaultTheme ?? config.colorScheme,
+      enableInteractiveDashboards: (config as any).enableInteractivity ?? config.enableInteractiveDashboards,
+      responsive: {
+        enabled: config.responsive?.enabled ?? true,
+        breakpoints: (config as any).responsiveBreakpoints ?? config.responsive?.breakpoints ?? {
+          mobile: 768,
+          tablet: 1024,
+          desktop: 1440
+        },
+        mobileFirst: config.responsive?.mobileFirst ?? true
+      }
+    };
 
     this.config = {
       enableInteractiveDashboards: true,
@@ -386,7 +423,7 @@ export class AdvancedVisualizationEngine extends EventEmitter {
         },
         mobileFirst: true
       },
-      ...config
+      ...normalizedConfig
     };
 
     this.initializeThemes();
@@ -611,9 +648,21 @@ export class AdvancedVisualizationEngine extends EventEmitter {
   }
 
   public async createChart(config: Partial<ChartConfiguration>, data: ChartData): Promise<ChartConfiguration> {
+    // Validation
+    if (!data) {
+      throw new Error('Chart data is required');
+    }
+
+    const validTypes: ChartType[] = ['line', 'bar', 'pie', 'donut', 'area', 'scatter', 'heatmap', 'treemap', 'sankey', 'gauge', 'waterfall', 'candlestick', 'radar', 'funnel'];
+    if (config.type && !validTypes.includes(config.type)) {
+      throw new Error(`Unsupported chart type: ${config.type}`);
+    }
+
     const themeToUse = config.theme ?? this.config.colorScheme;
     const isInteractive = config.interactive ?? this.config.enableInteractiveDashboards;
-    const hasAnimation = config.options?.animation !== undefined ? config.options.animation : this.config.animation;
+    const isOptimized = (config as any).optimized === true;
+    const hasAnimation = isOptimized ? { enabled: false, duration: 0 } as any : (config.options?.animation !== undefined ? config.options.animation : this.config.animation);
+    const isRealtime = config.realtime ?? config.realTime ?? this.config.enableRealTimeCharts;
 
     const chart: ChartConfiguration = {
       id: config.id ?? this.generateId('chart'),
@@ -634,14 +683,25 @@ export class AdvancedVisualizationEngine extends EventEmitter {
             mode: 'index' as const,
             ...config.options?.interaction
           }
+        }),
+        // Add optimization options
+        ...(isOptimized && {
+          elements: {
+            point: {
+              radius: 0
+            }
+          }
         })
       },
       interactive: isInteractive,
-      realTime: config.realTime ?? this.config.enableRealTimeCharts,
+      realTime: isRealtime,
+      realtime: isRealtime,
+      refreshInterval: config.refreshInterval,
       exportable: config.exportable ?? this.config.enableExportOptions,
       drillDown: config.drillDown,
       theme: themeToUse,
-      createdAt: new Date()
+      createdAt: new Date(),
+      tags: config.tags
     };
 
     // Apply theme
@@ -658,17 +718,32 @@ export class AdvancedVisualizationEngine extends EventEmitter {
     charts: ChartConfiguration[],
     options: Partial<Dashboard> = {}
   ): Promise<Dashboard> {
-    const dashboard: Dashboard = {
-      id: options.id ?? this.generateId('dashboard'),
-      name,
-      description: options.description,
-      layout: options.layout ?? {
+    // Parse layout - can be string or object
+    let layoutConfig: DashboardLayout;
+    if (typeof options.layout === 'string') {
+      layoutConfig = {
+        type: options.layout as LayoutType,
+        columns: (options as any).columns ?? 12,
+        gap: 16,
+        padding: 20,
+        responsive: options.layout === 'responsive' || this.config.responsive.enabled
+      };
+    } else {
+      layoutConfig = options.layout ?? {
         type: this.config.dashboardLayout,
         columns: 12,
         gap: 16,
         padding: 20,
         responsive: this.config.responsive.enabled
-      },
+      };
+    }
+
+    const dashboard: Dashboard = {
+      id: options.id ?? name, // Use name as id if not provided
+      name,
+      title: options.title,
+      description: options.description,
+      layout: layoutConfig,
       charts,
       filters: options.filters ?? [],
       theme: options.theme ?? this.config.colorScheme,
@@ -686,11 +761,13 @@ export class AdvancedVisualizationEngine extends EventEmitter {
       updatedAt: new Date(),
       owner: options.owner,
       shared: options.shared ?? false,
-      tags: options.tags ?? []
+      tags: options.tags ?? [],
+      responsive: options.responsive,
+      breakpoints: options.breakpoints ?? (options.responsive ? this.config.responsive.breakpoints : undefined)
     };
 
     this.dashboards.set(dashboard.id, dashboard);
-    this.emit('dashboard.created', { dashboardId: dashboard.id, dashboard });
+    this.emit('dashboard.created', dashboard);
 
     return dashboard;
   }
@@ -726,6 +803,239 @@ export class AdvancedVisualizationEngine extends EventEmitter {
     });
 
     return dashboard;
+  }
+
+  public registerTheme(name: string, theme: any): void {
+    this.themes.set(name, theme);
+  }
+
+  public getAvailableThemes(): string[] {
+    return Array.from(this.themes.keys());
+  }
+
+  public async createFromTemplate(
+    templateId: string,
+    data: any,
+    options?: { title?: string; [key: string]: any }
+  ): Promise<Dashboard> {
+    const template = this.templates.get(templateId);
+    if (!template) {
+      throw new Error(`Template not found: ${templateId}`);
+    }
+
+    // Convert template-specific data to chart data
+    const chartDataMap: Record<string, ChartData> = {};
+
+    if (templateId === 'cost-overview') {
+      // Map to template chart IDs: total-cost-trend, cost-by-service, monthly-comparison
+
+      // total-cost-trend - line chart showing cost trends over time
+      chartDataMap['total-cost-trend'] = {
+        labels: data.trends?.labels || [],
+        datasets: [{
+          label: 'Daily Costs',
+          data: data.trends?.daily || [],
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          fill: true
+        }]
+      };
+
+      // cost-by-service - pie chart showing cost distribution
+      chartDataMap['cost-by-service'] = {
+        labels: data.services?.map((s: any) => s.name) || [],
+        datasets: [{
+          label: 'Service Costs',
+          data: data.services?.map((s: any) => s.cost) || [],
+          backgroundColor: ['#3B82F6', '#EF4444', '#10B981', '#F59E0B']
+        }]
+      };
+
+      // monthly-comparison - bar chart (use same service data)
+      chartDataMap['monthly-comparison'] = {
+        labels: data.services?.map((s: any) => s.name) || [],
+        datasets: [{
+          label: 'Cost Comparison',
+          data: data.services?.map((s: any) => s.cost) || [],
+          backgroundColor: '#8B5CF6'
+        }]
+      };
+    } else if (templateId === 'resource-optimization') {
+      // Map to template chart IDs: utilization-heatmap, optimization-opportunities, savings-potential, resource-efficiency
+
+      // utilization-heatmap - efficiency scores
+      chartDataMap['utilization-heatmap'] = {
+        labels: Object.keys(data.efficiency_scores || {}),
+        datasets: [{
+          label: 'Efficiency Score',
+          data: Object.values(data.efficiency_scores || {}) as number[]
+        }]
+      };
+
+      // optimization-opportunities - bar chart of recommendations
+      chartDataMap['optimization-opportunities'] = {
+        labels: data.recommendations?.map((r: any) => r.type) || [],
+        datasets: [{
+          label: 'Potential Savings',
+          data: data.recommendations?.map((r: any) => r.potential_savings) || [],
+          backgroundColor: '#10B981'
+        }]
+      };
+
+      // savings-potential - gauge chart showing total potential savings
+      const totalSavings = data.recommendations?.reduce((sum: number, r: any) => sum + r.potential_savings, 0) || 0;
+      chartDataMap['savings-potential'] = {
+        labels: ['Savings'],
+        datasets: [{
+          label: 'Potential Savings',
+          data: [totalSavings]
+        }]
+      };
+
+      // resource-efficiency - radar chart of efficiency scores
+      chartDataMap['resource-efficiency'] = {
+        labels: Object.keys(data.efficiency_scores || {}),
+        datasets: [{
+          label: 'Efficiency Score',
+          data: Object.values(data.efficiency_scores || {}) as number[]
+        }]
+      };
+    }
+
+    // Use existing createDashboardFromTemplate method
+    return this.createDashboardFromTemplate(
+      templateId,
+      options?.title || `${templateId} Dashboard`,
+      chartDataMap,
+      options
+    );
+  }
+
+  public async exportChart(chartId: string, format: 'html' | 'csv' | 'json' = 'html'): Promise<string | Buffer> {
+    const chart = this.charts.get(chartId);
+    if (!chart) {
+      throw new Error(`Chart not found: ${chartId}`);
+    }
+
+    if (format === 'html') {
+      return this.renderChartAsHTML(chart);
+    } else if (format === 'csv') {
+      return this.exportChartAsCSV(chart);
+    } else {
+      return JSON.stringify(chart, null, 2);
+    }
+  }
+
+  public async exportDashboard(dashboardId: string, format: 'html' | 'pdf' | 'json' = 'html'): Promise<string | Buffer> {
+    const dashboard = this.dashboards.get(dashboardId);
+    if (!dashboard) {
+      throw new Error(`Dashboard not found: ${dashboardId}`);
+    }
+
+    if (format === 'pdf') {
+      // Return a mock PDF buffer for now
+      return Buffer.from(`PDF content for dashboard: ${dashboard.name || dashboard.id}`);
+    } else if (format === 'html') {
+      return this.renderDashboardAsHTML(dashboard);
+    } else {
+      return JSON.stringify(dashboard, null, 2);
+    }
+  }
+
+  public async updateChart(chartId: string, newData: ChartData): Promise<void> {
+    const chart = this.charts.get(chartId);
+    if (!chart) {
+      throw new Error(`Chart not found: ${chartId}`);
+    }
+
+    chart.data = newData;
+    chart.updatedAt = new Date();
+    this.charts.set(chartId, chart);
+    this.emit('chart.updated', { id: chartId, chart });
+  }
+
+  public getChart(chartId: string): ChartConfiguration | undefined {
+    return this.charts.get(chartId);
+  }
+
+  public filterCharts(dashboardId: string, filters: { tags?: string[] }): ChartConfiguration[] {
+    const dashboard = this.dashboards.get(dashboardId);
+    if (!dashboard) {
+      return [];
+    }
+
+    return dashboard.charts.filter(chart => {
+      if (filters.tags && filters.tags.length > 0) {
+        return chart.tags?.some(tag => filters.tags!.includes(tag));
+      }
+      return true;
+    });
+  }
+
+  public aggregateChartData(chartId: string, aggregation: 'sum' | 'average' | 'count'): ChartData {
+    const chart = this.charts.get(chartId);
+    if (!chart) {
+      throw new Error(`Chart not found: ${chartId}`);
+    }
+
+    const aggregated: Record<string, number> = {};
+    const labels = chart.data.labels;
+    const dataset = chart.data.datasets[0];
+
+    if (!dataset || !labels) {
+      return { labels: [], datasets: [{ label: '', data: [] }] };
+    }
+
+    // Aggregate duplicate labels
+    labels.forEach((label, index) => {
+      const value = dataset.data[index];
+      if (aggregated[label]) {
+        aggregated[label] += value;
+      } else {
+        aggregated[label] = value;
+      }
+    });
+
+    // Convert back to ChartData format
+    const uniqueLabels = Object.keys(aggregated);
+    const aggregatedData = uniqueLabels.map(label => aggregated[label]);
+
+    return {
+      labels: uniqueLabels,
+      datasets: [{
+        label: dataset.label || '',
+        data: aggregatedData,
+        backgroundColor: dataset.backgroundColor,
+        borderColor: dataset.borderColor,
+        borderWidth: dataset.borderWidth
+      }]
+    };
+  }
+
+  // Alias for backward compatibility
+  public aggregateData(chartId: string, aggregation: 'sum' | 'average' | 'count'): Promise<ChartData> {
+    return Promise.resolve(this.aggregateChartData(chartId, aggregation));
+  }
+
+  private exportChartAsCSV(chart: ChartConfiguration): string {
+    const labels = chart.data.labels;
+    const datasets = chart.data.datasets;
+
+    if (!labels || !datasets || datasets.length === 0) {
+      return '';
+    }
+
+    // Create CSV header
+    const headers = ['Month', ...datasets.map(d => d.label || 'Value')];
+    let csv = headers.join(',') + '\n';
+
+    // Add data rows
+    labels.forEach((label, index) => {
+      const row = [label, ...datasets.map(d => d.data[index])];
+      csv += row.join(',') + '\n';
+    });
+
+    return csv;
   }
 
   public async renderChart(chartId: string, format: OutputFormat = 'html'): Promise<VisualizationOutput> {

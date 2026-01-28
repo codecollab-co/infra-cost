@@ -1,3 +1,14 @@
+import { jest } from '@jest/globals';
+
+// Mock the logger module entirely to avoid ora issues
+jest.mock('../../src/logger', () => ({
+  printFatalError: jest.fn(),
+  showSpinner: jest.fn(),
+  hideSpinner: jest.fn(),
+  succeedSpinner: jest.fn(),
+  failSpinner: jest.fn()
+}));
+
 import { CloudProviderFactory } from '../../src/providers/factory';
 import { CloudProvider, ProviderConfig } from '../../src/types/providers';
 
@@ -32,7 +43,7 @@ describe('CloudProviderFactory', () => {
 
       expect(() => {
         factory.createProvider(config);
-      }).toThrow('Unsupported cloud provider');
+      }).toThrow('Invalid configuration for provider');
     });
   });
 

@@ -259,8 +259,9 @@ describe('WebhookManager', () => {
       await webhookManager.deliverWebhook('https://example.com/webhook', successEvent);
       await webhookManager.deliverWebhook('https://example.com/webhook', failEvent);
 
-      // Wait for delivery attempts
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for all retry attempts to complete (3 retries with exponential backoff)
+      // Retry 1: 100ms, Retry 2: 200ms, Retry 3: 400ms -> need at least 700ms total
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       const successfulDeliveries = webhookManager.getDeliveries({ status: 'delivered' });
       const failedDeliveries = webhookManager.getDeliveries({ status: 'failed' });

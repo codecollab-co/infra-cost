@@ -1,4 +1,14 @@
 import { jest } from '@jest/globals';
+
+// Mock the logger module entirely to avoid ora issues
+jest.mock('../../../src/logger.js', () => ({
+  printFatalError: jest.fn(),
+  showSpinner: jest.fn(),
+  hideSpinner: jest.fn(),
+  succeedSpinner: jest.fn(),
+  failSpinner: jest.fn()
+}));
+
 import { AWSProvider } from '../../../src/providers/aws.js';
 import { CloudProvider, ProviderConfig } from '../../../src/types/providers.js';
 
