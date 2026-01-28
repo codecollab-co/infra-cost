@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 // Global test utilities
-global.testUtils = {
+(global as any).testUtils = {
   mockAwsResponse: (data: any) => ({
     promise: () => Promise.resolve(data),
   }),

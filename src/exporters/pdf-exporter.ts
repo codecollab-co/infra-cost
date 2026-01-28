@@ -1,3 +1,4 @@
+// @ts-ignore - puppeteer is an optional dependency
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -171,7 +172,7 @@ export class PDFExporter {
     <body>
       <div class="report-container">
         ${this.generateCoverPage(data)}
-        ${this.options.includeSummary ? this.generateExecutiveSummary(data) : ''}
+        ${this.options.includeSummary ? this.generateExecutiveSummaryHTML(data) : ''}
         ${this.generateCostBreakdownSection(data.costBreakdown)}
         ${data.trendAnalysis && this.options.includeCharts ? this.generateTrendAnalysisSection(data.trendAnalysis) : ''}
         ${data.resourceInventory && this.options.includeDetails ? this.generateResourceInventorySection(data.resourceInventory) : ''}
@@ -250,7 +251,7 @@ export class PDFExporter {
     <div class="page-break"></div>`;
   }
 
-  private generateExecutiveSummary(data: AuditReportData): string {
+  private generateExecutiveSummaryHTML(data: AuditReportData): string {
     const monthlyChange = this.calculatePercentageChange(
       data.costBreakdown.totals.thisMonth,
       data.costBreakdown.totals.lastMonth

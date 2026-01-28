@@ -1,6 +1,13 @@
 import { CloudProviderAdapter, ProviderConfig, AccountInfo, RawCostData, CostBreakdown, CloudProvider, ResourceInventory, InventoryFilters, ResourceType, BudgetInfo, BudgetAlert, CostTrendAnalysis, FinOpsRecommendation } from '../types/providers';
 import { showSpinner } from '../logger';
 
+// GCP-specific type definitions
+type GCPComputeInstance = any;
+type GCPStorageBucket = any;
+type GCPCloudSQLInstance = any;
+type GCPCloudFunction = any;
+type GCPGKECluster = any;
+
 export class GCPProvider extends CloudProviderAdapter {
   constructor(config: ProviderConfig) {
     super(config);

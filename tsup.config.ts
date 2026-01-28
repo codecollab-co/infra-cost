@@ -4,7 +4,7 @@ export default defineConfig([
   {
     entry: ['src/index.ts', 'src/demo/test-enhanced-ui.ts', 'src/demo/test-multi-cloud-dashboard.ts'],
     outDir: 'dist',
-    target: 'node16',
+    target: 'node20',
     platform: 'node',
     format: ['cjs'],
     splitting: false,
@@ -13,10 +13,12 @@ export default defineConfig([
     shims: false,
     dts: false,
     external: [
-      'puppeteer',
-      'cli-progress',
-      'moment',
-      'ora',
+      // Core AWS SDK clients (in package.json dependencies)
+      '@aws-sdk/client-cost-explorer',
+      '@aws-sdk/client-iam',
+      '@aws-sdk/client-sts',
+      '@aws-sdk/credential-providers',
+      // Additional AWS SDK clients (peer dependencies)
       '@aws-sdk/client-ec2',
       '@aws-sdk/client-s3',
       '@aws-sdk/client-rds',
@@ -24,12 +26,16 @@ export default defineConfig([
       '@aws-sdk/client-budgets',
       '@aws-sdk/client-elastic-load-balancing-v2',
       '@aws-sdk/client-organizations',
-      '@aws-sdk/client-cost-explorer',
+      // Optional feature dependencies
+      'puppeteer',
+      'cli-progress',
+      'moment',
+      'ora',
+      'ini',
       'dayjs',
       'express',
       'node-fetch',
       'exceljs',
-      'ini',
     ],
   },
 ]);

@@ -1,5 +1,5 @@
 import { AWSProvider } from '../../src/providers/aws';
-import { ProviderConfig } from '../../src/types/providers';
+import { CloudProvider, ProviderConfig } from '../../src/types/providers';
 
 // Mock AWS SDK
 jest.mock('@aws-sdk/client-cost-explorer');
@@ -12,10 +12,12 @@ describe('AWSProvider', () => {
 
   beforeEach(() => {
     mockConfig = {
-      provider: 'aws',
+      provider: CloudProvider.AWS,
       region: 'us-east-1',
-      accessKeyId: 'test-access-key',
-      secretAccessKey: 'test-secret-key'
+      credentials: {
+        accessKeyId: 'test-access-key',
+        secretAccessKey: 'test-secret-key'
+      }
     };
 
     provider = new AWSProvider(mockConfig);

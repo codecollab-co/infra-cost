@@ -38,8 +38,8 @@ export class TerminalUIEngine {
   createTable(columns: TableColumn[], rows: TableRow[]): string {
     const table = new Table({
       head: columns.map(col => chalk.bold(col.header)),
-      colWidths: columns.map(col => col.width || 20),
-      colAligns: columns.map(col => col.align || 'left'),
+      colWidths: columns.map(col => col.width ?? 20),
+      colAligns: columns.map(col => col.align ?? 'left'),
       style: {
         head: [],
         border: [],
@@ -71,7 +71,8 @@ export class TerminalUIEngine {
         const colorKey = col.color;
 
         if (colorKey && typeof value === 'string') {
-          return chalk[colorKey](value);
+          const chalkFn = (chalk as any)[colorKey];
+          return typeof chalkFn === 'function' ? chalkFn(value) : value;
         }
 
         return String(value);
@@ -141,7 +142,7 @@ export class TerminalUIEngine {
       .filter(([_, cost]) => cost > 0.01) // Filter out negligible costs for performance
       .sort(([, a], [, b]) => b - a);
 
-    const maxDisplay = options.highlightTop || 15;
+    const maxDisplay = options.highlightTop ?? 15;
     const serviceEntries = significantServices.slice(0, maxDisplay);
 
     // Show stats for large datasets
@@ -165,7 +166,7 @@ export class TerminalUIEngine {
 
     const serviceRows: TableRow[] = serviceEntries.map(([service, cost]) => {
       const share = (cost / totals.thisMonth * 100).toFixed(1);
-      const lastMonthCost = totalsByService.lastMonth[service] || 0;
+      const lastMonthCost = totalsByService.lastMonth[service] ?? 0;
       const trend = this.getTrendIndicator(cost, lastMonthCost);
 
       return {
@@ -282,7 +283,8 @@ export class TerminalUIEngine {
       const severityColor = this.getSeverityColor(anomaly.severity);
       const icon = this.getSeverityIcon(anomaly.severity);
 
-      output += chalk[severityColor](`${icon} ${anomaly.date}\n`);
+      const chalkFn = (chalk as any)[severityColor];
+      output += typeof chalkFn === 'function' ? chalkFn(`${icon} ${anomaly.date}\n`) : `${icon} ${anomaly.date}\n`;
       output += `   Expected: ${this.formatCurrency(anomaly.expectedCost, 'USD')}\n`;
       output += `   Actual:   ${this.formatCurrency(anomaly.actualCost, 'USD')}\n`;
       output += `   Deviation: ${anomaly.deviation > 0 ? '+' : ''}${anomaly.deviation.toFixed(1)}%\n`;
@@ -362,7 +364,7 @@ export class TerminalUIEngine {
   }
 
   private colorizeBar(bar: string, normalizedValue: number, threshold?: number): string {
-    const thresholdValue = threshold || 0.7;
+    const thresholdValue = threshold ?? 0.7;
 
     if (normalizedValue > thresholdValue) {
       return chalk.red(bar);

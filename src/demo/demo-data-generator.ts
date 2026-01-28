@@ -86,7 +86,7 @@ export class DemoDataGenerator {
       const randomVariation = 0.9 + Math.random() * 0.2;
 
       const actualCost = baselineCost * seasonalFactor * trendFactor * randomVariation;
-      const previousCost = i === months - 1 ? actualCost * 0.95 : trendData[i - 1]?.actualCost || actualCost;
+      const previousCost = i === months - 1 ? actualCost * 0.95 : trendData[i - 1]?.actualCost ?? actualCost;
 
       trendData.push({
         period: date.toISOString().substring(0, 7), // YYYY-MM format
@@ -332,7 +332,7 @@ export class DemoDataGenerator {
       'Amazon DynamoDB': 0.6
     };
 
-    return multipliers[serviceName] || 0.5;
+    return multipliers[serviceName] ?? 0.5;
   }
 }
 

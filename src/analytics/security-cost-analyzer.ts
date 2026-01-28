@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import { CloudProvider, ResourceInventory } from '../types/providers';
-import { AuditLogger } from '../audit/audit-logger';
+import { AuditLogger, ComplianceFramework } from '../audit/audit-logger';
 
 export interface SecurityCostData {
   resourceId: string;
@@ -89,17 +89,6 @@ export enum ComplianceLevel {
   PARTIALLY_COMPLIANT = 'PARTIALLY_COMPLIANT',
   MOSTLY_COMPLIANT = 'MOSTLY_COMPLIANT',
   FULLY_COMPLIANT = 'FULLY_COMPLIANT'
-}
-
-export enum ComplianceFramework {
-  SOC2 = 'SOC2',
-  PCI_DSS = 'PCI_DSS',
-  HIPAA = 'HIPAA',
-  GDPR = 'GDPR',
-  ISO27001 = 'ISO27001',
-  NIST = 'NIST',
-  CIS = 'CIS',
-  FedRAMP = 'FedRAMP'
 }
 
 export interface SecurityCostMetrics {

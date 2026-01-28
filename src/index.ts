@@ -2,18 +2,19 @@ import { Command } from 'commander';
 import packageJson from '../package.json' assert { type: 'json' };
 import { getAccountAlias } from './account';
 import { getAwsConfigFromOptionsOrFile } from './config';
-import { getTotalCosts } from './cost';
+import { getTotalCosts, RawCostByService } from './cost';
 import { printFancy } from './printers/fancy';
 import { printJson } from './printers/json';
 import { notifySlack } from './printers/slack';
-import { printPlainText } from './printers/text';
+import { printPlainText, TotalCostsWithDelta } from './printers/text';
 import { printInventory, printOptimizationRecommendations, printResourceSummary } from './printers/inventory';
 import { InventoryExporter } from './exporters/inventory';
 import { CloudProviderFactory } from './providers/factory';
 import { CloudProvider, ProviderConfig, InventoryFilters, ResourceType, InventoryExportOptions } from './types/providers';
 import { CrossCloudOptimizer } from './optimization/cross-cloud-optimizer';
+import { CostOptimizationEngine, OptimizationCategory, formatOptimizationReport, formatRecommendationDetail, OptimizationEngineConfig, RiskLevel } from './optimization/cost-optimization-engine';
 import { TotalCosts } from './cost';
-import { CostMonitor, AlertThresholdType, NotificationChannel } from './monitoring/cost-monitor';
+import { CostMonitor, AlertThresholdType, NotificationChannelType, AlertSeverity } from './monitoring/cost-monitor';
 import { DependencyMapper, TaggingStandardsAnalyzer } from './analytics/dependency-mapper';
 import { MonitoringConfigManager, initializeMonitoringConfig, validateMonitoringConfig } from './monitoring/config';
 import { CostForecastingEngine } from './analytics/cost-forecasting';
@@ -21,9 +22,9 @@ import { AutomatedOptimizer, OptimizationRule, OptimizationPlan } from './optimi
 import { AuditLogger, AuditEventType, AuditSeverity, ComplianceFramework as AuditComplianceFramework } from './audit/audit-logger';
 import { RightsizingEngine, RightsizingRecommendation } from './analytics/rightsizing-engine';
 import { SustainabilityAnalyzer, SustainabilityMetrics, SustainabilityConfiguration } from './analytics/sustainability-analyzer';
-import { SecurityCostAnalyzer, SecurityCostMetrics, SecurityCostConfiguration, ComplianceFramework } from './analytics/security-cost-analyzer';
+import { SecurityCostAnalyzer, SecurityCostMetrics, SecurityCostConfiguration } from './analytics/security-cost-analyzer';
 import { ToolIntegrationsManager, ToolIntegration, IntegrationCategory, IntegrationStatus, IntegrationConfig } from './integrations/tool-integrations';
-import { AdvancedCostAnalytics, CostIntelligenceReport, DashboardConfiguration, ExecutiveSummary, CohortAnalysis, UnitEconomicsReport } from './analytics/business-intelligence';
+import { AdvancedCostAnalytics, CostIntelligenceReport, DashboardConfiguration, ExecutiveSummary, CohortAnalysis, UnitEconomicsReport, TrendDirection, WidgetType } from './analytics/business-intelligence';
 import { MultiTenantManager, Tenant, User, SubscriptionPlan, UserRole, EnterpriseFeature, MultiTenantMetrics } from './enterprise/multi-tenant';
 import { APIServer, APIConfiguration, APIKey } from './api/api-server';
 import { WebhookManager, WebhookEvent, WebhookDelivery } from './api/webhook-manager';
@@ -33,6 +34,13 @@ import { MultiCloudDashboard } from './visualization/multi-cloud-dashboard';
 import { AWSOrganizationsManager, formatOrganizationReport, exportOrganizationReportCsv, formatDailySummary } from './organizations/aws-organizations';
 import chalk from 'chalk';
 import { join } from 'path';
+// Caching imports (Issue #28)
+import { CostCacheManager, getGlobalCache, parseTTL, formatCacheStats } from './cache/cost-cache';
+import { CachedProviderWrapper, wrapWithCache } from './cache/cached-provider';
+// New imports for Sprint 1 features
+import { AppConfigManager, configInit, configValidate, configListProfiles, configShow, ResolvedConfig } from './config/app-config';
+import { analyzeCostDelta, enhanceCostsWithDelta, generateDeltaSummary, CostDeltaAnalysis } from './analytics/cost-delta';
+import { isSSOProfile, getSSOProfileInfo, discoverSSOProfiles, createAutoCredentialProvider, validateSSOCredentials, getSSOLoginInstructions, listSSOProfiles, printSSOProfileInfo } from './auth/sso-provider';
 
 
 const program = new Command();
@@ -49,6 +57,21 @@ program
   .option('-s, --secret-key [key]', 'Secret key (AWS Secret Key, etc.)')
   .option('-T, --session-token [key]', 'Session token (AWS Session Token, etc.)')
   .option('-r, --region [region]', 'Cloud provider region', 'us-east-1')
+  // Configuration file support (Issue #29)
+  .option('--config-file [path]', 'Path to configuration file')
+  .option('--config-profile [name]', 'Use named profile from configuration file')
+  .option('--app-config-init [path]', 'Initialize application configuration file')
+  .option('--app-config-validate [path]', 'Validate application configuration file')
+  .option('--app-config-list-profiles', 'List available configuration profiles')
+  .option('--app-config-show', 'Show current configuration')
+  // SSO login support (Issue #9)
+  .option('--sso', 'Use AWS SSO for authentication')
+  .option('--sso-list', 'List available SSO profiles')
+  .option('--sso-info [profile]', 'Show SSO profile information')
+  .option('--sso-validate [profile]', 'Validate SSO credentials')
+  // Cost delta analysis (Issue #7)
+  .option('--delta', 'Show cost delta/difference compared to previous period')
+  .option('--delta-threshold [percent]', 'Alert threshold for cost changes (default: 10%)', '10')
   // Provider-specific options
   .option('--project-id [id]', 'GCP Project ID')
   .option('--key-file [path]', 'Path to service account key file (GCP) or private key (Oracle)')
@@ -127,6 +150,16 @@ program
   .option('--optimize-stats', 'Show optimization statistics and history')
   .option('--optimize-stop', 'Stop all active optimizations')
   .option('--optimize-create-plan [file]', 'Create a new optimization plan template')
+  // Cost Optimization Recommendations Engine (Issue #31)
+  .option('--recommendations', 'Generate comprehensive cost optimization recommendations')
+  .option('--recommendations-category [category]', 'Filter by category (compute, storage, database, network, serverless, reserved_capacity, unused_resources, architecture)')
+  .option('--recommendations-min-savings [amount]', 'Minimum monthly savings threshold (default: $10)', '10')
+  .option('--recommendations-max-risk [level]', 'Maximum risk level (none, low, medium, high)', 'high')
+  .option('--recommendations-sort [field]', 'Sort by: savings, effort, risk, confidence (default: savings)', 'savings')
+  .option('--recommendations-top [n]', 'Show top N recommendations (default: 10)', '10')
+  .option('--recommendations-detail [id]', 'Show detailed view for a specific recommendation')
+  .option('--recommendations-export [format]', 'Export recommendations (json, csv)')
+  .option('--recommendations-quick-wins', 'Show only quick win opportunities')
   // Audit and compliance
   .option('--audit-query [filters]', 'Query audit logs with JSON filters')
   .option('--audit-export [format]', 'Export audit logs (json, csv, xml, syslog)')
@@ -251,6 +284,14 @@ program
   .option('--auto-profile', 'Automatically select best available profile')
   .option('--smart-alerts', 'Enable intelligent cost alerting with visual indicators')
   .option('--compact', 'Use compact display mode for large datasets')
+  // Caching options (Issue #28)
+  .option('--cache', 'Use cached data if available (default: enabled)')
+  .option('--no-cache', 'Disable caching, always fetch fresh data')
+  .option('--refresh-cache', 'Force refresh cache with fresh data')
+  .option('--clear-cache', 'Clear all cached data')
+  .option('--cache-stats', 'Show cache statistics')
+  .option('--cache-ttl [duration]', 'Cache TTL (e.g., 30m, 2h, 1d)', '4h')
+  .option('--cache-type [type]', 'Cache type: file, memory', 'file')
   // Other options
   .option('-h, --help', 'Get the help of the CLI')
   .parse(process.argv);
@@ -458,6 +499,38 @@ type OptionsType = {
   autoProfile: boolean;
   smartAlerts: boolean;
   compact: boolean;
+  // Caching options (Issue #28)
+  cache: boolean;
+  refreshCache: boolean;
+  clearCache: boolean;
+  cacheStats: boolean;
+  cacheTtl: string;
+  cacheType: string;
+  // Configuration file options (Issue #29)
+  configFile: string;
+  configProfile: string;
+  appConfigInit: string;
+  appConfigValidate: string;
+  appConfigListProfiles: boolean;
+  appConfigShow: boolean;
+  // SSO options (Issue #9)
+  sso: boolean;
+  ssoList: boolean;
+  ssoInfo: string;
+  ssoValidate: string;
+  // Cost delta options (Issue #7)
+  delta: boolean;
+  deltaThreshold: string;
+  // Cost optimization recommendations options (Issue #31)
+  recommendations: boolean;
+  recommendationsCategory: string;
+  recommendationsMinSavings: string;
+  recommendationsMaxRisk: string;
+  recommendationsSort: string;
+  recommendationsTop: string;
+  recommendationsDetail: string;
+  recommendationsExport: string;
+  recommendationsQuickWins: boolean;
   // Other options
   help: boolean;
 };
@@ -552,7 +625,193 @@ if (options.help) {
   process.exit(0);
 }
 
+// Handle cache management commands (Issue #28)
+if (options.clearCache || options.cacheStats) {
+  const cacheConfig = {
+    type: (options.cacheType || 'file') as 'file' | 'memory',
+    ttl: parseTTL(options.cacheTtl || '4h'),
+  };
+  const cache = getGlobalCache(cacheConfig);
+
+  if (options.clearCache) {
+    await cache.clear();
+    console.log(chalk.green('Cache cleared successfully'));
+    process.exit(0);
+  }
+
+  if (options.cacheStats) {
+    const stats = await cache.getStats();
+    console.log('');
+    console.log(chalk.bold('Cache Statistics'));
+    console.log(chalk.gray('━'.repeat(40)));
+    console.log(formatCacheStats(stats));
+    console.log('');
+    process.exit(0);
+  }
+}
+
 // Handle configuration management commands
+// Handle application configuration commands (Issue #29)
+if (options.appConfigInit || options.appConfigValidate || options.appConfigListProfiles || options.appConfigShow) {
+  if (options.appConfigInit) {
+    // appConfigInit can be a path string or just a flag
+    const configPath = typeof options.appConfigInit === 'string' && options.appConfigInit.length > 0
+      ? options.appConfigInit
+      : undefined;
+    configInit(configPath);
+    process.exit(0);
+  }
+
+  if (options.appConfigValidate) {
+    // appConfigValidate can be a path string or just a flag
+    const configPath = typeof options.appConfigValidate === 'string' && options.appConfigValidate.length > 0
+      ? options.appConfigValidate
+      : undefined;
+    const isValid = configValidate(configPath);
+    process.exit(isValid ? 0 : 1);
+  }
+
+  if (options.appConfigListProfiles) {
+    configListProfiles();
+    process.exit(0);
+  }
+
+  if (options.appConfigShow) {
+    configShow(options.configFile);
+    process.exit(0);
+  }
+}
+
+// Handle SSO commands (Issue #9)
+if (options.ssoList || options.ssoInfo || options.ssoValidate) {
+  if (options.ssoList) {
+    listSSOProfiles();
+    process.exit(0);
+  }
+
+  if (options.ssoInfo) {
+    // ssoInfo can be a profile name string or just a flag
+    const profileName = typeof options.ssoInfo === 'string' && options.ssoInfo.length > 0
+      ? options.ssoInfo
+      : options.profile;
+    printSSOProfileInfo(profileName);
+    process.exit(0);
+  }
+
+  if (options.ssoValidate) {
+    // ssoValidate can be a profile name string or just a flag
+    const profileName = typeof options.ssoValidate === 'string' && options.ssoValidate.length > 0
+      ? options.ssoValidate
+      : options.profile;
+    const result = await validateSSOCredentials(profileName);
+    if (result.success) {
+      console.log(chalk.green('SSO credentials are valid'));
+      console.log(`  Account: ${result.accountId}`);
+      console.log(`  Role: ${result.roleName}`);
+      if (result.expiresAt) {
+        console.log(`  Expires: ${result.expiresAt.toLocaleString()}`);
+      }
+    } else {
+      console.log(chalk.red('SSO validation failed'));
+      console.log(`  Error: ${result.error}`);
+      console.log(getSSOLoginInstructions(profileName));
+    }
+    process.exit(result.success ? 0 : 1);
+  }
+}
+
+// Apply configuration file settings if specified (Issue #29)
+let resolvedConfig: ResolvedConfig | null = null;
+if (options.configFile || options.configProfile || AppConfigManager.findConfigFile()) {
+  try {
+    resolvedConfig = AppConfigManager.resolveConfig(
+      {
+        provider: options.provider,
+        profile: options.profile,
+        region: options.region,
+        accessKey: options.accessKey,
+        secretKey: options.secretKey,
+        sessionToken: options.sessionToken,
+        projectId: options.projectId,
+        keyFile: options.keyFile,
+        subscriptionId: options.subscriptionId,
+        tenantId: options.tenantId,
+        clientId: options.clientId,
+        clientSecret: options.clientSecret,
+        userId: options.userId,
+        tenancyId: options.tenancyId,
+        fingerprint: options.fingerprint,
+        slackToken: options.slackToken,
+        slackChannel: options.slackChannel,
+      },
+      options.configProfile,
+      options.configFile // Pass configFile path to honor --config-file option
+    );
+
+    // Apply resolved config to options if not explicitly set by CLI
+    // Use getOptionValueSource to distinguish CLI-provided values from defaults
+    if (program.getOptionValueSource('provider') === 'default' && resolvedConfig.provider) {
+      options.provider = resolvedConfig.provider;
+    }
+    if (program.getOptionValueSource('profile') === 'default' && resolvedConfig.profile) {
+      options.profile = resolvedConfig.profile;
+    }
+    if (program.getOptionValueSource('region') === 'default' && resolvedConfig.region) {
+      options.region = resolvedConfig.region;
+    }
+    // Propagate all credential fields from resolved config when not set via CLI
+    if (!options.accessKey && resolvedConfig.accessKey) {
+      options.accessKey = resolvedConfig.accessKey;
+    }
+    if (!options.secretKey && resolvedConfig.secretKey) {
+      options.secretKey = resolvedConfig.secretKey;
+    }
+    if (!options.sessionToken && resolvedConfig.sessionToken) {
+      options.sessionToken = resolvedConfig.sessionToken;
+    }
+    // GCP settings
+    if (!options.projectId && resolvedConfig.projectId) {
+      options.projectId = resolvedConfig.projectId;
+    }
+    if (!options.keyFile && resolvedConfig.keyFile) {
+      options.keyFile = resolvedConfig.keyFile;
+    }
+    // Azure settings
+    if (!options.subscriptionId && resolvedConfig.subscriptionId) {
+      options.subscriptionId = resolvedConfig.subscriptionId;
+    }
+    if (!options.tenantId && resolvedConfig.tenantId) {
+      options.tenantId = resolvedConfig.tenantId;
+    }
+    if (!options.clientId && resolvedConfig.clientId) {
+      options.clientId = resolvedConfig.clientId;
+    }
+    if (!options.clientSecret && resolvedConfig.clientSecret) {
+      options.clientSecret = resolvedConfig.clientSecret;
+    }
+    // Oracle settings
+    if (!options.userId && resolvedConfig.userId) {
+      options.userId = resolvedConfig.userId;
+    }
+    if (!options.tenancyId && resolvedConfig.tenancyId) {
+      options.tenancyId = resolvedConfig.tenancyId;
+    }
+    if (!options.fingerprint && resolvedConfig.fingerprint) {
+      options.fingerprint = resolvedConfig.fingerprint;
+    }
+    // Slack settings
+    if (!options.slackToken && resolvedConfig.slackToken) {
+      options.slackToken = resolvedConfig.slackToken;
+    }
+    if (!options.slackChannel && resolvedConfig.slackChannel) {
+      options.slackChannel = resolvedConfig.slackChannel;
+    }
+  } catch (error) {
+    console.warn(`Warning: Failed to load configuration: ${(error as Error).message}`);
+  }
+}
+
+// Handle configuration management commands (monitoring config - legacy)
 if (options.configInit || options.configValidate || options.configSample) {
   if (options.configInit) {
     initializeMonitoringConfig(options.configInit);
@@ -583,20 +842,56 @@ const providerType = options.provider.toLowerCase() as CloudProvider;
 let providerConfig: ProviderConfig;
 
 if (providerType === CloudProvider.AWS) {
-  // Use existing AWS configuration for backward compatibility
-  const awsConfig = await getAwsConfigFromOptionsOrFile({
-    profile: options.profile,
-    accessKey: options.accessKey,
-    secretKey: options.secretKey,
-    sessionToken: options.sessionToken,
-    region: options.region,
-  });
+  // Check if SSO should be used (Issue #9)
+  const useSSO = options.sso || isSSOProfile(options.profile);
 
-  providerConfig = {
-    provider: CloudProvider.AWS,
-    credentials: awsConfig.credentials,
-    region: awsConfig.region
-  };
+  if (useSSO) {
+    // Use SSO credential provider
+    const profileInfo = getSSOProfileInfo(options.profile);
+    if (!profileInfo || !profileInfo.isSSO) {
+      console.error(chalk.red(`Profile "${options.profile}" is not configured for SSO.`));
+      console.log(getSSOLoginInstructions(options.profile));
+      process.exit(1);
+    }
+
+    // Validate SSO credentials first
+    const ssoResult = await validateSSOCredentials(options.profile);
+    if (!ssoResult.success) {
+      console.error(chalk.red('SSO authentication required.'));
+      console.log(getSSOLoginInstructions(options.profile));
+      process.exit(1);
+    }
+
+    // Create SSO credential provider
+    const ssoCredentials = createAutoCredentialProvider(options.profile);
+    const region = options.region || profileInfo.region || 'us-east-1';
+
+    providerConfig = {
+      provider: CloudProvider.AWS,
+      credentials: ssoCredentials,
+      region: region
+    };
+
+    console.log(chalk.green(`Using SSO profile: ${options.profile}`));
+    if (ssoResult.expiresAt) {
+      console.log(chalk.gray(`Token expires: ${ssoResult.expiresAt.toLocaleString()}`));
+    }
+  } else {
+    // Use existing AWS configuration for backward compatibility
+    const awsConfig = await getAwsConfigFromOptionsOrFile({
+      profile: options.profile,
+      accessKey: options.accessKey,
+      secretKey: options.secretKey,
+      sessionToken: options.sessionToken,
+      region: options.region,
+    });
+
+    providerConfig = {
+      provider: CloudProvider.AWS,
+      credentials: awsConfig.credentials,
+      region: awsConfig.region
+    };
+  }
 } else {
   // Create configuration for other providers
   const credentials: Record<string, any> = {};
@@ -633,7 +928,26 @@ if (providerType === CloudProvider.AWS) {
 
 // Create provider instance
 const providerFactory = new CloudProviderFactory();
-const provider = providerFactory.createProvider(providerConfig);
+const baseProvider = providerFactory.createProvider(providerConfig);
+
+// Wrap provider with caching if enabled (Issue #28)
+const useCache = options.cache !== false && !options.refreshCache;
+const provider = wrapWithCache(baseProvider, {
+  profile: options.profile,
+  region: options.region,
+  providerName: providerType,
+  useCache,
+  writeCache: useCache, // Don't write to cache if caching is disabled
+  cacheTtl: options.cacheTtl || '4h',
+  cacheType: (options.cacheType || 'file') as 'file' | 'memory',
+  verbose: false,
+});
+
+// Handle cache refresh
+if (options.refreshCache) {
+  console.log(chalk.yellow('Refreshing cache...'));
+  await provider.refreshCache();
+}
 
 // Validate credentials
 const credentialsValid = await provider.validateCredentials();
@@ -645,6 +959,11 @@ if (!credentialsValid) {
 // Get account information and costs
 const accountInfo = await provider.getAccountInfo();
 const costBreakdown = await provider.getCostBreakdown();
+
+// Show cache status if verbose or refresh was requested
+if (options.refreshCache) {
+  console.log(chalk.green('Cache refreshed with fresh data'));
+}
 
 // Handle budget and trends requests
 if (options.budgets || options.trends || options.finops || options.alerts) {
@@ -1443,6 +1762,155 @@ if (options.optimize || options.optimizePlan || options.optimizeStats || options
   console.log(''); // Add spacing
 }
 
+// Handle cost optimization recommendations (Issue #31)
+if (options.recommendations || options.recommendationsQuickWins || options.recommendationsDetail || options.recommendationsExport) {
+  try {
+    console.log('🔍 Analyzing infrastructure for cost optimization opportunities...');
+    console.log('');
+
+    // Build configuration from CLI options
+    const engineConfig: Partial<OptimizationEngineConfig> = {
+      minSavingsThreshold: parseFloat(options.recommendationsMinSavings) || 10,
+      topN: parseInt(options.recommendationsTop) || 10,
+      sortBy: (options.recommendationsSort as 'savings' | 'effort' | 'risk' | 'confidence') || 'savings',
+    };
+
+    // Parse max risk level
+    if (options.recommendationsMaxRisk) {
+      const riskMap: Record<string, RiskLevel> = {
+        none: RiskLevel.NONE,
+        low: RiskLevel.LOW,
+        medium: RiskLevel.MEDIUM,
+        high: RiskLevel.HIGH,
+      };
+      engineConfig.maxRiskLevel = riskMap[options.recommendationsMaxRisk.toLowerCase()] || RiskLevel.HIGH;
+    }
+
+    // Parse category filter
+    if (options.recommendationsCategory) {
+      const categoryMap: Record<string, OptimizationCategory> = {
+        compute: OptimizationCategory.COMPUTE,
+        storage: OptimizationCategory.STORAGE,
+        database: OptimizationCategory.DATABASE,
+        network: OptimizationCategory.NETWORK,
+        serverless: OptimizationCategory.SERVERLESS,
+        reserved_capacity: OptimizationCategory.RESERVED_CAPACITY,
+        unused_resources: OptimizationCategory.UNUSED_RESOURCES,
+        architecture: OptimizationCategory.ARCHITECTURE,
+      };
+      const category = categoryMap[options.recommendationsCategory.toLowerCase()];
+      if (category) {
+        engineConfig.categories = [category];
+        console.log(`📁 Filtering by category: ${options.recommendationsCategory}`);
+      }
+    }
+
+    // Initialize the optimization engine
+    const optimizationEngine = new CostOptimizationEngine(engineConfig);
+
+    // Get inventory and cost data for analysis
+    console.log('📊 Fetching resource inventory...');
+    const inventory = await provider.getResourceInventory();
+
+    console.log('💰 Fetching cost breakdown...');
+    const costBreakdown = await provider.getCostBreakdown();
+
+    // Run the analysis
+    console.log('⚙️  Running optimization analysis...');
+    const report = await optimizationEngine.analyze(provider, inventory, costBreakdown);
+
+    // Handle detail view for specific recommendation
+    if (options.recommendationsDetail) {
+      const recommendation = report.recommendations.find(r => r.id === options.recommendationsDetail);
+      if (recommendation) {
+        console.log(formatRecommendationDetail(recommendation));
+      } else {
+        console.log(`❌ Recommendation not found: ${options.recommendationsDetail}`);
+        console.log('');
+        console.log('Available recommendation IDs:');
+        report.recommendations.slice(0, 20).forEach(r => {
+          console.log(`  • ${r.id}: ${r.title}`);
+        });
+      }
+      process.exit(0);
+    }
+
+    // Handle quick wins only
+    if (options.recommendationsQuickWins) {
+      console.log('');
+      console.log('═'.repeat(70));
+      console.log('  QUICK WIN OPPORTUNITIES');
+      console.log('═'.repeat(70));
+      console.log('');
+
+      if (report.quickWins.length === 0) {
+        console.log('No quick wins found matching your criteria.');
+      } else {
+        const totalQuickWinSavings = report.quickWins.reduce((sum, r) => sum + r.savings.monthly, 0);
+        console.log(`Found ${report.quickWins.length} quick wins with $${totalQuickWinSavings.toFixed(2)}/month potential savings`);
+        console.log('');
+
+        report.quickWins.forEach((rec, index) => {
+          console.log(`${index + 1}. ⚡ ${rec.title}`);
+          console.log(`   💰 Savings: $${rec.savings.monthly.toFixed(2)}/month ($${rec.savings.annual.toFixed(2)}/year)`);
+          console.log(`   📊 Effort: ${rec.effort} | Risk: ${rec.risk} | Confidence: ${rec.confidence}`);
+          console.log(`   📍 Resource: ${rec.resource.name} (${rec.resource.region})`);
+          console.log('');
+        });
+      }
+      process.exit(0);
+    }
+
+    // Handle export
+    if (options.recommendationsExport) {
+      const format = options.recommendationsExport.toLowerCase();
+      const filename = `optimization-recommendations-${Date.now()}.${format}`;
+
+      if (format === 'json') {
+        require('fs').writeFileSync(filename, JSON.stringify(report, null, 2));
+        console.log(`✅ Recommendations exported to ${filename}`);
+      } else if (format === 'csv') {
+        const csvLines = [
+          'ID,Title,Category,Resource,Region,Monthly Savings,Annual Savings,Risk,Effort,Confidence'
+        ];
+        report.recommendations.forEach(rec => {
+          csvLines.push([
+            rec.id,
+            `"${rec.title.replace(/"/g, '""')}"`,
+            rec.category,
+            `"${rec.resource.name.replace(/"/g, '""')}"`,
+            rec.resource.region,
+            rec.savings.monthly.toFixed(2),
+            rec.savings.annual.toFixed(2),
+            rec.risk,
+            rec.effort,
+            rec.confidenceScore
+          ].join(','));
+        });
+        require('fs').writeFileSync(filename, csvLines.join('\n'));
+        console.log(`✅ Recommendations exported to ${filename}`);
+      } else {
+        console.log(`❌ Unsupported export format: ${format}. Use 'json' or 'csv'.`);
+      }
+      process.exit(0);
+    }
+
+    // Default: Show full report
+    console.log(formatOptimizationReport(report));
+
+    // Show hint for detailed view
+    if (report.recommendations.length > 0) {
+      console.log('💡 Tip: Use --recommendations-detail <id> to see full details for a recommendation');
+      console.log(`   Example: infra-cost --recommendations-detail ${report.recommendations[0].id}`);
+      console.log('');
+    }
+
+  } catch (error) {
+    console.error(`Failed to generate recommendations: ${error.message}`);
+    process.exit(1);
+  }
+}
+
 // Handle audit and compliance requests
 if (options.auditQuery || options.auditExport || options.auditReport || options.auditStats ||
     options.complianceCheck || options.complianceFrameworks) {
@@ -1598,7 +2066,7 @@ if (options.auditQuery || options.auditExport || options.auditReport || options.
 
       // Log the compliance check event
       await auditLogger.logComplianceCheck(
-        framework as ComplianceFramework,
+        framework as AuditComplianceFramework,
         ['access_control', 'data_protection', 'audit_logging'],
         [], // No violations for demo
         {
@@ -1648,7 +2116,7 @@ if (options.auditQuery || options.auditExport || options.auditReport || options.
 
       try {
         const report = await auditLogger.generateComplianceReport(
-          framework as ComplianceFramework,
+          framework as AuditComplianceFramework,
           startDate,
           endDate
         );
@@ -1772,7 +2240,7 @@ if (options.auditQuery || options.auditExport || options.auditReport || options.
 
       try {
         const exportFile = await auditLogger.exportLogs(
-          format as any,
+          format as 'json' | 'csv' | 'xml' | 'syslog',
           { startDate, endDate },
           `audit-export-${format}-${new Date().toISOString().split('T')[0]}.${format === 'syslog' ? 'log' : format}`
         );
@@ -1815,7 +2283,7 @@ if (options.auditQuery || options.auditExport || options.auditReport || options.
         }
       },
       compliance: {
-        frameworks: [ComplianceFramework.SOC2],
+        frameworks: [AuditComplianceFramework.SOC2],
         controlsAffected: ['audit_logging'],
         riskLevel: 'low',
         requiresReview: false
@@ -2133,7 +2601,7 @@ if (options.sustainability || options.carbonFootprint || options.greenRecommenda
     if (options.carbonPricing) {
       const pricingModel = options.carbonPricing.toUpperCase();
       if (['SOCIAL_COST', 'CARBON_TAX', 'MARKET_PRICE'].includes(pricingModel)) {
-        sustainabilityConfig.carbonPricingModel = pricingModel as any;
+        sustainabilityConfig.carbonPricingModel = pricingModel as 'SOCIAL_COST' | 'CARBON_TAX' | 'MARKET_PRICE';
       }
     }
 
@@ -2309,7 +2777,7 @@ if (options.sustainability || options.carbonFootprint || options.greenRecommenda
       console.log(`\n📁 Exporting sustainability analysis to ${format} format...`);
 
       try {
-        const exportPath = await analyzer.exportSustainabilityReport(sustainabilityMetrics, format as any);
+        const exportPath = await analyzer.exportSustainabilityReport(sustainabilityMetrics, format as 'json' | 'csv' | 'xlsx' | 'pdf');
         console.log(`✅ Report exported to: ${exportPath}`);
       } catch (exportError) {
         console.error(`❌ Export failed: ${exportError.message}`);
@@ -2353,26 +2821,26 @@ if (options.securityAnalysis || options.securityVulnerabilities || options.secur
     if (options.securityRiskTolerance) {
       const tolerance = options.securityRiskTolerance.toUpperCase();
       if (['LOW', 'MEDIUM', 'HIGH'].includes(tolerance)) {
-        securityConfig.riskTolerance = tolerance as any;
+        securityConfig.riskTolerance = tolerance as 'LOW' | 'MEDIUM' | 'HIGH';
       }
     }
 
     if (options.securityIndustry) {
       const industry = options.securityIndustry.toUpperCase();
       if (['FINANCE', 'HEALTHCARE', 'RETAIL', 'TECHNOLOGY', 'GOVERNMENT'].includes(industry)) {
-        securityConfig.industryVertical = industry as any;
+        securityConfig.industryVertical = industry as 'FINANCE' | 'HEALTHCARE' | 'RETAIL' | 'TECHNOLOGY' | 'GOVERNMENT';
       }
     }
 
     if (options.securityCompliance) {
       const framework = options.securityCompliance.toUpperCase();
       const frameworkMap = {
-        'SOC2': ComplianceFramework.SOC2,
-        'ISO27001': ComplianceFramework.ISO27001,
-        'PCI_DSS': ComplianceFramework.PCI_DSS,
-        'HIPAA': ComplianceFramework.HIPAA,
-        'GDPR': ComplianceFramework.GDPR,
-        'NIST': ComplianceFramework.NIST
+        'SOC2': AuditComplianceFramework.SOC2,
+        'ISO27001': AuditComplianceFramework.ISO27001,
+        'PCI_DSS': AuditComplianceFramework.PCI_DSS,
+        'HIPAA': AuditComplianceFramework.HIPAA,
+        'GDPR': AuditComplianceFramework.GDPR,
+        'NIST': AuditComplianceFramework.NIST
       };
 
       if (frameworkMap[framework]) {
@@ -2496,10 +2964,10 @@ if (options.securityAnalysis || options.securityVulnerabilities || options.secur
       console.log('─'.repeat(40));
 
       Array.from(securityMetrics.complianceBreakdown.entries()).forEach(([framework, metrics]) => {
-        const frameworkIcon = framework === 'SOC2' ? '📋' :
-                             framework === 'ISO27001' ? '🌐' :
-                             framework === 'PCI_DSS' ? '💳' :
-                             framework === 'HIPAA' ? '🏥' : '📊';
+        const frameworkIcon = framework === AuditComplianceFramework.SOC2 ? '📋' :
+                             framework === AuditComplianceFramework.ISO27001 ? '🌐' :
+                             framework === AuditComplianceFramework.PCI_DSS ? '💳' :
+                             framework === AuditComplianceFramework.HIPAA ? '🏥' : '📊';
 
         console.log(`   ${frameworkIcon} ${framework}:`);
         console.log(`     Overall Score: ${metrics.overallScore.toFixed(1)}/100`);
@@ -3054,7 +3522,7 @@ if (options.analytics || options.analyticsExecutive || options.analyticsInsights
             unit: 'USD',
             change: 8750,
             changePercent: 7.5,
-            trend: 'INCREASING' as any,
+            trend: TrendDirection.INCREASING,
             context: 'Monthly cloud infrastructure spending'
           },
           {
@@ -3063,7 +3531,7 @@ if (options.analytics || options.analyticsExecutive || options.analyticsInsights
             unit: '%',
             change: 3,
             changePercent: 4.1,
-            trend: 'INCREASING' as any,
+            trend: TrendDirection.INCREASING,
             context: 'Resource utilization efficiency'
           },
           {
@@ -3072,7 +3540,7 @@ if (options.analytics || options.analyticsExecutive || options.analyticsInsights
             unit: 'USD',
             change: 5200,
             changePercent: 28.4,
-            trend: 'INCREASING' as any,
+            trend: TrendDirection.INCREASING,
             context: 'Monthly cost optimization opportunities'
           }
         ],
@@ -3266,7 +3734,7 @@ if (options.analytics || options.analyticsExecutive || options.analyticsInsights
         widgets: [
           {
             id: 'cost-trend-widget',
-            type: 'COST_TREND' as any,
+            type: WidgetType.COST_TREND,
             title: 'Cost Trend Analysis',
             dataSource: 'cost-data',
             configuration: {
@@ -3289,7 +3757,7 @@ if (options.analytics || options.analyticsExecutive || options.analyticsInsights
           },
           {
             id: 'efficiency-gauge',
-            type: 'GAUGE' as any,
+            type: WidgetType.GAUGE,
             title: 'Cost Efficiency',
             dataSource: 'efficiency-metrics',
             configuration: {
@@ -3636,7 +4104,7 @@ if (options.monitor || options.monitorSetup || options.monitorStart || options.m
         builder.addAlert('cli-alert', {
           thresholdType,
           thresholdValue,
-          severity: 'MEDIUM',
+          severity: AlertSeverity.MEDIUM,
           enabled: true,
           cooldownMinutes: 15,
           description: `CLI-configured ${thresholdType.toLowerCase()} alert`
@@ -3645,29 +4113,30 @@ if (options.monitor || options.monitorSetup || options.monitorStart || options.m
 
       // Add notification channel if specified
       if (options.alertChannel) {
-        const channel = options.alertChannel.toLowerCase() as NotificationChannel;
+        const channelStr = options.alertChannel.toUpperCase();
+        const channel = channelStr as NotificationChannelType;
         const channelConfig: any = { type: channel };
 
         // Add channel-specific configuration based on environment variables
-        switch (channel) {
-          case 'slack':
+        switch (channelStr) {
+          case 'SLACK':
             channelConfig.webhookUrl = process.env.SLACK_WEBHOOK_URL || options.slackToken;
             channelConfig.channel = process.env.SLACK_CHANNEL || options.slackChannel;
             break;
-          case 'email':
+          case 'EMAIL':
             channelConfig.to = process.env.ALERT_EMAIL_TO;
             channelConfig.from = process.env.ALERT_EMAIL_FROM;
             break;
-          case 'webhook':
+          case 'WEBHOOK':
             channelConfig.url = process.env.ALERT_WEBHOOK_URL;
             break;
-          case 'teams':
+          case 'TEAMS':
             channelConfig.webhookUrl = process.env.TEAMS_WEBHOOK_URL;
             break;
-          case 'sms':
+          case 'SMS':
             channelConfig.phoneNumber = process.env.ALERT_PHONE_NUMBER;
             break;
-          case 'discord':
+          case 'DISCORD':
             channelConfig.webhookUrl = process.env.DISCORD_WEBHOOK_URL;
             break;
         }
@@ -3784,7 +4253,7 @@ if (options.monitor || options.monitorSetup || options.monitorStart || options.m
 
 // For backward compatibility with existing printers, convert to legacy format
 const alias = accountInfo.name;
-const costs: TotalCosts = {
+let costs: TotalCostsWithDelta = {
   totals: {
     lastMonth: costBreakdown.totals.lastMonth || 0,
     thisMonth: costBreakdown.totals.thisMonth || 0,
@@ -3794,8 +4263,44 @@ const costs: TotalCosts = {
   totalsByService: costBreakdown.totalsByService
 };
 
+// Add cost delta analysis if enabled (Issue #7)
+let deltaAnalysis: CostDeltaAnalysis | null = null;
+if (options.delta) {
+  try {
+    // Get raw cost data for delta analysis
+    const rawCostData = await provider.getRawCostData();
+    const deltaThreshold = parseFloat(options.deltaThreshold) || 10;
+
+    deltaAnalysis = analyzeCostDelta(rawCostData, {
+      significantChangeThreshold: deltaThreshold,
+      topN: 5,
+    });
+
+    // Enhance costs with delta information
+    costs = {
+      ...costs,
+      delta: deltaAnalysis,
+    };
+
+    // Print delta summary if there are significant changes
+    if (deltaAnalysis.insights.anomalyDetected) {
+      console.log(chalk.yellow('\n⚠️  Cost Anomaly Detected'));
+      console.log(chalk.gray('━'.repeat(50)));
+      console.log(generateDeltaSummary(deltaAnalysis));
+      console.log('');
+    }
+  } catch (error) {
+    console.warn(`Warning: Could not calculate cost delta: ${(error as Error).message}`);
+  }
+}
+
 if (options.json) {
-  printJson(alias, costs, options.summary);
+  // Include delta in JSON output if available
+  if (deltaAnalysis) {
+    printJson(alias, { ...costs, delta: deltaAnalysis } as any, options.summary);
+  } else {
+    printJson(alias, costs, options.summary);
+  }
 } else if (options.text) {
   printPlainText(alias, costs, options.summary);
 } else {
@@ -3973,18 +4478,7 @@ if (options.enterprise || options.tenants || options.tenantCreate || options.ten
 
   try {
     // Initialize multi-tenant manager
-    const multiTenantManager = new MultiTenantManager({
-      dataStorePath: join(process.cwd(), 'enterprise-data'),
-      encryptionEnabled: process.env.ENTERPRISE_ENCRYPTION === 'true',
-      auditingEnabled: process.env.ENTERPRISE_AUDITING !== 'false',
-      maxTenantsPerInstance: parseInt(process.env.MAX_TENANTS_PER_INSTANCE || '100'),
-      defaultQuotas: {
-        maxUsers: parseInt(process.env.DEFAULT_MAX_USERS || '50'),
-        maxAPIKeys: parseInt(process.env.DEFAULT_MAX_API_KEYS || '10'),
-        maxResources: parseInt(process.env.DEFAULT_MAX_RESOURCES || '1000'),
-        maxCostAnalysis: parseInt(process.env.DEFAULT_MAX_COST_ANALYSIS || '100')
-      }
-    });
+    const multiTenantManager = new MultiTenantManager();
 
     // Set up event listeners
     multiTenantManager.on('tenantCreated', (tenant) => {
@@ -4079,7 +4573,7 @@ if (options.enterprise || options.tenants || options.tenantCreate || options.ten
         name: tenantName,
         subscription: {
           plan: SubscriptionPlan.STARTER
-        }
+        } as any
       });
 
       console.log('✅ Tenant created successfully!');
@@ -4145,7 +4639,7 @@ if (options.enterprise || options.tenants || options.tenantCreate || options.ten
       const tenantId = options.tenantSuspend;
       console.log(`⏸️  Suspending tenant: ${tenantId}`);
 
-      await multiTenantManager.suspendTenant(tenantId);
+      await multiTenantManager.suspendTenant(tenantId, 'CLI suspension');
       console.log('✅ Tenant suspended successfully');
     }
 
@@ -4182,8 +4676,8 @@ if (options.enterprise || options.tenants || options.tenantCreate || options.ten
         console.log(`   🏢 Tenant: ${user.tenantId}`);
         console.log(`   🔑 API Keys: ${user.apiKeys?.length || 0}`);
         console.log(`   📅 Created: ${new Date(user.createdAt).toLocaleDateString()}`);
-        if (user.lastLoginAt) {
-          console.log(`   🕐 Last Login: ${new Date(user.lastLoginAt).toLocaleDateString()}`);
+        if (user.lastLogin) {
+          console.log(`   🕐 Last Login: ${new Date(user.lastLogin).toLocaleDateString()}`);
         }
         console.log('');
       });
@@ -4225,7 +4719,7 @@ if (options.enterprise || options.tenants || options.tenantCreate || options.ten
       const [userId, keyName] = options.apiKeyGenerate.split(':');
       console.log(`🔑 Generating API key: ${keyName || 'default'} for user ${userId}`);
 
-      const apiKey = await multiTenantManager.generateAPIKey(userId, keyName || 'default');
+      const apiKey = await multiTenantManager.generateApiKey(userId, keyName || 'default');
       console.log('✅ API key generated successfully!');
       console.log(`   🔑 API Key: ${apiKey.key}`);
       console.log(`   📛 Name: ${apiKey.name}`);
@@ -4329,7 +4823,7 @@ if (options.enterprise || options.tenants || options.tenantCreate || options.ten
           role: u.role,
           status: u.status,
           createdAt: u.createdAt,
-          lastLoginAt: u.lastLoginAt
+          lastLogin: u.lastLogin
         }))
       };
 
@@ -4417,10 +4911,7 @@ if (options.apiServer || options.apiKeyCreate || options.apiKeyList || options.a
 
       // Try to integrate with multi-tenant manager if available
       try {
-        const multiTenantManager = new MultiTenantManager({
-          dataStorePath: join(process.cwd(), 'enterprise-data'),
-          encryptionEnabled: process.env.ENTERPRISE_ENCRYPTION === 'true'
-        });
+        const multiTenantManager = new MultiTenantManager();
         apiServer.setMultiTenantManager(multiTenantManager);
         console.log('🏢 Multi-tenant support enabled');
       } catch (error) {
@@ -4429,11 +4920,7 @@ if (options.apiServer || options.apiKeyCreate || options.apiKeyList || options.a
 
       // Try to integrate with cost analytics
       try {
-        const costAnalytics = new AdvancedCostAnalytics({
-          enablePredictiveAnalytics: true,
-          enableCostIntelligence: true,
-          enableExecutiveReporting: true
-        });
+        const costAnalytics = new AdvancedCostAnalytics();
         apiServer.setCostAnalytics(costAnalytics);
         console.log('📊 Cost analytics integration enabled');
       } catch (error) {
@@ -4616,7 +5103,7 @@ if (options.apiServer || options.apiKeyCreate || options.apiKeyList || options.a
       console.log(`🧪 Testing webhook: ${webhookId}`);
 
       // Create test event
-      const testEvent = await webhookManager.emitEvent('test.event', {
+      const testEvent = await webhookManager.emitEvent('audit.event' as any, {
         message: 'This is a test webhook delivery',
         timestamp: new Date().toISOString(),
         testData: {
@@ -4997,8 +5484,8 @@ if (options.anomalyDetect || options.anomalyReport || options.anomalyConfig || o
       console.log(`📊 Updating anomaly status: ${anomalyId} → ${newStatus}`);
 
       try {
-        await anomalyDetector.updateAnomalyStatus(anomalyId, newStatus as any);
-        console.log('✅ Anomaly status updated successfully');
+        // TODO: Implement updateAnomalyStatus method in CostAnomalyDetectorAI
+        console.log('⚠️  Anomaly status update not yet implemented');
       } catch (error) {
         console.error(`❌ Failed to update anomaly status: ${error.message}`);
         process.exit(1);
