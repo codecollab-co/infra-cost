@@ -25,6 +25,7 @@ export default defineConfig([
       '@aws-sdk/client-lambda',
       '@aws-sdk/client-budgets',
       '@aws-sdk/client-elastic-load-balancing-v2',
+      '@aws-sdk/client-organizations',
       // Optional feature dependencies
       'puppeteer',
       'cli-progress',

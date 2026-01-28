@@ -31,6 +31,7 @@ import { WebhookManager, WebhookEvent, WebhookDelivery } from './api/webhook-man
 import { CostAnomalyDetectorAI, AIAnomalyDetectionConfiguration, AIAnomaly, AIAnomalyInput, AIAnomalyDetectionReport } from './analytics/anomaly-detector';
 import { AdvancedVisualizationEngine, ChartConfiguration, Dashboard, ChartData, OutputFormat, VisualizationConfiguration } from './visualization/dashboard-engine';
 import { MultiCloudDashboard } from './visualization/multi-cloud-dashboard';
+import { AWSOrganizationsManager, formatOrganizationReport, exportOrganizationReportCsv, formatDailySummary } from './organizations/aws-organizations';
 import chalk from 'chalk';
 import { join } from 'path';
 // Caching imports (Issue #28)
@@ -107,6 +108,16 @@ program
   .option('--optimization-report', 'Generate cross-cloud optimization recommendations')
   .option('--multi-cloud-dashboard', 'Display comprehensive multi-cloud infrastructure dashboard')
   .option('--all-clouds-inventory', 'Show inventory across all configured cloud providers')
+  // AWS Organizations (Issue #10)
+  .option('--organization', 'Get cost summary for all accounts in AWS Organization')
+  .option('--organization-accounts', 'List all accounts in the AWS Organization')
+  .option('--organization-costs', 'Get detailed cost breakdown by account')
+  .option('--organization-export [format]', 'Export organization report (json, csv)')
+  .option('--organization-slack', 'Send organization cost summary to Slack')
+  .option('--organization-daily', 'Generate daily summary format for notifications')
+  .option('--exclude-accounts [ids]', 'Comma-separated account IDs to exclude')
+  .option('--include-accounts [ids]', 'Comma-separated account IDs to include (overrides exclude)')
+  .option('--spike-threshold [percent]', 'Alert threshold for cost spikes (default: 20%)', '20')
   // Resource analysis
   .option('--dependency-mapping', 'Analyze resource dependencies and relationships')
   .option('--tagging-compliance', 'Analyze tagging compliance against standards')
@@ -520,6 +531,16 @@ type OptionsType = {
   recommendationsDetail: string;
   recommendationsExport: string;
   recommendationsQuickWins: boolean;
+  // AWS Organizations options (Issue #10)
+  organization: boolean;
+  organizationAccounts: boolean;
+  organizationCosts: boolean;
+  organizationExport: string;
+  organizationSlack: boolean;
+  organizationDaily: boolean;
+  excludeAccounts: string;
+  includeAccounts: string;
+  spikeThreshold: string;
   // Other options
   help: boolean;
 };
@@ -945,14 +966,25 @@ if (!credentialsValid) {
   process.exit(1);
 }
 
-// Get account information and costs
-const accountInfo = await provider.getAccountInfo();
-const costBreakdown = await provider.getCostBreakdown();
+// Check if organization-only flags are used (skip provider calls for org-only flows)
+const isOrganizationOnlyFlow = options.organization || options.organizationAccounts || options.organizationCosts || options.organizationExport || options.organizationSlack || options.organizationDaily;
+
+// Get account information and costs (skip for organization-only flows)
+let accountInfo: any = null;
+let costBreakdown: any = null;
+
+if (!isOrganizationOnlyFlow) {
+  accountInfo = await provider.getAccountInfo();
+  costBreakdown = await provider.getCostBreakdown();
+}
 
 // Show cache status if verbose or refresh was requested
 if (options.refreshCache) {
   console.log(chalk.green('Cache refreshed with fresh data'));
 }
+
+// Skip all non-org handlers when in organization-only mode
+if (!isOrganizationOnlyFlow) {
 
 // Handle budget and trends requests
 if (options.budgets || options.trends || options.finops || options.alerts) {
@@ -1285,6 +1317,188 @@ if (options.forecast) {
     console.log(''); // Add spacing before regular output
   } catch (error) {
     console.error(`Failed to generate forecast: ${error.message}`);
+  }
+}
+
+} // End of !isOrganizationOnlyFlow guard
+
+// Handle AWS Organizations requests (Issue #10)
+if (options.organization || options.organizationAccounts || options.organizationCosts || options.organizationExport || options.organizationSlack || options.organizationDaily) {
+  try {
+    console.log('🏢 Analyzing AWS Organization costs...');
+    console.log('');
+
+    // Initialize AWS Organizations Manager
+    const spikePercentRaw = Number(options.spikeThreshold);
+    const orgManager = new AWSOrganizationsManager({
+      excludeAccountIds: options.excludeAccounts ? options.excludeAccounts.split(',').map((id: string) => id.trim()) : undefined,
+      includeAccountIds: options.includeAccounts ? options.includeAccounts.split(',').map((id: string) => id.trim()) : undefined,
+      alertThresholds: {
+        spikePercent: Number.isFinite(spikePercentRaw) ? spikePercentRaw : 20,
+        budgetPercent: 90,
+        anomalyThreshold: 2,
+      },
+    });
+
+    // Initialize with credentials
+    // Set AWS_PROFILE for SDK's default credential chain to use the correct profile/SSO
+    const previousProfile = process.env.AWS_PROFILE;
+    if (options.profile && options.profile !== 'default') {
+      process.env.AWS_PROFILE = options.profile;
+    }
+
+    try {
+      await orgManager.initialize({
+        accessKeyId: options.accessKey,
+        secretAccessKey: options.secretKey,
+        sessionToken: options.sessionToken,
+        region: options.region,
+      });
+    } finally {
+      // Restore previous AWS_PROFILE
+      if (previousProfile !== undefined) {
+        process.env.AWS_PROFILE = previousProfile;
+      } else if (options.profile && options.profile !== 'default') {
+        delete process.env.AWS_PROFILE;
+      }
+    }
+
+    // Set up event listeners
+    orgManager.on('accountProcessed', (accountId: string, summary: any) => {
+      console.log(`  ✓ Processed account: ${summary.accountName} (${accountId})`);
+    });
+
+    orgManager.on('accountError', (accountId: string, error: Error) => {
+      console.warn(`  ⚠ Error processing account ${accountId}: ${error.message}`);
+    });
+
+    // Handle account listing
+    if (options.organizationAccounts) {
+      console.log('📋 Fetching organization accounts...');
+      const structure = await orgManager.getOrganizationStructure();
+
+      console.log('');
+      console.log('═'.repeat(70));
+      console.log('  AWS ORGANIZATION ACCOUNTS');
+      console.log('═'.repeat(70));
+      console.log(`  Organization ID: ${structure.id}`);
+      console.log(`  Master Account: ${structure.masterAccountId}`);
+      console.log(`  Total Accounts: ${structure.totalAccounts}`);
+      console.log('');
+      console.log('─'.repeat(70));
+      console.log('  #  │ Account ID    │ Account Name                    │ Status');
+      console.log(' ────┼───────────────┼─────────────────────────────────┼────────');
+
+      structure.accounts.forEach((account, index) => {
+        const name = account.name.length > 31
+          ? account.name.substring(0, 28) + '...'
+          : account.name.padEnd(31);
+        const statusIcon = account.status === 'ACTIVE' ? '✓' : account.status === 'SUSPENDED' ? '⏸' : '⏳';
+        console.log(` ${(index + 1).toString().padStart(2)}  │ ${account.id} │ ${name} │ ${statusIcon} ${account.status}`);
+      });
+
+      console.log(' ────┴───────────────┴─────────────────────────────────┴────────');
+      console.log('');
+      process.exit(0);
+    }
+
+    // Get organization costs
+    console.log('💰 Fetching cost data for all accounts...');
+    const report = await orgManager.getOrganizationCosts();
+
+    // Handle daily summary format
+    if (options.organizationDaily) {
+      const dailySummary = formatDailySummary(report);
+      console.log('');
+      console.log(dailySummary);
+      process.exit(0);
+    }
+
+    // Handle Slack notification
+    if (options.organizationSlack) {
+      if (!options.slackToken || !options.slackChannel) {
+        console.error('❌ Slack token and channel are required. Use --slack-token and --slack-channel');
+        process.exit(1);
+      }
+
+      console.log('📤 Sending report to Slack...');
+      const slackMessage = orgManager.formatSlackMessage(report);
+      let slackSent = false;
+
+      // Send to Slack using existing notifySlack or direct API
+      try {
+        const fetch = (await import('node-fetch')).default;
+        const response = await fetch('https://slack.com/api/chat.postMessage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${options.slackToken}`,
+          },
+          body: JSON.stringify({
+            channel: options.slackChannel,
+            ...slackMessage,
+          }),
+        });
+
+        const result = await response.json() as any;
+        if (result.ok) {
+          slackSent = true;
+          console.log(`✅ Report sent to Slack channel: ${options.slackChannel}`);
+        } else {
+          console.error(`❌ Failed to send to Slack: ${result.error}`);
+        }
+      } catch (slackError) {
+        console.error(`❌ Slack API error: ${(slackError as Error).message}`);
+      }
+      process.exit(slackSent ? 0 : 1);
+    }
+
+    // Handle export
+    if (options.organizationExport) {
+      // Guard against boolean true when flag is used without value
+      if (typeof options.organizationExport !== 'string' || !options.organizationExport.trim()) {
+        console.log('❌ Export format is required. Use --organization-export <json|csv>.');
+        process.exit(1);
+      }
+
+      const format = options.organizationExport.toLowerCase();
+      const filename = `organization-costs-${Date.now()}.${format}`;
+
+      if (format === 'json') {
+        require('fs').writeFileSync(filename, JSON.stringify(report, null, 2));
+        console.log(`✅ Organization report exported to ${filename}`);
+      } else if (format === 'csv') {
+        const csvContent = exportOrganizationReportCsv(report);
+        require('fs').writeFileSync(filename, csvContent);
+        console.log(`✅ Organization report exported to ${filename}`);
+      } else {
+        console.log(`❌ Unsupported export format: ${format}. Use 'json' or 'csv'.`);
+      }
+      process.exit(0);
+    }
+
+    // Default: Show full report
+    console.log(formatOrganizationReport(report));
+
+    // Show tips
+    console.log('💡 Tips:');
+    console.log('   • Use --organization-slack to send daily summaries to Slack');
+    console.log('   • Use --organization-export csv for finance reports');
+    console.log('   • Use --exclude-accounts to skip specific accounts');
+    console.log('   • Use --spike-threshold to adjust alert sensitivity');
+    console.log('');
+
+    process.exit(0);
+  } catch (error) {
+    console.error(`❌ Failed to analyze AWS Organization: ${(error as Error).message}`);
+    if ((error as Error).message.includes('AccessDenied')) {
+      console.log('');
+      console.log('💡 Ensure your credentials have permissions for:');
+      console.log('   • organizations:DescribeOrganization');
+      console.log('   • organizations:ListAccounts');
+      console.log('   • ce:GetCostAndUsage (with linked account filter)');
+    }
+    process.exit(1);
   }
 }
 
