@@ -510,6 +510,16 @@ type OptionsType = {
   // Cost delta options (Issue #7)
   delta: boolean;
   deltaThreshold: string;
+  // Cost optimization recommendations options (Issue #31)
+  recommendations: boolean;
+  recommendationsCategory: string;
+  recommendationsMinSavings: string;
+  recommendationsMaxRisk: string;
+  recommendationsSort: string;
+  recommendationsTop: string;
+  recommendationsDetail: string;
+  recommendationsExport: string;
+  recommendationsQuickWins: boolean;
   // Other options
   help: boolean;
 };
@@ -1634,7 +1644,7 @@ if (options.recommendations || options.recommendationsQuickWins || options.recom
 
     // Get inventory and cost data for analysis
     console.log('📊 Fetching resource inventory...');
-    const inventory = await provider.getInventory();
+    const inventory = await provider.getResourceInventory();
 
     console.log('💰 Fetching cost breakdown...');
     const costBreakdown = await provider.getCostBreakdown();

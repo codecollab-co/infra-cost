@@ -333,28 +333,29 @@ export class CostOptimizationEngine {
     const computeResources = inventory.resources.compute || [];
 
     // Group instances by type and region
-    const instanceGroups = new Map<string, { count: number; totalCost: number }>();
+    const instanceGroups = new Map<string, { count: number; totalCost: number; instanceType: string; region: string }>();
 
     for (const resource of computeResources) {
       if (resource.state !== 'running') continue;
 
-      const key = `${resource.instanceType}-${resource.region}`;
-      const existing = instanceGroups.get(key) || { count: 0, totalCost: 0 };
+      const key = JSON.stringify([resource.instanceType, resource.region]);
+      const existing = instanceGroups.get(key) || { count: 0, totalCost: 0, instanceType: resource.instanceType, region: resource.region };
       const cost = this.estimateResourceCost(resource, costBreakdown);
 
       instanceGroups.set(key, {
         count: existing.count + 1,
         totalCost: existing.totalCost + cost,
+        instanceType: resource.instanceType,
+        region: resource.region,
       });
     }
 
     // Recommend reserved instances for groups with 3+ instances
-    for (const [key, data] of instanceGroups.entries()) {
+    for (const [, data] of instanceGroups.entries()) {
       if (data.count >= 3) {
-        const [instanceType, region] = key.split('-');
         this.recommendations.push(this.createReservedInstanceRecommendation(
-          instanceType,
-          region,
+          data.instanceType,
+          data.region,
           data.count,
           data.totalCost
         ));
@@ -369,6 +370,20 @@ export class CostOptimizationEngine {
     for (const rec of finopsRecs) {
       const category = this.mapFinOpsTypeToCategory(rec.type);
 
+      // Normalize savings to monthly amount
+      const monthlySavings = rec.potentialSavings.timeframe === 'ANNUALLY'
+        ? rec.potentialSavings.amount / 12
+        : rec.potentialSavings.amount;
+
+      // Calculate current and recommended costs, guard against division by zero
+      let currentMonthlyCost = 0;
+      let recommendedMonthlyCost = 0;
+
+      if (rec.potentialSavings.percentage > 0) {
+        currentMonthlyCost = monthlySavings / (rec.potentialSavings.percentage / 100);
+        recommendedMonthlyCost = currentMonthlyCost - monthlySavings;
+      }
+
       this.recommendations.push({
         id: `finops-${rec.id}`,
         title: rec.title,
@@ -382,18 +397,16 @@ export class CostOptimizationEngine {
         },
         current: {
           configuration: 'Current configuration',
-          monthlyCost: rec.potentialSavings.amount / (rec.potentialSavings.percentage / 100),
+          monthlyCost: currentMonthlyCost,
         },
         recommended: {
           configuration: rec.title,
-          monthlyCost: rec.potentialSavings.amount / (rec.potentialSavings.percentage / 100) - rec.potentialSavings.amount,
+          monthlyCost: recommendedMonthlyCost,
           description: rec.description,
         },
         savings: {
-          monthly: rec.potentialSavings.amount,
-          annual: rec.potentialSavings.timeframe === 'ANNUALLY'
-            ? rec.potentialSavings.amount
-            : rec.potentialSavings.amount * 12,
+          monthly: monthlySavings,
+          annual: monthlySavings * 12,
           percentage: rec.potentialSavings.percentage,
         },
         risk: this.mapEffortToRisk(rec.effort),
@@ -798,14 +811,16 @@ export class CostOptimizationEngine {
       case 'savings':
         sorted.sort((a, b) => b.savings.monthly - a.savings.monthly);
         break;
-      case 'effort':
+      case 'effort': {
         const effortOrder = [EffortLevel.MINIMAL, EffortLevel.LOW, EffortLevel.MEDIUM, EffortLevel.HIGH];
         sorted.sort((a, b) => effortOrder.indexOf(a.effort) - effortOrder.indexOf(b.effort));
         break;
-      case 'risk':
+      }
+      case 'risk': {
         const riskOrder = [RiskLevel.NONE, RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH];
         sorted.sort((a, b) => riskOrder.indexOf(a.risk) - riskOrder.indexOf(b.risk));
         break;
+      }
       case 'confidence':
         sorted.sort((a, b) => b.confidenceScore - a.confidenceScore);
         break;
