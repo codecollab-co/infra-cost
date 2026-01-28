@@ -8,6 +8,17 @@
 
 import { EventEmitter } from 'events';
 
+/**
+ * Formats a Date object to YYYY-MM-DD string using local timezone components
+ * Avoids timezone offset issues that occur with toISOString()
+ */
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // AWS Organizations Account
 export interface OrganizationAccount {
   id: string;
@@ -398,8 +409,8 @@ export class AWSOrganizationsManager extends EventEmitter {
     const currentCostResponse = await this.costExplorerClient.send(
       new GetCostAndUsageCommand({
         TimePeriod: {
-          Start: currentStart.toISOString().split('T')[0],
-          End: currentEnd.toISOString().split('T')[0],
+          Start: formatLocalDate(currentStart),
+          End: formatLocalDate(currentEnd),
         },
         Granularity: 'MONTHLY',
         Metrics: ['UnblendedCost'],
@@ -419,8 +430,8 @@ export class AWSOrganizationsManager extends EventEmitter {
     const previousCostResponse = await this.costExplorerClient.send(
       new GetCostAndUsageCommand({
         TimePeriod: {
-          Start: previousStart.toISOString().split('T')[0],
-          End: previousEnd.toISOString().split('T')[0],
+          Start: formatLocalDate(previousStart),
+          End: formatLocalDate(previousEnd),
         },
         Granularity: 'MONTHLY',
         Metrics: ['UnblendedCost'],

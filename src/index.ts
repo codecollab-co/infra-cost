@@ -1324,11 +1324,12 @@ if (options.organization || options.organizationAccounts || options.organization
     console.log('');
 
     // Initialize AWS Organizations Manager
+    const spikePercentRaw = Number(options.spikeThreshold);
     const orgManager = new AWSOrganizationsManager({
       excludeAccountIds: options.excludeAccounts ? options.excludeAccounts.split(',').map((id: string) => id.trim()) : undefined,
       includeAccountIds: options.includeAccounts ? options.includeAccounts.split(',').map((id: string) => id.trim()) : undefined,
       alertThresholds: {
-        spikePercent: parseFloat(options.spikeThreshold) || 20,
+        spikePercent: Number.isFinite(spikePercentRaw) ? spikePercentRaw : 20,
         budgetPercent: 90,
         anomalyThreshold: 2,
       },
@@ -1432,6 +1433,12 @@ if (options.organization || options.organizationAccounts || options.organization
 
     // Handle export
     if (options.organizationExport) {
+      // Guard against boolean true when flag is used without value
+      if (typeof options.organizationExport !== 'string' || !options.organizationExport.trim()) {
+        console.log('❌ Export format is required. Use --organization-export <json|csv>.');
+        process.exit(1);
+      }
+
       const format = options.organizationExport.toLowerCase();
       const filename = `organization-costs-${Date.now()}.${format}`;
 
