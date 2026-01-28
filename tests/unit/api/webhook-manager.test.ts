@@ -6,6 +6,17 @@ import { WebhookManager } from '../../../src/api/webhook-manager.js';
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
+// Test utilities
+const testUtils = {
+  mockAxiosResponse: (data: unknown, status: number = 200) => ({
+    data,
+    status,
+    statusText: 'OK',
+    headers: {},
+    config: {} as any
+  })
+};
+
 describe('WebhookManager', () => {
   let webhookManager: WebhookManager;
 

@@ -99,12 +99,18 @@ export interface ChartConfiguration {
   realTime?: boolean;
   exportable?: boolean;
   drillDown?: DrillDownConfig;
+  theme?: ColorScheme;
+  createdAt?: Date;
 }
 
 export interface ChartOptions {
   responsive?: boolean;
   maintainAspectRatio?: boolean;
   animation?: AnimationConfig;
+  interaction?: {
+    intersect?: boolean;
+    mode?: 'point' | 'nearest' | 'index' | 'dataset' | 'x' | 'y';
+  };
   legend?: LegendConfig;
   tooltip?: TooltipConfig;
   scales?: ScalesConfig;
@@ -428,8 +434,8 @@ export class AdvancedVisualizationEngine extends EventEmitter {
         background: '#111827',
         surface: '#1F2937',
         text: {
-          primary: '#F9FAFB',
-          secondary: '#D1D5DB',
+          primary: '#ffffff',
+          secondary: '#ffffff',
           disabled: '#6B7280'
         },
         grid: '#374151',
@@ -605,6 +611,10 @@ export class AdvancedVisualizationEngine extends EventEmitter {
   }
 
   public async createChart(config: Partial<ChartConfiguration>, data: ChartData): Promise<ChartConfiguration> {
+    const themeToUse = config.theme ?? this.config.colorScheme;
+    const isInteractive = config.interactive ?? this.config.enableInteractiveDashboards;
+    const hasAnimation = config.options?.animation !== undefined ? config.options.animation : this.config.animation;
+
     const chart: ChartConfiguration = {
       id: config.id ?? this.generateId('chart'),
       type: config.type ?? this.config.defaultChartType,
@@ -615,20 +625,30 @@ export class AdvancedVisualizationEngine extends EventEmitter {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: this.config.animation,
-        ...config.options
+        animation: hasAnimation,
+        ...config.options,
+        // Add interaction options for interactive charts
+        ...(isInteractive && {
+          interaction: {
+            intersect: false,
+            mode: 'index' as const,
+            ...config.options?.interaction
+          }
+        })
       },
-      interactive: config.interactive ?? this.config.enableInteractiveDashboards,
+      interactive: isInteractive,
       realTime: config.realTime ?? this.config.enableRealTimeCharts,
       exportable: config.exportable ?? this.config.enableExportOptions,
-      drillDown: config.drillDown
+      drillDown: config.drillDown,
+      theme: themeToUse,
+      createdAt: new Date()
     };
 
     // Apply theme
-    chart.options = this.applyTheme(chart.options, this.config.colorScheme);
+    chart.options = this.applyTheme(chart.options, themeToUse);
 
     this.charts.set(chart.id, chart);
-    this.emit('chart.created', { chartId: chart.id, chart });
+    this.emit('chart.created', { id: chart.id, type: chart.type, chart });
 
     return chart;
   }

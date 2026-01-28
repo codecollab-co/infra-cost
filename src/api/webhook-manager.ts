@@ -122,31 +122,43 @@ export class WebhookManager extends EventEmitter {
 
         this.emit('delivery.success', delivery);
         console.log(`✅ Webhook delivered: ${delivery.id} to ${delivery.webhookUrl} (${duration}ms)`);
+      } else if (response.status >= 400 && response.status < 500) {
+        // Client error (4xx) - don't retry
+        delivery.status = 'failed';
+        delivery.failedAt = new Date();
+        delivery.error = `HTTP ${response.status}: ${response.statusText}`;
+
+        this.emit('delivery.failed', delivery);
+        console.error(`❌ Webhook delivery failed (client error): ${delivery.id} - ${delivery.error}`);
       } else {
-        // HTTP error but not server error
+        // HTTP error (5xx) - should retry
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
     } catch (error) {
       const duration = Date.now() - startTime;
       const errorMessage = this.getErrorMessage(error);
+      const statusCode = (error as AxiosError).response?.status || 0;
 
       delivery.error = errorMessage;
       delivery.lastResponse = {
-        statusCode: (error as AxiosError).response?.status || 0,
+        statusCode,
         headers: (error as AxiosError).response?.headers as Record<string, string> || {},
         body: JSON.stringify((error as AxiosError).response?.data) || '',
         duration
       };
 
-      if (delivery.attempts < delivery.maxRetries) {
-        // Schedule retry
+      // Don't retry on client errors (4xx)
+      const isClientError = statusCode >= 400 && statusCode < 500;
+
+      if (!isClientError && delivery.attempts < delivery.maxRetries) {
+        // Schedule retry for server errors or network errors
         delivery.nextRetryAt = new Date(Date.now() + this.config.retryDelay * Math.pow(2, delivery.attempts - 1));
         this.scheduleRetry(delivery);
 
         console.log(`⏰ Webhook delivery failed, retrying ${delivery.id}: ${errorMessage} (attempt ${delivery.attempts}/${delivery.maxRetries})`);
       } else {
-        // Max retries reached
+        // Max retries reached or client error
         delivery.status = 'failed';
         delivery.failedAt = new Date();
 
@@ -200,10 +212,15 @@ export class WebhookManager extends EventEmitter {
     const expectedSignature = this.generateSignature(payload, secret);
     const providedSignature = signature.replace(/^sha256=/, '');
 
-    return timingSafeEqual(
-      Buffer.from(expectedSignature, 'hex'),
-      Buffer.from(providedSignature, 'hex')
-    );
+    // Check if lengths match before using timingSafeEqual
+    const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+    const providedBuffer = Buffer.from(providedSignature, 'hex');
+
+    if (expectedBuffer.length !== providedBuffer.length) {
+      return false;
+    }
+
+    return timingSafeEqual(expectedBuffer, providedBuffer);
   }
 
   private scheduleRetry(delivery: WebhookDelivery): void {
@@ -214,6 +231,9 @@ export class WebhookManager extends EventEmitter {
   }
 
   private setupRetryProcessor(): void {
+    // Use the configured retryDelay as the interval, with a minimum of 100ms
+    const interval = Math.max(this.config.retryDelay / 2, 100);
+
     this.retryTimer = setInterval(() => {
       const now = new Date();
       const readyForRetry = this.retryQueue.filter(delivery =>
@@ -232,7 +252,7 @@ export class WebhookManager extends EventEmitter {
         clearInterval(this.retryTimer);
         this.retryTimer = undefined;
       }
-    }, 1000);
+    }, interval);
   }
 
   private getErrorMessage(error: any): string {
@@ -277,8 +297,8 @@ export class WebhookManager extends EventEmitter {
       timestamp: new Date(),
       tenantId: options?.tenantId,
       userId: options?.userId,
-      source: options?.source,
-      version: options?.version
+      source: options?.source || 'infra-cost',
+      version: options?.version || '1.0'
     };
 
     this.emit('event.created', event);
