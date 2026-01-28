@@ -9,13 +9,37 @@ jest.mock('../../src/logger', () => ({
   failSpinner: jest.fn()
 }));
 
+// Create a stable object to hold our mock functions
+const mocks = {
+  stsSend: jest.fn().mockResolvedValue({}),
+  iamSend: jest.fn().mockResolvedValue({}),
+  ceSend: jest.fn().mockResolvedValue({})
+};
+
+// Mock AWS SDK clients with explicit factory functions that reference the stable mocks object
+jest.mock('@aws-sdk/client-sts', () => ({
+  STSClient: jest.fn(() => ({
+    send: (command: any) => mocks.stsSend(command)
+  })),
+  GetCallerIdentityCommand: jest.fn((input) => input)
+}));
+
+jest.mock('@aws-sdk/client-iam', () => ({
+  IAMClient: jest.fn(() => ({
+    send: (command: any) => mocks.iamSend(command)
+  })),
+  ListAccountAliasesCommand: jest.fn((input) => input)
+}));
+
+jest.mock('@aws-sdk/client-cost-explorer', () => ({
+  CostExplorerClient: jest.fn(() => ({
+    send: (command: any) => mocks.ceSend(command)
+  })),
+  GetCostAndUsageCommand: jest.fn((input) => input)
+}));
+
 import { AWSProvider } from '../../src/providers/aws';
 import { CloudProvider, ProviderConfig } from '../../src/types/providers';
-
-// Mock AWS SDK
-jest.mock('@aws-sdk/client-cost-explorer');
-jest.mock('@aws-sdk/client-sts');
-jest.mock('@aws-sdk/client-iam');
 
 describe('AWSProvider', () => {
   let provider: AWSProvider;
@@ -58,29 +82,20 @@ describe('AWSProvider', () => {
   describe('validateCredentials', () => {
     it('should validate credentials successfully', async () => {
       // Mock successful STS response
-      const mockSTSClient = {
-        send: jest.fn().mockResolvedValue({
-          Account: '123456789012',
-          UserId: 'test-user',
-          Arn: 'arn:aws:sts::123456789012:user/test-user'
-        })
-      };
-
-      // Replace the client in provider
-      (provider as any).stsClient = mockSTSClient;
+      mocks.stsSend.mockResolvedValue({
+        Account: '123456789012',
+        UserId: 'test-user',
+        Arn: 'arn:aws:sts::123456789012:user/test-user'
+      });
 
       const isValid = await provider.validateCredentials();
       expect(isValid).toBe(true);
-      expect(mockSTSClient.send).toHaveBeenCalledTimes(1);
+      expect(mocks.stsSend).toHaveBeenCalledTimes(1);
     });
 
     it('should return false for invalid credentials', async () => {
       // Mock failed STS response
-      const mockSTSClient = {
-        send: jest.fn().mockRejectedValue(new Error('Invalid credentials'))
-      };
-
-      (provider as any).stsClient = mockSTSClient;
+      mocks.stsSend.mockRejectedValue(new Error('Invalid credentials'));
 
       const isValid = await provider.validateCredentials();
       expect(isValid).toBe(false);
@@ -89,51 +104,33 @@ describe('AWSProvider', () => {
 
   describe('getAccountInfo', () => {
     it('should return account information', async () => {
-      // Mock STS response
-      const mockSTSClient = {
-        send: jest.fn().mockResolvedValue({
-          Account: '123456789012',
-          UserId: 'test-user',
-          Arn: 'arn:aws:sts::123456789012:user/test-user'
-        })
-      };
-
-      // Mock IAM response
-      const mockIAMClient = {
-        send: jest.fn().mockResolvedValue({
-          AccountAliases: ['test-account-alias']
-        })
-      };
-
-      (provider as any).stsClient = mockSTSClient;
-      (provider as any).iamClient = mockIAMClient;
+      // Mock IAM response with account alias
+      mocks.iamSend.mockResolvedValue({
+        AccountAliases: ['test-account-alias']
+      });
 
       const accountInfo = await provider.getAccountInfo();
 
       expect(accountInfo).toEqual({
-        id: '123456789012',
+        id: 'test-account-alias',
         name: 'test-account-alias',
         provider: 'aws'
       });
+      expect(mocks.iamSend).toHaveBeenCalledTimes(1);
     });
 
     it('should handle missing account alias', async () => {
-      const mockSTSClient = {
-        send: jest.fn().mockResolvedValue({
-          Account: '123456789012',
-          UserId: 'test-user',
-          Arn: 'arn:aws:sts::123456789012:user/test-user'
-        })
-      };
+      // Mock IAM response with no aliases
+      mocks.iamSend.mockResolvedValue({
+        AccountAliases: []
+      });
 
-      const mockIAMClient = {
-        send: jest.fn().mockResolvedValue({
-          AccountAliases: []
-        })
-      };
-
-      (provider as any).stsClient = mockSTSClient;
-      (provider as any).iamClient = mockIAMClient;
+      // Mock STS response for fallback
+      mocks.stsSend.mockResolvedValue({
+        Account: '123456789012',
+        UserId: 'test-user',
+        Arn: 'arn:aws:sts::123456789012:user/test-user'
+      });
 
       const accountInfo = await provider.getAccountInfo();
 
@@ -142,6 +139,8 @@ describe('AWSProvider', () => {
         name: '123456789012',
         provider: 'aws'
       });
+      expect(mocks.iamSend).toHaveBeenCalledTimes(1);
+      expect(mocks.stsSend).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -175,11 +174,7 @@ describe('AWSProvider', () => {
         ]
       };
 
-      const mockCEClient = {
-        send: jest.fn().mockResolvedValue(mockCostData)
-      };
-
-      (provider as any).ceClient = mockCEClient;
+      mocks.ceSend.mockResolvedValue(mockCostData);
 
       const costBreakdown = await provider.getCostBreakdown();
 
@@ -187,31 +182,25 @@ describe('AWSProvider', () => {
       expect(costBreakdown).toHaveProperty('services');
       expect(costBreakdown.totals.thisMonth).toBeGreaterThanOrEqual(0);
       expect(Array.isArray(costBreakdown.services)).toBe(true);
+      expect(mocks.ceSend).toHaveBeenCalled();
     });
 
     it('should handle empty cost data', async () => {
-      const mockCEClient = {
-        send: jest.fn().mockResolvedValue({
-          ResultsByTime: []
-        })
-      };
-
-      (provider as any).ceClient = mockCEClient;
+      mocks.ceSend.mockResolvedValue({
+        ResultsByTime: []
+      });
 
       const costBreakdown = await provider.getCostBreakdown();
 
       expect(costBreakdown.totals.thisMonth).toBe(0);
       expect(costBreakdown.services).toEqual([]);
+      expect(mocks.ceSend).toHaveBeenCalled();
     });
   });
 
   describe('error handling', () => {
     it('should handle AWS API errors gracefully', async () => {
-      const mockCEClient = {
-        send: jest.fn().mockRejectedValue(new Error('AWS API Error'))
-      };
-
-      (provider as any).ceClient = mockCEClient;
+      mocks.ceSend.mockRejectedValue(new Error('AWS API Error'));
 
       await expect(provider.getCostBreakdown()).rejects.toThrow();
     });
