@@ -896,6 +896,12 @@ export class CostOptimizationEngine {
 
   // Helper methods
 
+  /**
+   * Estimate monthly cost for a specific resource
+   * @param resource - The resource to estimate cost for
+   * @param costBreakdown - Overall cost breakdown data
+   * @returns Estimated monthly cost in dollars
+   */
   private estimateResourceCost(resource: any, costBreakdown: CostBreakdown): number {
     // Simplified cost estimation based on resource type
     // In production, this would use actual cost allocation data
@@ -904,6 +910,11 @@ export class CostOptimizationEngine {
     return totalCost / totalResources / 10; // Rough per-resource estimate
   }
 
+  /**
+   * Simulate resource utilization metrics
+   * @param resource - The resource to simulate utilization for
+   * @returns Object containing CPU and memory utilization percentages
+   */
   private simulateUtilization(resource: any): { cpu: number; memory: number } {
     // Simulate utilization for demo purposes
     // In production, this would query CloudWatch metrics
@@ -913,6 +924,11 @@ export class CostOptimizationEngine {
     };
   }
 
+  /**
+   * Get recommended downsized instance type
+   * @param currentType - Current instance type
+   * @returns Recommended smaller instance type, or null if no recommendation
+   */
   private getDownsizedInstanceType(currentType: string): string | null {
     const downsizeMap: Record<string, string> = {
       't3.xlarge': 't3.large',
@@ -928,6 +944,12 @@ export class CostOptimizationEngine {
     return downsizeMap[currentType] || null;
   }
 
+  /**
+   * Calculate estimated savings percentage from downsizing
+   * @param currentType - Current instance type
+   * @param recommendedType - Recommended instance type
+   * @returns Estimated savings percentage
+   */
   private getDownsizeSavingsPercent(currentType: string, recommendedType: string): number {
     // Simplified savings calculation
     if (currentType.includes('xlarge') && recommendedType.includes('large')) {
@@ -942,6 +964,11 @@ export class CostOptimizationEngine {
     return 30;
   }
 
+  /**
+   * Map FinOps recommendation type to optimization category
+   * @param type - FinOps recommendation type
+   * @returns Corresponding optimization category
+   */
   private mapFinOpsTypeToCategory(type: string): OptimizationCategory {
     switch (type) {
       case 'RESOURCE_RIGHTSIZING':
@@ -955,6 +982,11 @@ export class CostOptimizationEngine {
     }
   }
 
+  /**
+   * Map implementation effort to risk level
+   * @param effort - Implementation effort level
+   * @returns Corresponding risk level
+   */
   private mapEffortToRisk(effort: string): RiskLevel {
     switch (effort.toUpperCase()) {
       case 'LOW':
@@ -968,6 +1000,11 @@ export class CostOptimizationEngine {
     }
   }
 
+  /**
+   * Convert effort level to estimated time range
+   * @param effort - Implementation effort level
+   * @returns Human-readable time estimate
+   */
   private effortToTime(effort: string): string {
     switch (effort.toUpperCase()) {
       case 'LOW':
@@ -981,6 +1018,11 @@ export class CostOptimizationEngine {
     }
   }
 
+  /**
+   * Assess the quality of inventory data based on resource count
+   * @param inventory - Resource inventory to assess
+   * @returns Data quality rating: 'high', 'medium', or 'low'
+   */
   private assessDataQuality(inventory: ResourceInventory): 'high' | 'medium' | 'low' {
     if (inventory.totalResources > 50) return 'high';
     if (inventory.totalResources > 10) return 'medium';
