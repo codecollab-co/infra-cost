@@ -156,6 +156,7 @@ export class AWSOrganizationsManager extends EventEmitter {
       const { OrganizationsClient, ListAccountsCommand, DescribeOrganizationCommand, ListRootsCommand, ListOrganizationalUnitsForParentCommand } = await import('@aws-sdk/client-organizations');
       const { CostExplorerClient, GetCostAndUsageCommand } = await import('@aws-sdk/client-cost-explorer');
 
+      // Config for Organizations client (can use any region)
       const clientConfig: any = {
         region: credentials?.region || this.config.costExplorerRegion,
       };
@@ -168,8 +169,21 @@ export class AWSOrganizationsManager extends EventEmitter {
         };
       }
 
+      // Config for Cost Explorer client (must use us-east-1)
+      const costExplorerConfig: any = {
+        region: this.config.costExplorerRegion, // Force us-east-1
+      };
+
+      if (credentials?.accessKeyId && credentials?.secretAccessKey) {
+        costExplorerConfig.credentials = {
+          accessKeyId: credentials.accessKeyId,
+          secretAccessKey: credentials.secretAccessKey,
+          sessionToken: credentials.sessionToken,
+        };
+      }
+
       this.organizationsClient = new OrganizationsClient(clientConfig);
-      this.costExplorerClient = new CostExplorerClient(clientConfig);
+      this.costExplorerClient = new CostExplorerClient(costExplorerConfig);
 
       this.emit('initialized');
     } catch (error) {
@@ -252,14 +266,14 @@ export class AWSOrganizationsManager extends EventEmitter {
         return false;
       }
 
-      // Filter by exclude list
-      if (this.config.excludeAccountIds?.includes(account.id)) {
-        return false;
-      }
-
-      // Filter by include list (if specified)
+      // Filter by include list first (if specified, it takes precedence)
       if (this.config.includeAccountIds && this.config.includeAccountIds.length > 0) {
         return this.config.includeAccountIds.includes(account.id);
+      }
+
+      // Filter by exclude list (only applies if no include list is specified)
+      if (this.config.excludeAccountIds?.includes(account.id)) {
+        return false;
       }
 
       return true;
@@ -278,7 +292,8 @@ export class AWSOrganizationsManager extends EventEmitter {
     const now = new Date();
     const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const previousMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+    // Cost Explorer End is exclusive, so use the first day of current month
+    const previousMonthEnd = currentMonthStart;
 
     // Get costs for each account
     for (const account of structure.accounts) {
@@ -611,7 +626,19 @@ export class AWSOrganizationsManager extends EventEmitter {
       ],
     });
 
-    return { blocks };
+    // Build plain-text fallback summary
+    const topSpendersSnippet = report.topSpenders
+      .slice(0, 3)
+      .map(a => `${a.accountName}: $${a.currentMonthCost.toFixed(2)}`)
+      .join(', ');
+
+    const alertsSnippet = report.alerts.length > 0
+      ? ` | ${report.alerts.length} alert${report.alerts.length > 1 ? 's' : ''}`
+      : '';
+
+    const summaryText = `${report.period.label}: $${report.summary.totalCurrentMonth.toFixed(2)} (${changeSign}${report.summary.totalChangePercent.toFixed(1)}% ${trendEmoji}) | Top spenders: ${topSpendersSnippet}${alertsSnippet}`;
+
+    return { text: summaryText, blocks };
   }
 }
 

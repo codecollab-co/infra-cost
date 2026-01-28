@@ -531,6 +531,16 @@ type OptionsType = {
   recommendationsDetail: string;
   recommendationsExport: string;
   recommendationsQuickWins: boolean;
+  // AWS Organizations options (Issue #10)
+  organization: boolean;
+  organizationAccounts: boolean;
+  organizationCosts: boolean;
+  organizationExport: string;
+  organizationSlack: boolean;
+  organizationDaily: boolean;
+  excludeAccounts: string;
+  includeAccounts: string;
+  spikeThreshold: string;
   // Other options
   help: boolean;
 };
@@ -956,9 +966,17 @@ if (!credentialsValid) {
   process.exit(1);
 }
 
-// Get account information and costs
-const accountInfo = await provider.getAccountInfo();
-const costBreakdown = await provider.getCostBreakdown();
+// Check if organization-only flags are used (skip provider calls for org-only flows)
+const isOrganizationOnlyFlow = options.organization || options.organizationAccounts || options.organizationCosts || options.organizationExport || options.organizationSlack || options.organizationDaily;
+
+// Get account information and costs (skip for organization-only flows)
+let accountInfo: any = null;
+let costBreakdown: any = null;
+
+if (!isOrganizationOnlyFlow) {
+  accountInfo = await provider.getAccountInfo();
+  costBreakdown = await provider.getCostBreakdown();
+}
 
 // Show cache status if verbose or refresh was requested
 if (options.refreshCache) {
