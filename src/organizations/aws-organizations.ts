@@ -799,9 +799,13 @@ export function formatDailySummary(report: OrganizationCostReport): string {
   summary += `🔮 Forecast: $${report.summary.forecastedMonthEnd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} by month end\n\n`;
 
   summary += `*Top 3 Spenders:*\n`;
-  report.topSpenders.slice(0, 3).forEach((account, index) => {
-    summary += `${index + 1}. ${account.accountName}: $${account.currentMonthCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-  });
+  if (report.topSpenders.length > 0) {
+    report.topSpenders.slice(0, 3).forEach((account, index) => {
+      summary += `${index + 1}. ${account.accountName}: $${account.currentMonthCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+    });
+  } else {
+    summary += `_No accounts matched the filters for this period._\n`;
+  }
 
   if (report.alerts.length > 0) {
     summary += `\n⚠️ *${report.alerts.length} Alert(s)*\n`;

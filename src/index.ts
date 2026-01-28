@@ -983,6 +983,9 @@ if (options.refreshCache) {
   console.log(chalk.green('Cache refreshed with fresh data'));
 }
 
+// Skip all non-org handlers when in organization-only mode
+if (!isOrganizationOnlyFlow) {
+
 // Handle budget and trends requests
 if (options.budgets || options.trends || options.finops || options.alerts) {
   try {
@@ -1317,6 +1320,8 @@ if (options.forecast) {
   }
 }
 
+} // End of !isOrganizationOnlyFlow guard
+
 // Handle AWS Organizations requests (Issue #10)
 if (options.organization || options.organizationAccounts || options.organizationCosts || options.organizationExport || options.organizationSlack || options.organizationDaily) {
   try {
@@ -1336,12 +1341,27 @@ if (options.organization || options.organizationAccounts || options.organization
     });
 
     // Initialize with credentials
-    await orgManager.initialize({
-      accessKeyId: options.accessKey,
-      secretAccessKey: options.secretKey,
-      sessionToken: options.sessionToken,
-      region: options.region,
-    });
+    // Set AWS_PROFILE for SDK's default credential chain to use the correct profile/SSO
+    const previousProfile = process.env.AWS_PROFILE;
+    if (options.profile && options.profile !== 'default') {
+      process.env.AWS_PROFILE = options.profile;
+    }
+
+    try {
+      await orgManager.initialize({
+        accessKeyId: options.accessKey,
+        secretAccessKey: options.secretKey,
+        sessionToken: options.sessionToken,
+        region: options.region,
+      });
+    } finally {
+      // Restore previous AWS_PROFILE
+      if (previousProfile !== undefined) {
+        process.env.AWS_PROFILE = previousProfile;
+      } else if (options.profile && options.profile !== 'default') {
+        delete process.env.AWS_PROFILE;
+      }
+    }
 
     // Set up event listeners
     orgManager.on('accountProcessed', (accountId: string, summary: any) => {
