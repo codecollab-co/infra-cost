@@ -110,7 +110,7 @@ export interface ChartOptions {
   scales?: ScalesConfig;
   plugins?: PluginConfig;
   theme?: ColorScheme;
-  customStyles?: Record<string, any>;
+  customStyles?: Record<string, unknown>;
 }
 
 export interface LegendConfig {
@@ -135,9 +135,9 @@ export interface TooltipConfig {
   borderWidth?: number;
   displayColors?: boolean;
   callbacks?: {
-    title?: (context: any) => string;
-    label?: (context: any) => string;
-    footer?: (context: any) => string;
+    title?: (context: { label?: string; dataset?: { label?: string }; dataIndex?: number }) => string;
+    label?: (context: { label?: string; parsed?: { y?: number }; dataset?: { label?: string }; dataIndex?: number }) => string;
+    footer?: (context: { label?: string; dataset?: { label?: string }; dataIndex?: number }) => string;
   };
 }
 
@@ -166,7 +166,7 @@ export interface AxisConfig {
     display: boolean;
     color?: string;
     font?: FontConfig;
-    callback?: (value: any, index: number, values: any[]) => string;
+    callback?: (value: number | string, index: number, values: Array<{ value: number }>) => string;
   };
   min?: number;
   max?: number;
@@ -178,7 +178,7 @@ export interface PluginConfig {
     display: boolean;
     color?: string;
     font?: FontConfig;
-    formatter?: (value: any, context: any) => string;
+    formatter?: (value: number | string, context: { dataIndex?: number; dataset?: { label?: string } }) => string;
   };
   zoom?: {
     zoom: {
@@ -226,7 +226,7 @@ export interface FontConfig {
 export interface DrillDownConfig {
   enabled: boolean;
   levels: DrillDownLevel[];
-  onDrillDown?: (level: number, data: any) => ChartData;
+  onDrillDown?: (level: number, data: { label?: string; value?: number; index?: number }) => ChartData;
 }
 
 export interface DrillDownLevel {
@@ -277,12 +277,12 @@ export interface DashboardFilter {
   name: string;
   type: 'date' | 'select' | 'multiselect' | 'range' | 'search';
   options?: FilterOption[];
-  defaultValue?: any;
+  defaultValue?: string | number | Date | string[] | number[];
   affectedCharts: string[];
 }
 
 export interface FilterOption {
-  value: any;
+  value: string | number | boolean;
   label: string;
   group?: string;
 }
@@ -468,7 +468,7 @@ export class AdvancedVisualizationEngine extends EventEmitter {
       },
       fonts: {
         title: { family: 'system-ui, sans-serif', size: 24, weight: 'bold' },
-        subtitle: { family: 'system-ui, sans-serif', size: 18, weight: '500' },
+        subtitle: { family: 'system-ui, sans-serif', size: 18, weight: 500 },
         body: { family: 'system-ui, sans-serif', size: 14, weight: 'normal' },
         caption: { family: 'system-ui, sans-serif', size: 12, weight: 'normal' }
       },
@@ -606,11 +606,11 @@ export class AdvancedVisualizationEngine extends EventEmitter {
 
   public async createChart(config: Partial<ChartConfiguration>, data: ChartData): Promise<ChartConfiguration> {
     const chart: ChartConfiguration = {
-      id: config.id || this.generateId('chart'),
-      type: config.type || this.config.defaultChartType,
-      title: config.title || 'Untitled Chart',
-      width: config.width || '100%',
-      height: config.height || '400px',
+      id: config.id ?? this.generateId('chart'),
+      type: config.type ?? this.config.defaultChartType,
+      title: config.title ?? 'Untitled Chart',
+      width: config.width ?? '100%',
+      height: config.height ?? '400px',
       data,
       options: {
         responsive: true,
@@ -639,20 +639,19 @@ export class AdvancedVisualizationEngine extends EventEmitter {
     options: Partial<Dashboard> = {}
   ): Promise<Dashboard> {
     const dashboard: Dashboard = {
-      id: options.id || this.generateId('dashboard'),
+      id: options.id ?? this.generateId('dashboard'),
       name,
       description: options.description,
-      layout: options.layout || {
+      layout: options.layout ?? {
         type: this.config.dashboardLayout,
         columns: 12,
-        rows: 'auto',
         gap: 16,
         padding: 20,
         responsive: this.config.responsive.enabled
       },
       charts,
-      filters: options.filters || [],
-      theme: options.theme || this.config.colorScheme,
+      filters: options.filters ?? [],
+      theme: options.theme ?? this.config.colorScheme,
       settings: {
         autoRefresh: false,
         refreshInterval: 300000,
@@ -666,8 +665,8 @@ export class AdvancedVisualizationEngine extends EventEmitter {
       createdAt: new Date(),
       updatedAt: new Date(),
       owner: options.owner,
-      shared: options.shared || false,
-      tags: options.tags || []
+      shared: options.shared ?? false,
+      tags: options.tags ?? []
     };
 
     this.dashboards.set(dashboard.id, dashboard);
@@ -834,7 +833,7 @@ export class AdvancedVisualizationEngine extends EventEmitter {
   }
 
   private async renderChartAsHTML(chart: ChartConfiguration): Promise<string> {
-    const theme = this.themes.get(chart.options.theme || this.config.colorScheme) || this.themes.get('default')!;
+    const theme = this.themes.get(chart.options.theme ?? this.config.colorScheme) ?? this.themes.get('default')!;
 
     return `
 <!DOCTYPE html>
@@ -899,7 +898,7 @@ export class AdvancedVisualizationEngine extends EventEmitter {
   }
 
   private async renderChartAsSVG(chart: ChartConfiguration): Promise<string> {
-    const theme = this.themes.get(chart.options.theme || this.config.colorScheme) || this.themes.get('default')!;
+    const theme = this.themes.get(chart.options.theme ?? this.config.colorScheme) ?? this.themes.get('default')!;
     const width = typeof chart.width === 'string' ? 800 : chart.width;
     const height = typeof chart.height === 'string' ? 600 : chart.height;
 
@@ -926,7 +925,7 @@ export class AdvancedVisualizationEngine extends EventEmitter {
     chart.data.labels.forEach((label, index) => {
       const row = [label];
       chart.data.datasets.forEach(dataset => {
-        row.push(dataset.data[index]?.toString() || '0');
+        row.push(dataset.data[index]?.toString() ?? '0');
       });
       rows.push(row.join(','));
     });
@@ -1037,9 +1036,11 @@ export class AdvancedVisualizationEngine extends EventEmitter {
         x: {
           ...options.scales?.x,
           grid: {
+            display: true,
             color: theme.colors.grid
           },
           ticks: {
+            display: true,
             color: theme.colors.text.secondary,
             font: theme.fonts.caption
           }
@@ -1047,9 +1048,11 @@ export class AdvancedVisualizationEngine extends EventEmitter {
         y: {
           ...options.scales?.y,
           grid: {
+            display: true,
             color: theme.colors.grid
           },
           ticks: {
+            display: true,
             color: theme.colors.text.secondary,
             font: theme.fonts.caption
           }
@@ -1058,7 +1061,11 @@ export class AdvancedVisualizationEngine extends EventEmitter {
     };
   }
 
-  private processChartOptions(options: ChartOptions, theme: ThemeDefinition): any {
+  private processChartOptions(options: ChartOptions, theme: ThemeDefinition): ChartOptions & {
+    backgroundColor: string;
+    borderColor: string;
+    color: string;
+  } {
     return {
       ...options,
       backgroundColor: theme.colors.background,

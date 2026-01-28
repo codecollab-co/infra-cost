@@ -4,7 +4,7 @@
 
 **Multi-cloud FinOps CLI tool for comprehensive cost analysis and infrastructure optimization**
 
-[![npm version](https://badge.fury.io/js/infra-cost.svg)](https://badge.fury.io/js/infra-cost)
+[![npm version](https://badge.fury.io/js/infra-cost.svg)](https://badge.fury.io/js/infra-cost.svg)
 [![Downloads](https://img.shields.io/npm/dm/infra-cost.svg)](https://npmjs.org/package/infra-cost)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub issues](https://img.shields.io/github/issues/codecollab-co/infra-cost)](https://github.com/codecollab-co/infra-cost/issues)
@@ -12,7 +12,7 @@
 
 *Take control of your cloud costs across AWS, Google Cloud, Azure, Alibaba Cloud, and Oracle Cloud* 🚀
 
-[Installation](#-installation) • [Quick Start](#-quick-start) • [Features](#-features) • [Documentation](#-documentation) • [Contributing](#-contributing)
+[Installation](#-installation) • [Quick Start](#-quick-start) • [Features](#-features) • [Documentation](#-documentation) • [Development](#-development) • [Contributing](#-contributing)
 
 </div>
 
@@ -83,6 +83,15 @@ npx infra-cost
 ### Docker
 ```bash
 docker run --rm codecollab-co/infra-cost --help
+```
+
+### GitHub Action
+```yaml
+- uses: codecollab-co/infra-cost@v0.3.0
+  with:
+    provider: aws
+    aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 ```
 
 ## 🎯 Quick Start
@@ -230,6 +239,99 @@ jobs:
             --smart-alerts --trends 7
 ```
 
+## 🤖 GitHub Actions Integration
+
+**infra-cost** is available as a GitHub Action on the [GitHub Marketplace](https://github.com/marketplace/actions/infra-cost-multi-cloud-finops-analysis), making it easy to integrate cost analysis into your CI/CD workflows.
+
+### Basic Usage
+```yaml
+name: Cost Analysis
+on: [push, pull_request]
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: codecollab-co/infra-cost@v0.3.0
+        with:
+          provider: aws
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          analysis-type: summary
+```
+
+### PR Cost Check with Comments
+```yaml
+name: PR Cost Check
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  cost-check:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: codecollab-co/infra-cost@v0.3.0
+        with:
+          provider: aws
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          analysis-type: delta
+          delta-threshold: '10'
+          comment-on-pr: 'true'
+```
+
+### Daily Cost Report to Slack
+```yaml
+name: Daily Cost Report
+on:
+  schedule:
+    - cron: '0 9 * * *'
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: codecollab-co/infra-cost@v0.3.0
+        with:
+          provider: aws
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          analysis-type: finops
+          slack-webhook: ${{ secrets.SLACK_WEBHOOK }}
+```
+
+### Action Inputs
+
+| Input | Description | Default |
+|-------|-------------|---------|
+| `provider` | Cloud provider (aws, gcp, azure, alicloud, oracle) | `aws` |
+| `profile` | Cloud provider profile | `default` |
+| `region` | Cloud provider region | `us-east-1` |
+| `aws-access-key-id` | AWS Access Key ID | - |
+| `aws-secret-access-key` | AWS Secret Access Key | - |
+| `analysis-type` | Type of analysis (summary, detailed, delta, forecast, anomaly, finops, audit) | `summary` |
+| `forecast-days` | Days for forecast | `30` |
+| `delta-threshold` | Alert threshold for cost changes (%) | `10` |
+| `output-format` | Output format (text, json) | `text` |
+| `slack-webhook` | Slack webhook URL | - |
+| `comment-on-pr` | Post analysis as PR comment | `false` |
+| `fail-on-threshold` | Fail if costs exceed threshold | `false` |
+
+### Action Outputs
+
+| Output | Description |
+|--------|-------------|
+| `total-cost` | Total cost for the analysis period |
+| `cost-change` | Cost change percentage |
+| `forecast-cost` | Forecasted cost |
+| `anomalies-detected` | Number of anomalies detected |
+| `report-json` | Full report in JSON format |
+
+See [example workflows](.github/workflows/examples/) for more use cases.
+
 ## 🔧 Advanced Usage
 
 ### Cost Forecasting & Analytics
@@ -340,12 +442,14 @@ src/
 ```
 
 ### System Requirements
-- Node.js 16+ (recommended: 18+)
+- Node.js 20+ (required)
 - Memory: 512MB+ available
 - Network: Internet access for cloud provider APIs
 - Optional: Docker for containerized deployments
 
 ## 🧪 Development
+
+> 📚 **Developer Resources**: See the [`docs/`](./docs) folder for comprehensive technical documentation including architecture guides, testing reports, and release procedures.
 
 ### Local Development Setup
 ```bash
@@ -449,6 +553,28 @@ For enterprise deployments, custom integrations, and professional support:
 - 🎨 Custom branding and whitelabeling
 - 🏗️ Professional services and consulting
 
+## 📚 Documentation
+
+### 📖 User Documentation
+- **[README.md](./README.md)** - Main project documentation (you are here)
+- **[CHANGELOG.md](./CHANGELOG.md)** - Version history and release notes
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Contribution guidelines
+
+### 🔧 Developer Documentation
+Comprehensive technical documentation is available in the [`docs/`](./docs) folder:
+
+- **[docs/RELEASE_SUMMARY.md](./docs/RELEASE_SUMMARY.md)** - Complete release guide for GitHub, npm, and Homebrew
+- **[docs/PRODUCTION_READINESS.md](./docs/PRODUCTION_READINESS.md)** - Production readiness assessment and checklist
+- **[docs/TEST_RESULTS.md](./docs/TEST_RESULTS.md)** - Comprehensive test results and analysis
+- **[docs/NPM_PUBLISHING.md](./docs/NPM_PUBLISHING.md)** - npm publishing workflow and best practices
+- **[docs/HOMEBREW_SETUP.md](./docs/HOMEBREW_SETUP.md)** - Homebrew formula creation guide
+- **[docs/code_flow.md](./docs/code_flow.md)** - Codebase architecture and flow
+- **[docs/infra_cost_cli.md](./docs/infra_cost_cli.md)** - CLI implementation details
+- **[docs/MULTI-CLOUD-INVENTORY.md](./docs/MULTI-CLOUD-INVENTORY.md)** - Multi-cloud features
+- **[docs/ENHANCED-FEATURES.md](./docs/ENHANCED-FEATURES.md)** - Advanced capabilities
+
+See [docs/README.md](./docs/README.md) for the complete documentation index.
+
 ## 📄 License
 
 MIT © [Code Collab](https://github.com/codecollab-co)
@@ -457,7 +583,14 @@ MIT © [Code Collab](https://github.com/codecollab-co)
 
 ## 🔄 Changelog
 
-### v0.2.4 - Latest Release
+### v0.3.0 - Latest Release
+- ✅ **GitHub Marketplace Action** - Integrate cost analysis into CI/CD workflows
+- ✅ **Node.js 20+ support** - Updated runtime requirements
+- ✅ **Sprint 6 UX improvements** - Enhanced user experience
+- ✅ **Configuration improvements** - Better config resolution and file permissions
+- ✅ **Date normalization** - Consistent UTC date handling
+
+### v0.2.4
 - ✅ **Fixed CommonJS compatibility** - Homebrew installation now works perfectly
 - ✅ **Enhanced error handling** and user experience improvements
 - ✅ **Optimized build process** for better performance

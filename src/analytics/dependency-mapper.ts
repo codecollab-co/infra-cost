@@ -886,7 +886,7 @@ export class TaggingStandardsAnalyzer {
     return violations;
   }
 
-  private calculateResourceCompliance(presentTags: string[], missingTags: string[], invalidTags: string[]): number {
+  private calculateResourceCompliance(presentTags: string[], missingTags: string[], invalidTags: InvalidTagReport[]): number {
     const requiredTagsCount = this.standards.filter(s => s.required).length;
     const presentRequiredTags = this.standards.filter(s => s.required && presentTags.includes(s.key)).length;
 
