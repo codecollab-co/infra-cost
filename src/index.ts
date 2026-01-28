@@ -1459,6 +1459,7 @@ if (options.organization || options.organizationAccounts || options.organization
     console.log('   • Use --spike-threshold to adjust alert sensitivity');
     console.log('');
 
+    process.exit(0);
   } catch (error) {
     console.error(`❌ Failed to analyze AWS Organization: ${(error as Error).message}`);
     if ((error as Error).message.includes('AccessDenied')) {

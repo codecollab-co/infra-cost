@@ -569,13 +569,15 @@ export class AWSOrganizationsManager extends EventEmitter {
     ];
 
     // Add top spenders
-    const topSpendersText = report.topSpenders
-      .slice(0, 5)
-      .map((account, index) => {
-        const trend = account.trend === 'up' ? '🔺' : account.trend === 'down' ? '🔻' : '➡️';
-        return `${index + 1}. *${account.accountName}* (${account.accountId})\n    $${account.currentMonthCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${trend} ${account.costChangePercent >= 0 ? '+' : ''}${account.costChangePercent.toFixed(1)}%`;
-      })
-      .join('\n');
+    const topSpendersText = report.topSpenders.length > 0
+      ? report.topSpenders
+          .slice(0, 5)
+          .map((account, index) => {
+            const trend = account.trend === 'up' ? '🔺' : account.trend === 'down' ? '🔻' : '➡️';
+            return `${index + 1}. *${account.accountName}* (${account.accountId})\n    $${account.currentMonthCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${trend} ${account.costChangePercent >= 0 ? '+' : ''}${account.costChangePercent.toFixed(1)}%`;
+          })
+          .join('\n')
+      : '_No accounts matched the filters for this period._';
 
     blocks.push({
       type: 'section',
@@ -627,10 +629,12 @@ export class AWSOrganizationsManager extends EventEmitter {
     });
 
     // Build plain-text fallback summary
-    const topSpendersSnippet = report.topSpenders
-      .slice(0, 3)
-      .map(a => `${a.accountName}: $${a.currentMonthCost.toFixed(2)}`)
-      .join(', ');
+    const topSpendersSnippet = report.topSpenders.length > 0
+      ? report.topSpenders
+          .slice(0, 3)
+          .map(a => `${a.accountName}: $${a.currentMonthCost.toFixed(2)}`)
+          .join(', ')
+      : 'none';
 
     const alertsSnippet = report.alerts.length > 0
       ? ` | ${report.alerts.length} alert${report.alerts.length > 1 ? 's' : ''}`
