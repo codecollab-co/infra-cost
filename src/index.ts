@@ -1423,6 +1423,7 @@ if (options.organization || options.organizationAccounts || options.organization
 
       console.log('📤 Sending report to Slack...');
       const slackMessage = orgManager.formatSlackMessage(report);
+      let slackSent = false;
 
       // Send to Slack using existing notifySlack or direct API
       try {
@@ -1441,6 +1442,7 @@ if (options.organization || options.organizationAccounts || options.organization
 
         const result = await response.json() as any;
         if (result.ok) {
+          slackSent = true;
           console.log(`✅ Report sent to Slack channel: ${options.slackChannel}`);
         } else {
           console.error(`❌ Failed to send to Slack: ${result.error}`);
@@ -1448,7 +1450,7 @@ if (options.organization || options.organizationAccounts || options.organization
       } catch (slackError) {
         console.error(`❌ Slack API error: ${(slackError as Error).message}`);
       }
-      process.exit(0);
+      process.exit(slackSent ? 0 : 1);
     }
 
     // Handle export

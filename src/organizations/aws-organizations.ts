@@ -167,9 +167,23 @@ export class AWSOrganizationsManager extends EventEmitter {
       const { OrganizationsClient, ListAccountsCommand, DescribeOrganizationCommand, ListRootsCommand, ListOrganizationalUnitsForParentCommand } = await import('@aws-sdk/client-organizations');
       const { CostExplorerClient, GetCostAndUsageCommand } = await import('@aws-sdk/client-cost-explorer');
 
-      // Config for Organizations client (can use any region)
+      // Determine AWS partition and Organizations endpoint region
+      // AWS Organizations is a global service with fixed endpoints per partition:
+      // - Commercial (aws): us-east-1
+      // - GovCloud (aws-us-gov): us-gov-west-1
+      // - China (aws-cn): cn-northwest-1
+      const region = credentials?.region || this.config.costExplorerRegion || 'us-east-1';
+      let organizationsRegion = 'us-east-1'; // Default to commercial
+
+      if (region.startsWith('us-gov-')) {
+        organizationsRegion = 'us-gov-west-1';
+      } else if (region.startsWith('cn-')) {
+        organizationsRegion = 'cn-northwest-1';
+      }
+
+      // Config for Organizations client (must use partition-specific fixed region)
       const clientConfig: any = {
-        region: credentials?.region || this.config.costExplorerRegion,
+        region: organizationsRegion,
       };
 
       if (credentials?.accessKeyId && credentials?.secretAccessKey) {
