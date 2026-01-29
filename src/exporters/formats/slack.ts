@@ -90,10 +90,18 @@ ${formatServiceBreakdown(costs)}
     message += `${breakdown}`;
   }
 
+  // Slack Block Kit enforces 3000 character limit per section block
+  const MAX_SECTION_LENGTH = 3000;
+  if (message.length > MAX_SECTION_LENGTH) {
+    const truncatedMessage = message.substring(0, MAX_SECTION_LENGTH - 50);
+    message = truncatedMessage + '\n\n_...truncated (message too long)_';
+  }
+
   const response = await fetch('https://slack.com/api/chat.postMessage', {
     method: 'post',
     body: JSON.stringify({
       channel,
+      text: `AWS Cost Report for ${accountAlias}`, // Fallback text for accessibility
       blocks: [
         {
           type: 'section',
