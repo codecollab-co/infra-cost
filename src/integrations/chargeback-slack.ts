@@ -128,13 +128,16 @@ export function formatChargebackSlackMessage(
       allocationText += `_...and ${allocations.length - 5} more_`;
     }
 
-    blocks.push({
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: allocationText,
-      },
-    });
+    // Only add section if there's actual allocation text
+    if (allocationText.trim()) {
+      blocks.push({
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: allocationText,
+        },
+      });
+    }
   }
 
   // Tagging compliance warning
@@ -248,7 +251,7 @@ export function formatChargebackAlert(
   threshold: number
 ): object {
   const change = currentCost - previousCost;
-  const changePercent = previousCost > 0 ? (change / previousCost) * 100 : 100;
+  const changePercent = previousCost > 0 ? (change / previousCost) * 100 : (currentCost > 0 ? 100 : 0);
 
   return {
     blocks: [

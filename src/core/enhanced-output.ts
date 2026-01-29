@@ -374,7 +374,7 @@ export function formatQuickWinsSection(quickWins: QuickWin[], options: EnhancedO
   }
 
   lines.push('');
-  lines.push('💡 Run --recommendations for detailed optimization analysis');
+  lines.push('💡 Run with --optimize for detailed optimization analysis');
 
   return lines.join('\n');
 }
