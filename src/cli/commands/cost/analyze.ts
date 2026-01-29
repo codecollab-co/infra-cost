@@ -58,6 +58,15 @@ export async function handleAnalyze(options: AnalyzeOptions, command: any): Prom
 
     logger.debug('Fetching cost data', { startDate, endDate });
 
+    // Warn if custom date range provided (not yet supported)
+    const hasCustomRange = Boolean(options.startDate || options.endDate);
+    if (hasCustomRange) {
+      logger.warn('Custom date range is not supported yet; using provider default range (last 65 days)', {
+        requestedStartDate: startDate,
+        requestedEndDate: endDate,
+      });
+    }
+
     // Fetch costs from provider
     // Note: getCostBreakdown() fetches the last 65 days of data internally
     // startDate/endDate parameters are noted but not currently supported by the provider interface
