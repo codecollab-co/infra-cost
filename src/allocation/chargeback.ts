@@ -324,9 +324,10 @@ export class CostAllocationEngine {
    */
   private isResourceTagged(resource: ResourceCostDetail): boolean {
     const tags = resource.tags || {};
-    return this.tagSchema.requiredTags.some(tag =>
-      tags[tag] !== undefined && tags[tag] !== ''
-    );
+    return this.tagSchema.requiredTags.every(tag => {
+      const value = tags[tag] ?? tags[tag.toLowerCase()];
+      return value !== undefined && value !== '';
+    });
   }
 
   /**
