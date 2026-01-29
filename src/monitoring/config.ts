@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-import { AlertThresholdType, NotificationChannel, AlertSeverity, AlertConfiguration, NotificationChannelConfig } from './cost-monitor';
+import { AlertThresholdType, NotificationChannelType, AlertSeverity, AlertConfiguration, NotificationChannelConfig } from './cost-monitor';
 
 export interface MonitoringConfiguration {
   // Basic settings
@@ -132,13 +132,13 @@ export class MonitoringConfigManager {
       },
       notificationChannels: {
         'slack-alerts': {
-          type: NotificationChannel.SLACK,
+          type: NotificationChannelType.SLACK,
           webhookUrl: '${SLACK_WEBHOOK_URL}',
           channel: '#cost-alerts',
           enabled: true
         },
         'email-alerts': {
-          type: NotificationChannel.EMAIL,
+          type: NotificationChannelType.EMAIL,
           to: '${ALERT_EMAIL_TO}',
           from: '${ALERT_EMAIL_FROM}',
           enabled: false
@@ -187,28 +187,28 @@ export class MonitoringConfigManager {
 
     // Validate notification channels
     Object.entries(config.notificationChannels).forEach(([channelId, channel]) => {
-      if (!channel.type || !Object.values(NotificationChannel).includes(channel.type)) {
+      if (!channel.type || !Object.values(NotificationChannelType).includes(channel.type)) {
         errors.push(`Channel '${channelId}': invalid type`);
       }
 
       // Channel-specific validation
       switch (channel.type) {
-        case NotificationChannel.SLACK:
+        case NotificationChannelType.SLACK:
           if (!channel.webhookUrl) {
             errors.push(`Channel '${channelId}': slack requires webhookUrl`);
           }
           break;
-        case NotificationChannel.EMAIL:
+        case NotificationChannelType.EMAIL:
           if (!channel.to || !channel.from) {
             errors.push(`Channel '${channelId}': email requires 'to' and 'from' addresses`);
           }
           break;
-        case NotificationChannel.WEBHOOK:
+        case NotificationChannelType.WEBHOOK:
           if (!channel.url) {
             errors.push(`Channel '${channelId}': webhook requires url`);
           }
           break;
-        case NotificationChannel.SMS:
+        case NotificationChannelType.SMS:
           if (!channel.phoneNumber) {
             errors.push(`Channel '${channelId}': SMS requires phoneNumber`);
           }
@@ -275,7 +275,7 @@ export class MonitoringConfigManager {
 
     if (process.env.SLACK_WEBHOOK_URL) {
       channels['slack'] = {
-        type: NotificationChannel.SLACK,
+        type: NotificationChannelType.SLACK,
         webhookUrl: process.env.SLACK_WEBHOOK_URL,
         channel: process.env.SLACK_CHANNEL || '#alerts',
         enabled: true
@@ -284,7 +284,7 @@ export class MonitoringConfigManager {
 
     if (process.env.ALERT_EMAIL_TO && process.env.ALERT_EMAIL_FROM) {
       channels['email'] = {
-        type: NotificationChannel.EMAIL,
+        type: NotificationChannelType.EMAIL,
         to: process.env.ALERT_EMAIL_TO,
         from: process.env.ALERT_EMAIL_FROM,
         enabled: true
@@ -293,7 +293,7 @@ export class MonitoringConfigManager {
 
     if (process.env.ALERT_WEBHOOK_URL) {
       channels['webhook'] = {
-        type: NotificationChannel.WEBHOOK,
+        type: NotificationChannelType.WEBHOOK,
         url: process.env.ALERT_WEBHOOK_URL,
         enabled: true
       };
@@ -370,7 +370,7 @@ export class MonitoringConfigManager {
     // Add notification channels if environment variables are available
     if (process.env.SLACK_WEBHOOK_URL) {
       config.notificationChannels['slack'] = {
-        type: NotificationChannel.SLACK,
+        type: NotificationChannelType.SLACK,
         webhookUrl: process.env.SLACK_WEBHOOK_URL,
         channel: process.env.SLACK_CHANNEL || '#cost-alerts',
         enabled: true

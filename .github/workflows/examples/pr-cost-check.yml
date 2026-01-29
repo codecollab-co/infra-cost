@@ -1,0 +1,25 @@
+# Example: PR Cost Check
+# This workflow analyzes costs on every PR and posts a comment
+
+name: PR Cost Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  cost-check:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Analyze Infrastructure Costs
+        uses: codecollab-co/infra-cost@v0.3.0
+        with:
+          provider: aws
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          analysis-type: delta
+          delta-threshold: '10'
+          comment-on-pr: 'true'
+          fail-on-threshold: 'false'

@@ -91,11 +91,11 @@ export class CostAlertEngine {
         const severityColor = this.getSeverityColor(severity as any);
         const severityIcon = this.getSeverityIcon(severity as any);
 
-        output += `\n${severityIcon} ${chalk[severityColor].bold(severity)} (${severityAlerts.length})\n`;
+        output += `\n${severityIcon} ${(chalk[severityColor] as any).bold(severity)} (${severityAlerts.length})\n`;
         output += '─'.repeat(40) + '\n';
 
         severityAlerts.forEach(alert => {
-          output += `\n${chalk[severityColor]('●')} ${chalk.bold(alert.threshold.name)}\n`;
+          output += `\n${(chalk[severityColor] as any)('●')} ${chalk.bold(alert.threshold.name)}\n`;
           output += `  ${alert.message}\n`;
           output += `  ${chalk.gray('Current:')} ${chalk.yellow(this.formatValue(alert.currentValue, alert.threshold))}\n`;
           output += `  ${chalk.gray('Threshold:')} ${chalk.cyan(this.formatValue(alert.threshold.value, alert.threshold))}\n`;
@@ -387,14 +387,14 @@ export class CostAlertEngine {
     }, {} as Record<string, CostAlert[]>);
   }
 
-  private getSeverityColor(severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'): keyof typeof chalk {
-    const colors = {
+  private getSeverityColor(severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'): 'red' | 'yellow' | 'cyan' {
+    const colors: Record<string, 'red' | 'yellow' | 'cyan'> = {
       'CRITICAL': 'red',
       'HIGH': 'red',
       'MEDIUM': 'yellow',
       'LOW': 'cyan'
     };
-    return colors[severity] as keyof typeof chalk;
+    return colors[severity];
   }
 
   private getSeverityIcon(severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'): string {

@@ -334,7 +334,7 @@ export class XlsxExporter {
     worksheet.getCell('A3').value = 'Key Metrics';
     worksheet.getCell('A3').font = { bold: true, size: 14 };
 
-    const metrics = [
+    const metrics: [string, number, string][] = [
       ['Total Cost:', trendAnalysis.totalCost, '$#,##0.00'],
       ['Average Daily Cost:', trendAnalysis.averageDailyCost, '$#,##0.00'],
       ['Projected Monthly Cost:', trendAnalysis.projectedMonthlyCost, '$#,##0.00'],

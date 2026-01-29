@@ -26,7 +26,7 @@ export interface Anomaly {
 export interface DataPoint {
   timestamp: string;
   value: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export class AnomalyDetector {
@@ -443,7 +443,7 @@ export interface AIResourceDataPoint {
   resourceType: string;
   cost: number;
   usage: Record<string, number>;
-  configuration: Record<string, any>;
+  configuration: Record<string, unknown>;
   lifecycle: 'created' | 'modified' | 'deleted';
 }
 
@@ -667,7 +667,7 @@ export class CostAnomalyDetectorAI extends EventEmitter {
   private config: AIAnomalyDetectionConfiguration;
   private models: Map<string, AIModel> = new Map();
   private detectedAnomalies: Map<string, AIAnomaly> = new Map();
-  private modelCache: Map<string, any> = new Map();
+  private modelCache: Map<string, { predictions: unknown; timestamp: Date }> = new Map();
 
   constructor(config: Partial<AIAnomalyDetectionConfiguration> = {}) {
     super();
@@ -866,7 +866,15 @@ export class CostAnomalyDetectorAI extends EventEmitter {
     return this.convertToAIAnomalies(results.anomalies || [], 'deep_learning');
   }
 
-  private convertToAIAnomalies(results: any[], detectionType: string): AIAnomaly[] {
+  private convertToAIAnomalies(results: Array<{
+    type?: string;
+    severity?: string;
+    confidence?: number;
+    timestamp?: Date;
+    affectedResources?: string[];
+    metrics?: Record<string, number>;
+    rootCause?: unknown;
+  }>, detectionType: string): AIAnomaly[] {
     return results.map(result => ({
       id: this.generateAIAnomalyId(detectionType, new Date()),
       type: result.type || 'cost_spike',
@@ -956,12 +964,12 @@ export class CostAnomalyDetectorAI extends EventEmitter {
     return anomalies;
   }
 
-  private async aiAnalyzePredictions(predictions: any, input: AIAnomalyInput): Promise<AIAnomaly[]> {
+  private async aiAnalyzePredictions(predictions: AIModelPredictionOutput, input: AIAnomalyInput): Promise<AIAnomaly[]> {
     // Mock implementation for prediction analysis
     return [];
   }
 
-  private async aiDetectSeasonalDeviations(analysis: any, input: AIAnomalyInput): Promise<AIAnomaly[]> {
+  private async aiDetectSeasonalDeviations(analysis: AIModelAnalysisOutput, input: AIAnomalyInput): Promise<AIAnomaly[]> {
     // Mock implementation for seasonal deviation detection
     return [];
   }
@@ -1123,16 +1131,44 @@ export class CostAnomalyDetectorAI extends EventEmitter {
 }
 
 // Advanced AI Model interfaces
+interface AIModelPredictionInput {
+  dataPoints?: DataPoint[];
+  historical?: AIHistoricalBaseline;
+  resources?: AIResourceDataPoint[];
+  length?: number;
+}
+
+interface AIModelPredictionOutput {
+  anomalies?: Array<{
+    type: string;
+    severity: string;
+    confidence: number;
+    timestamp: Date;
+    metrics?: Record<string, number>;
+    affectedResources?: string[];
+    rootCause?: unknown;
+  }>;
+  patterns?: unknown[];
+  seasonal?: unknown[];
+  ensemble_predictions?: unknown[];
+  confidence: number;
+}
+
+interface AIModelAnalysisOutput {
+  decomposition?: Record<string, unknown>;
+  patterns?: unknown[];
+}
+
 interface AIModel {
-  predict(input: any): Promise<any>;
-  analyze?(input: any): Promise<any>;
+  predict(input: AIModelPredictionInput): Promise<AIModelPredictionOutput>;
+  analyze?(input: AIModelPredictionInput): Promise<AIModelAnalysisOutput>;
 }
 
 class AdvancedSpikeDetectionModel implements AIModel {
-  async predict(input: any): Promise<any> {
+  async predict(input: AIModelPredictionInput): Promise<AIModelPredictionOutput> {
     // Mock advanced spike detection with neural networks
     return {
-      anomalies: input.length > 0 ? [{
+      anomalies: (input.length ?? 0) > 0 ? [{
         type: 'cost_spike',
         severity: 'high',
         confidence: 0.89,
@@ -1145,35 +1181,35 @@ class AdvancedSpikeDetectionModel implements AIModel {
 }
 
 class AdvancedPatternAnalysisModel implements AIModel {
-  async predict(input: any): Promise<any> {
+  async predict(input: AIModelPredictionInput): Promise<AIModelPredictionOutput> {
     return { patterns: [], confidence: 0.91 };
   }
 }
 
 class AdvancedSeasonalAnalysisModel implements AIModel {
-  async predict(input: any): Promise<any> {
+  async predict(input: AIModelPredictionInput): Promise<AIModelPredictionOutput> {
     return { seasonal: [], confidence: 0.93 };
   }
 
-  async analyze(input: any): Promise<any> {
+  async analyze(input: AIModelPredictionInput): Promise<AIModelAnalysisOutput> {
     return { decomposition: {}, patterns: [] };
   }
 }
 
 class AdvancedResourceAnomalyModel implements AIModel {
-  async predict(input: any): Promise<any> {
+  async predict(input: AIModelPredictionInput): Promise<AIModelPredictionOutput> {
     return { anomalies: [], confidence: 0.87 };
   }
 }
 
 class AdvancedEnsembleModel implements AIModel {
-  async predict(input: any): Promise<any> {
+  async predict(input: AIModelPredictionInput): Promise<AIModelPredictionOutput> {
     return { ensemble_predictions: [], anomalies: [], confidence: 0.94 };
   }
 }
 
 class DeepLearningModel implements AIModel {
-  async predict(input: any): Promise<any> {
+  async predict(input: AIModelPredictionInput): Promise<AIModelPredictionOutput> {
     // Mock deep learning predictions
     return {
       anomalies: [],

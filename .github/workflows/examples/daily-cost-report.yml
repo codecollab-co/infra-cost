@@ -1,0 +1,23 @@
+# Example: Daily Cost Report to Slack
+# This workflow runs daily and sends a cost summary to Slack
+
+name: Daily Cost Report
+
+on:
+  schedule:
+    # Run every day at 9 AM UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  cost-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Cost Analysis
+        uses: codecollab-co/infra-cost@v0.3.0
+        with:
+          provider: aws
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          analysis-type: summary
+          slack-webhook: ${{ secrets.SLACK_WEBHOOK }}

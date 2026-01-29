@@ -22,7 +22,7 @@ export interface CrossCloudComparison {
   migrationRecommendations: MigrationRecommendation[];
 }
 
-export interface CloudServiceComparison {
+export type CloudServiceComparison = {
   [provider in CloudProvider]?: {
     resourceCount: number;
     totalCost: number;

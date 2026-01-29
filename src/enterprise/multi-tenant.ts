@@ -15,6 +15,19 @@ export interface Tenant {
   metadata: TenantMetadata;
   createdAt: Date;
   updatedAt: Date;
+  lastActivityAt?: Date;
+  users?: User[];
+  userCount?: number;
+  usage?: {
+    users?: number;
+    cloudAccounts?: number;
+    resourcesMonitored?: number;
+    apiCalls?: number;
+    costAnalyses?: number;
+    reports?: number;
+    storage?: number;
+  };
+  apiKeyCount?: number;
 }
 
 export enum TenantStatus {
@@ -35,6 +48,12 @@ export interface Subscription {
   features: FeatureAccess[];
   pricing: PricingDetails;
   usage: UsageMetrics;
+  billing?: {
+    method?: string;
+    nextBillingDate?: Date;
+    monthlyAmount?: number;
+  };
+  apiKey?: string;
 }
 
 export enum SubscriptionPlan {
@@ -63,7 +82,7 @@ export interface FeatureAccess {
   feature: EnterpriseFeature;
   enabled: boolean;
   limits?: FeatureLimits;
-  customConfig?: { [key: string]: any };
+  customConfig?: Record<string, string | number | boolean>;
 }
 
 export enum EnterpriseFeature {
@@ -101,6 +120,7 @@ export interface PricingDetails {
   overageFees: OverageFee[];
   discounts: Discount[];
   currency: string;
+  monthlyAmount?: number;
 }
 
 export interface OverageFee {
@@ -163,6 +183,8 @@ export interface TenantSettings {
   security: SecuritySettings;
   notifications: NotificationSettings;
   integrations: IntegrationSettings;
+  ssoEnabled?: boolean;
+  mfaRequired?: boolean;
 }
 
 export interface BrandingSettings {
@@ -178,7 +200,7 @@ export interface BrandingSettings {
 export interface SecuritySettings {
   ssoEnabled: boolean;
   ssoProvider?: string;
-  ssoConfig?: { [key: string]: any };
+  ssoConfig?: Record<string, string | number | boolean>;
   mfaRequired: boolean;
   passwordPolicy: PasswordPolicy;
   sessionTimeout: number; // minutes
@@ -233,7 +255,7 @@ export interface CustomIntegration {
   id: string;
   name: string;
   type: 'WEBHOOK' | 'API' | 'PLUGIN';
-  config: { [key: string]: any };
+  config: Record<string, string | number | boolean>;
   enabled: boolean;
 }
 
@@ -276,6 +298,7 @@ export interface ResourceQuotas {
   dataRetentionDays: number;
   storageQuotaGB: number;
   computeUnitsPerMonth: number;
+  maxAPIKeys?: number;
 }
 
 export interface TenantContact {
@@ -302,7 +325,7 @@ export interface TenantMetadata {
   useCase?: string[];
   deploymentType?: 'CLOUD' | 'ON_PREMISE' | 'HYBRID';
   region?: string;
-  customFields?: { [key: string]: any };
+  customFields?: Record<string, string | number | boolean>;
   tags?: string[];
 }
 
@@ -324,9 +347,11 @@ export interface User {
 
 export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
   TENANT_ADMIN = 'TENANT_ADMIN',
   FINOPS_MANAGER = 'FINOPS_MANAGER',
   COST_ANALYST = 'COST_ANALYST',
+  MEMBER = 'MEMBER',
   VIEWER = 'VIEWER',
   CUSTOM = 'CUSTOM'
 }
@@ -1043,8 +1068,11 @@ export class MultiTenantManager extends EventEmitter {
   }
 
   private getDefaultPermissions(role: UserRole): Permission[] {
-    const permissionsByRole = {
+    const permissionsByRole: Record<UserRole, Permission[]> = {
       [UserRole.SUPER_ADMIN]: [
+        { resource: '*', actions: ['*'] }
+      ],
+      [UserRole.ADMIN]: [
         { resource: '*', actions: ['*'] }
       ],
       [UserRole.TENANT_ADMIN]: [
@@ -1067,6 +1095,11 @@ export class MultiTenantManager extends EventEmitter {
         { resource: 'forecasts', actions: ['read'] },
         { resource: 'reports', actions: ['read', 'write'] },
         { resource: 'dashboards', actions: ['read', 'write'] }
+      ],
+      [UserRole.MEMBER]: [
+        { resource: 'costs', actions: ['read'] },
+        { resource: 'dashboards', actions: ['read'] },
+        { resource: 'reports', actions: ['read'] }
       ],
       [UserRole.VIEWER]: [
         { resource: 'costs', actions: ['read'] },
@@ -1135,29 +1168,29 @@ export class MultiTenantManager extends EventEmitter {
 
   private initializeDefaultTenants(): void {
     // Create some sample tenants for demonstration
-    const sampleTenants = [
+    const sampleTenants: Array<{ name: string; domain: string; subscription?: Partial<Subscription>; metadata?: Partial<TenantMetadata> }> = [
       {
         name: 'Acme Corporation',
         domain: 'acme-corp.example.com',
-        subscription: { plan: SubscriptionPlan.ENTERPRISE },
+        subscription: { plan: SubscriptionPlan.ENTERPRISE } as Partial<Subscription>,
         metadata: { industry: 'Technology', companySize: '500-1000' }
       },
       {
         name: 'StartupXYZ',
         domain: 'startupxyz.example.com',
-        subscription: { plan: SubscriptionPlan.PROFESSIONAL },
+        subscription: { plan: SubscriptionPlan.PROFESSIONAL } as Partial<Subscription>,
         metadata: { industry: 'SaaS', companySize: '50-100' }
       },
       {
         name: 'SmallBiz Inc',
         domain: 'smallbiz.example.com',
-        subscription: { plan: SubscriptionPlan.STARTER },
+        subscription: { plan: SubscriptionPlan.STARTER } as Partial<Subscription>,
         metadata: { industry: 'Retail', companySize: '10-50' }
       }
     ];
 
     sampleTenants.forEach(async (tenantData) => {
-      const tenant = await this.createTenant(tenantData);
+      const tenant = await this.createTenant(tenantData as Partial<Tenant>);
       tenant.status = TenantStatus.ACTIVE;
 
       // Create sample users for each tenant
@@ -1225,5 +1258,115 @@ export class MultiTenantManager extends EventEmitter {
 
     const currentUsageValue = usageMap[quotaType as keyof typeof usageMap] || 0;
     return (currentUsageValue + requestedAmount) <= quota;
+  }
+
+  // Alias methods for compatibility
+  getAllTenants(): Tenant[] {
+    return this.getTenants();
+  }
+
+  getAllUsers(tenantId?: string): User[] {
+    return this.getUsers(tenantId);
+  }
+
+  async getPlatformMetrics(): Promise<{
+    totalTenants: number;
+    activeTenants: number;
+    suspendedTenants?: number;
+    totalUsers: number;
+    activeUsers: number;
+    dailyActiveUsers?: number;
+    newUsersThisMonth?: number;
+    totalRevenue: number;
+    revenueGrowthRate?: number;
+    enterpriseRevenue?: number;
+    averageRevenuePerUser?: number;
+    subscriptionsByPlan: Record<string, number>;
+    utilizationMetrics: Record<string, number>;
+    totalAPIKeys?: number;
+    monthlyGrowthRate?: number;
+    healthScore?: number;
+    averageResponseTime?: number;
+    uptime?: number;
+    subscriptionDistribution?: Record<string, number>;
+    totalCostAnalyses?: number;
+    totalReports?: number;
+    totalAPIRequests?: number;
+    storageUsage?: number;
+    alerts?: number;
+  }> {
+    const tenants = this.getTenants();
+    const users = this.getUsers();
+
+    const activeTenants = tenants.filter(t => t.status === TenantStatus.ACTIVE);
+    const activeUsers = users.filter(u => u.status === UserStatus.ACTIVE);
+
+    const subscriptionsByPlan: Record<string, number> = {};
+    tenants.forEach(t => {
+      const plan = t.subscription.plan;
+      subscriptionsByPlan[plan] = (subscriptionsByPlan[plan] || 0) + 1;
+    });
+
+    const totalRevenue = tenants.reduce((sum, t) => {
+      return sum + (t.subscription.pricing.baseFee || 0);
+    }, 0);
+
+    const totalAPIKeys = users.reduce((sum, u) => sum + u.apiKeys.length, 0);
+
+    return {
+      totalTenants: tenants.length,
+      activeTenants: activeTenants.length,
+      totalUsers: users.length,
+      activeUsers: activeUsers.length,
+      totalRevenue,
+      subscriptionsByPlan,
+      utilizationMetrics: {},
+      totalAPIKeys,
+      monthlyGrowthRate: 0,
+      healthScore: 100,
+      subscriptionDistribution: subscriptionsByPlan,
+      totalCostAnalyses: 0,
+      totalReports: 0,
+      totalAPIRequests: 0,
+      storageUsage: 0
+    };
+  }
+
+  async getQuotaUsage(tenantId: string): Promise<Record<string, { usage: number; limit: number; percentage: number }>> {
+    const tenant = this.tenants.get(tenantId);
+    if (!tenant) {
+      throw new Error(`Tenant ${tenantId} not found`);
+    }
+
+    const usage = tenant.subscription.usage.currentPeriod;
+    const quotas = tenant.quotas;
+
+    return {
+      users: {
+        usage: usage.users,
+        limit: quotas.maxUsers,
+        percentage: quotas.maxUsers > 0 ? (usage.users / quotas.maxUsers) * 100 : 0
+      },
+      cloudAccounts: {
+        usage: usage.cloudAccounts,
+        limit: quotas.maxCloudAccounts,
+        percentage: quotas.maxCloudAccounts > 0 ? (usage.cloudAccounts / quotas.maxCloudAccounts) * 100 : 0
+      },
+      resourcesMonitored: {
+        usage: usage.resourcesMonitored,
+        limit: quotas.maxResourcesMonitored,
+        percentage: quotas.maxResourcesMonitored > 0 ? (usage.resourcesMonitored / quotas.maxResourcesMonitored) * 100 : 0
+      },
+      apiCalls: {
+        usage: usage.apiCalls,
+        limit: quotas.maxApiCallsPerMonth,
+        percentage: quotas.maxApiCallsPerMonth > 0 ? (usage.apiCalls / quotas.maxApiCallsPerMonth) * 100 : 0
+      },
+      storage: {
+        usage: usage.storageUsed,
+        limit: quotas.storageQuotaGB,
+        percentage: quotas.storageQuotaGB > 0 ? (usage.storageUsed / quotas.storageQuotaGB) * 100 : 0
+      }
+    };
   }
 }

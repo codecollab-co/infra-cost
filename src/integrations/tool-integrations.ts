@@ -27,6 +27,7 @@ export interface IntegrationConfig {
   tags?: { [key: string]: string };
   filters?: IntegrationFilter[];
   thresholds?: IntegrationThreshold[];
+  capabilities?: string[];
 }
 
 export interface IntegrationFilter {

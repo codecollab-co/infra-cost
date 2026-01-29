@@ -1,35 +1,55 @@
+import { jest } from '@jest/globals';
+
+// Mock the logger module entirely to avoid ora issues
+jest.mock('../../src/logger', () => ({
+  printFatalError: jest.fn(),
+  showSpinner: jest.fn(),
+  hideSpinner: jest.fn(),
+  succeedSpinner: jest.fn(),
+  failSpinner: jest.fn()
+}));
+
 import { CloudProviderFactory } from '../../src/providers/factory';
 import { CloudProvider, ProviderConfig } from '../../src/types/providers';
 
 describe('CloudProviderFactory', () => {
-  describe('create', () => {
+  let factory: CloudProviderFactory;
+
+  beforeEach(() => {
+    factory = new CloudProviderFactory();
+  });
+
+  describe('createProvider', () => {
     it('should create AWS provider with valid config', () => {
       const config: ProviderConfig = {
         provider: CloudProvider.AWS,
         region: 'us-east-1',
-        accessKeyId: 'test-key',
-        secretAccessKey: 'test-secret'
+        credentials: {
+          accessKeyId: 'test-key',
+          secretAccessKey: 'test-secret'
+        }
       };
 
-      const provider = CloudProviderFactory.create(CloudProvider.AWS, config);
+      const provider = factory.createProvider(config);
       expect(provider).toBeDefined();
     });
 
     it('should throw error for unsupported provider', () => {
       const config: ProviderConfig = {
         provider: 'unsupported' as CloudProvider,
-        region: 'us-east-1'
+        region: 'us-east-1',
+        credentials: {}
       };
 
       expect(() => {
-        CloudProviderFactory.create('unsupported' as CloudProvider, config);
-      }).toThrow('Unsupported cloud provider');
+        factory.createProvider(config);
+      }).toThrow('Invalid configuration for provider');
     });
   });
 
   describe('getSupportedProviders', () => {
     it('should return list of supported providers', () => {
-      const providers = CloudProviderFactory.getSupportedProviders();
+      const providers = factory.getSupportedProviders();
       expect(providers).toContain(CloudProvider.AWS);
       expect(Array.isArray(providers)).toBe(true);
       expect(providers.length).toBeGreaterThan(0);

@@ -356,7 +356,7 @@ export class RightsizingEngine extends EventEmitter {
 
       analysis: {
         rightsizingType,
-        confidence: mlAnalysis.confidence,
+        confidence: mlAnalysis.predictionAccuracy,
         riskLevel,
         performanceImpact: this.calculatePerformanceImpact(currentConfig, optimalConfig)
       },
