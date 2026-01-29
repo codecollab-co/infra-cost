@@ -30,8 +30,8 @@ export function registerCostCommands(program: Command): void {
     .description('Analyze current cloud costs')
     .option('--start-date <date>', 'Start date for analysis (YYYY-MM-DD)')
     .option('--end-date <date>', 'End date for analysis (YYYY-MM-DD)')
-    .option('--show-delta', 'Show cost changes compared to previous period', true)
-    .option('--show-quick-wins', 'Show quick win opportunities', true)
+    .option('--no-show-delta', 'Hide cost changes compared to previous period')
+    .option('--no-show-quick-wins', 'Hide quick win opportunities')
     .option('--delta-threshold <percent>', 'Threshold for highlighting changes', '10')
     .option('--group-by <field>', 'Group by (service, region, tag)')
     .action(handleAnalyze);
