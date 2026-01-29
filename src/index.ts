@@ -67,10 +67,8 @@ program
   .option('-u, --summary', 'Get only the summary without service breakdown')
   .option('-t, --text', 'Get the output as plain text (no colors / tables)')
   // Sprint 6: Enhanced output options
-  .option('--show-delta', 'Show cost changes compared to previous period (default: enabled)')
-  .option('--no-delta', 'Disable cost delta display')
-  .option('--show-quick-wins', 'Show quick win recommendations in output (default: enabled)')
-  .option('--no-quick-wins', 'Disable quick wins display')
+  .option('--[no-]delta', 'Show cost changes compared to previous period (default: enabled)', true)
+  .option('--[no-]quick-wins', 'Show quick win recommendations in output (default: enabled)', true)
   .option('--delta-threshold [percent]', 'Threshold for highlighting cost changes (default: 10%)', '10')
   .option('--quick-wins-count [n]', 'Number of quick wins to show (default: 3)', '3')
   .option('--config-file [path]', 'Path to configuration file')
@@ -3726,8 +3724,8 @@ if (options.json) {
 }
 
 // Sprint 6: Enhanced output with delta and quick wins
-const showDelta = options.showDelta !== false && options.noDelta !== true && !options.json;
-const showQuickWins = options.showQuickWins !== false && options.noQuickWins !== true && !options.json;
+const showDelta = options.delta !== false && !options.json;
+const showQuickWins = options.quickWins !== false && !options.json;
 
 if (showDelta || showQuickWins) {
   try {

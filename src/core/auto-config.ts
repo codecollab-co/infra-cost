@@ -236,9 +236,9 @@ function mapCliOptionsToConfig(options: Record<string, any>): Partial<AutoConfig
   }
 
   // Delta settings
-  if (options.delta !== undefined || options.noDelta !== undefined) {
+  if (options.delta !== undefined) {
     config.output = config.output || {};
-    config.output.showDelta = options.delta === true || (options.noDelta !== true);
+    config.output.showDelta = options.delta;
   }
   if (options.deltaThreshold) {
     config.output = config.output || {};
@@ -246,9 +246,9 @@ function mapCliOptionsToConfig(options: Record<string, any>): Partial<AutoConfig
   }
 
   // Quick wins settings
-  if (options.showQuickWins !== undefined || options.noQuickWins !== undefined) {
+  if (options.quickWins !== undefined) {
     config.output = config.output || {};
-    config.output.showQuickWins = options.showQuickWins === true || (options.noQuickWins !== true);
+    config.output.showQuickWins = options.quickWins;
   }
   if (options.quickWinsCount) {
     config.output = config.output || {};
