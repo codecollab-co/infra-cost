@@ -176,7 +176,7 @@ program
   // Cost Allocation and Chargeback (Issue #30)
   .option('--chargeback', 'Generate cost allocation and chargeback report')
   .option('--allocate-by [dimensions]', 'Allocate costs by dimensions: team,project,environment,department,costCenter')
-  .option('--chargeback-export [format]', 'Export chargeback report (json, csv, xlsx)')
+  .option('--chargeback-export [format]', 'Export chargeback report (json, csv)')
   .option('--tag-compliance', 'Show resource tagging compliance analysis')
   .option('--untagged-resources', 'List untagged resources with their costs')
   .option('--allocation-config [path]', 'Path to allocation configuration file')
