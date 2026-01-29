@@ -138,6 +138,15 @@ const DEFAULT_TAG_SCHEMA: TagSchema = {
   },
 };
 
+// Category cost weights (rough approximation)
+const CATEGORY_WEIGHTS: Record<string, number> = {
+  compute: 0.45,
+  database: 0.25,
+  storage: 0.15,
+  serverless: 0.08,
+  network: 0.07,
+};
+
 /**
  * Cost Allocation Engine
  */
@@ -216,10 +225,23 @@ export class CostAllocationEngine {
     const resourceCosts: ResourceCostDetail[] = [];
     const totalMonthlyCost = costBreakdown.totals.thisMonth || 0;
 
+    // Calculate category counts
+    const categoryCounts: Record<string, number> = {
+      compute: inventory.resources.compute?.length ?? 0,
+      storage: inventory.resources.storage?.length ?? 0,
+      database: inventory.resources.database?.length ?? 0,
+      serverless: inventory.resources.serverless?.length ?? 0,
+      network: inventory.resources.network?.length ?? 0,
+    };
+
+    // Calculate total weight of active categories (categories with resources)
+    const activeWeightTotal = Object.entries(CATEGORY_WEIGHTS)
+      .reduce((sum, [category, weight]) => sum + (categoryCounts[category] > 0 ? weight : 0), 0) || 1;
+
     // Process compute resources
-    const computeCount = inventory.resources.compute?.length ?? 0;
+    const computeCount = categoryCounts.compute;
     for (const resource of inventory.resources.compute || []) {
-      const estimatedCost = this.estimateResourceCost(resource, 'compute', totalMonthlyCost, computeCount);
+      const estimatedCost = this.estimateResourceCost(resource, 'compute', totalMonthlyCost, computeCount, activeWeightTotal);
       resourceCosts.push({
         resourceId: resource.id,
         resourceName: resource.name,
@@ -232,9 +254,9 @@ export class CostAllocationEngine {
     }
 
     // Process storage resources
-    const storageCount = inventory.resources.storage?.length ?? 0;
+    const storageCount = categoryCounts.storage;
     for (const resource of inventory.resources.storage || []) {
-      const estimatedCost = this.estimateResourceCost(resource, 'storage', totalMonthlyCost, storageCount);
+      const estimatedCost = this.estimateResourceCost(resource, 'storage', totalMonthlyCost, storageCount, activeWeightTotal);
       resourceCosts.push({
         resourceId: resource.id,
         resourceName: resource.name,
@@ -247,9 +269,9 @@ export class CostAllocationEngine {
     }
 
     // Process database resources
-    const databaseCount = inventory.resources.database?.length ?? 0;
+    const databaseCount = categoryCounts.database;
     for (const resource of inventory.resources.database || []) {
-      const estimatedCost = this.estimateResourceCost(resource, 'database', totalMonthlyCost, databaseCount);
+      const estimatedCost = this.estimateResourceCost(resource, 'database', totalMonthlyCost, databaseCount, activeWeightTotal);
       resourceCosts.push({
         resourceId: resource.id,
         resourceName: resource.name,
@@ -262,9 +284,9 @@ export class CostAllocationEngine {
     }
 
     // Process serverless resources
-    const serverlessCount = inventory.resources.serverless?.length ?? 0;
+    const serverlessCount = categoryCounts.serverless;
     for (const resource of inventory.resources.serverless || []) {
-      const estimatedCost = this.estimateResourceCost(resource, 'serverless', totalMonthlyCost, serverlessCount);
+      const estimatedCost = this.estimateResourceCost(resource, 'serverless', totalMonthlyCost, serverlessCount, activeWeightTotal);
       resourceCosts.push({
         resourceId: resource.id,
         resourceName: resource.name,
@@ -277,9 +299,9 @@ export class CostAllocationEngine {
     }
 
     // Process network resources
-    const networkCount = inventory.resources.network?.length ?? 0;
+    const networkCount = categoryCounts.network;
     for (const resource of inventory.resources.network || []) {
-      const estimatedCost = this.estimateResourceCost(resource, 'network', totalMonthlyCost, networkCount);
+      const estimatedCost = this.estimateResourceCost(resource, 'network', totalMonthlyCost, networkCount, activeWeightTotal);
       resourceCosts.push({
         resourceId: resource.id,
         resourceName: resource.name,
@@ -301,19 +323,12 @@ export class CostAllocationEngine {
     resource: any,
     category: string,
     totalCost: number,
-    categoryResourceCount: number
+    categoryResourceCount: number,
+    activeWeightTotal: number
   ): number {
-    // Cost weights by category (rough approximation)
-    const categoryWeights: Record<string, number> = {
-      compute: 0.45,
-      database: 0.25,
-      storage: 0.15,
-      serverless: 0.08,
-      network: 0.07,
-    };
-
-    const weight = categoryWeights[category] || 0.1;
-    const categoryCost = totalCost * weight;
+    const weight = CATEGORY_WEIGHTS[category] || 0.1;
+    const normalizedWeight = activeWeightTotal > 0 ? weight / activeWeightTotal : weight;
+    const categoryCost = totalCost * normalizedWeight;
     const resourcesInCategory = Math.max(1, categoryResourceCount);
 
     return categoryCost / resourcesInCategory;
