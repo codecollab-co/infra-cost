@@ -31,12 +31,18 @@ export class MultiTenantManager extends EventEmitter {
     };
 
     this.tenants.set(newTenant.id, newTenant);
-    this.emit('tenant:created', newTenant);
 
-    auditLogger.logDataAccess('write', newTenant.id, undefined, {
-      action: 'Tenant created',
-      tenantName: newTenant.name,
-    });
+    // Emit and audit after state mutation - wrap to prevent partial success
+    try {
+      this.emit('tenant:created', newTenant);
+      auditLogger.logDataAccess('write', newTenant.id, undefined, {
+        action: 'Tenant created',
+        tenantName: newTenant.name,
+      });
+    } catch (error) {
+      // Log error but don't fail the operation since state is already committed
+      console.error('Failed to emit event or log audit:', error);
+    }
 
     return newTenant;
   }
