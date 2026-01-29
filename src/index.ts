@@ -570,7 +570,8 @@ const logger = initializeLogger({
   enableAudit: options.enableAudit || false,
   auditOutput: options.auditOutput,
   enablePerformance: options.enableProfiling || false,
-  silent: options.quiet || false,
+  // quiet should still allow ERROR logs
+  silent: false,
 });
 
 // Log startup
