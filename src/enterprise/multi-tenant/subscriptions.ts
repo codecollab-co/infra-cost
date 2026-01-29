@@ -76,16 +76,26 @@ export class SubscriptionManager {
     for (const feature of subscription.features) {
       if (!feature.enabled || !feature.limits) continue;
 
-      if (feature.limits.maxUsers && subscription.usage.currentUsers > feature.limits.maxUsers) {
+      // Use !== undefined to allow zero limits
+      if (feature.limits.maxUsers !== undefined && subscription.usage.currentUsers > feature.limits.maxUsers) {
         violations.push(`User limit exceeded: ${subscription.usage.currentUsers}/${feature.limits.maxUsers}`);
       }
 
-      if (feature.limits.maxCloudAccounts && subscription.usage.currentCloudAccounts > feature.limits.maxCloudAccounts) {
+      if (feature.limits.maxCloudAccounts !== undefined && subscription.usage.currentCloudAccounts > feature.limits.maxCloudAccounts) {
         violations.push(`Cloud account limit exceeded: ${subscription.usage.currentCloudAccounts}/${feature.limits.maxCloudAccounts}`);
       }
 
-      if (feature.limits.maxStorageGB && subscription.usage.storageUsedGB > feature.limits.maxStorageGB) {
+      if (feature.limits.maxStorageGB !== undefined && subscription.usage.storageUsedGB > feature.limits.maxStorageGB) {
         violations.push(`Storage limit exceeded: ${subscription.usage.storageUsedGB}GB/${feature.limits.maxStorageGB}GB`);
+      }
+
+      // Add missing limit checks
+      if (feature.limits.maxResourcesMonitored !== undefined && subscription.usage.currentResourcesMonitored > feature.limits.maxResourcesMonitored) {
+        violations.push(`Resource limit exceeded: ${subscription.usage.currentResourcesMonitored}/${feature.limits.maxResourcesMonitored}`);
+      }
+
+      if (feature.limits.maxReportsPerMonth !== undefined && subscription.usage.reportsThisMonth > feature.limits.maxReportsPerMonth) {
+        violations.push(`Report limit exceeded: ${subscription.usage.reportsThisMonth}/${feature.limits.maxReportsPerMonth}`);
       }
     }
 
