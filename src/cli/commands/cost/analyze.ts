@@ -7,9 +7,9 @@
 import { getGlobalLogger } from '../../../core/logging';
 import { CloudProviderFactory } from '../../../providers/factory';
 import { generateEnhancedOutput, formatEnhancedSections } from '../../../core/enhanced-output';
-import { printFancy } from '../../../printers/fancy';
-import { printJson } from '../../../printers/json';
-import { printPlainText } from '../../../printers/text';
+import { printFancy } from '../../../exporters/formats/fancy';
+import { printJson } from '../../../exporters/formats/json';
+import { printPlainText } from '../../../exporters/formats/text';
 
 interface AnalyzeOptions {
   startDate?: string;
@@ -76,14 +76,7 @@ export async function handleAnalyze(options: AnalyzeOptions, command: any): Prom
         break;
 
       case 'text':
-        printPlainText({
-          totalCosts: {
-            thisMonth: costs.totals?.thisMonth || 0,
-            lastMonth: costs.totals?.lastMonth || 0,
-            delta: (costs.totals?.thisMonth || 0) - (costs.totals?.lastMonth || 0),
-          },
-          byService: costs.totalsByService,
-        });
+        printPlainText(mergedOpts.profile || 'default', costs, false);
         // Print enhanced sections
         console.log(formatEnhancedSections(enhanced, {
           showDelta: options.showDelta !== false,
@@ -96,7 +89,7 @@ export async function handleAnalyze(options: AnalyzeOptions, command: any): Prom
 
       case 'fancy':
       default:
-        printFancy(costs.totalsByService || {}, costs.totals?.thisMonth || 0);
+        printFancy(mergedOpts.profile || 'default', costs, false);
         // Print enhanced sections
         console.log(formatEnhancedSections(enhanced, {
           showDelta: options.showDelta !== false,

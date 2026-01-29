@@ -25,13 +25,14 @@ import { authMiddleware } from './middleware/auth';
 import { validationMiddleware } from './middleware/validation';
 import { errorHandler } from './middleware/error-handler';
 
+// Create module-level program instance for exports
+const program = new Command();
+
 /**
  * Create and configure the CLI program
  */
 export function createCLI(): Command {
-  const program = new Command();
-
-  // Configure main program
+  // Reset program for fresh initialization
   program
     .name('infra-cost')
     .description(packageJson.description)
@@ -127,7 +128,7 @@ export function createCLI(): Command {
  * Main CLI entry point
  */
 export async function main(argv: string[] = process.argv): Promise<void> {
-  const program = createCLI();
+  createCLI(); // Initialize the program
 
   try {
     await program.parseAsync(argv);
