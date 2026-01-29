@@ -310,6 +310,10 @@ export class StructuredLogger extends EventEmitter {
       let stream = this.fileStreams.get(filepath);
       if (!stream) {
         stream = fs.createWriteStream(filepath, { flags: 'a' });
+        stream.on('error', (err) => {
+          console.error(`Log stream error for ${filepath}:`, err);
+          this.fileStreams.delete(filepath);
+        });
         this.fileStreams.set(filepath, stream);
       }
 
