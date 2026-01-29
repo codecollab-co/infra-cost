@@ -6,7 +6,8 @@
  */
 
 import { Command } from 'commander';
-import packageJson from '../../package.json' with { type: 'json' };
+// @ts-expect-error - esbuild doesn't support 'with' syntax yet, using 'assert' for bundler compatibility
+import packageJson from '../../package.json' assert { type: 'json' };
 import { initializeLogger } from '../core/logging';
 import { autoLoadConfig } from '../core/config';
 

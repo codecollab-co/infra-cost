@@ -1,7 +1,7 @@
 import { fromEnv, fromIni, fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import type { AwsCredentialIdentity, AwsCredentialIdentityProvider } from "@aws-sdk/types";
 import chalk from "chalk";
-import { printFatalError } from "./logger";
+import { printFatalError } from "../../logger";
 
 export type EnvConfig = {
   awsAccessKey: string;

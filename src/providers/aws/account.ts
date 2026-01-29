@@ -1,7 +1,7 @@
 import { IAMClient, ListAccountAliasesCommand } from '@aws-sdk/client-iam';
 import { STSClient, GetCallerIdentityCommand } from '@aws-sdk/client-sts';
 import { AWSConfig, AWSClientConfig } from './config';
-import { showSpinner } from './logger';
+import { showSpinner } from '../../logger';
 
 export async function getAccountAlias(awsConfig: AWSClientConfig): Promise<string> {
   showSpinner('Getting account alias');

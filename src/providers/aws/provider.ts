@@ -30,10 +30,10 @@ import {
   FinOpsRecommendation,
   TrendData,
   BudgetThreshold
-} from '../types/providers';
+} from '../../types/providers';
 import type { AwsCredentialIdentityProvider } from "@aws-sdk/types";
-import { showSpinner } from '../logger';
-import { CostAnalyticsEngine, DataPoint, Anomaly } from '../analytics/anomaly-detector';
+import { showSpinner } from '../../logger';
+import { CostAnalyticsEngine, DataPoint, Anomaly } from '../../analytics/anomaly-detector';
 
 export class AWSProvider extends CloudProviderAdapter {
   constructor(config: ProviderConfig) {
