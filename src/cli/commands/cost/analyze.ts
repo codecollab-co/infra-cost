@@ -39,12 +39,15 @@ export async function handleAnalyze(options: AnalyzeOptions, command: any): Prom
 
     // Create cloud provider
     const factory = new CloudProviderFactory();
-    const provider = factory.createProvider(mergedOpts.provider || 'aws', {
+    const provider = factory.createProvider({
+      provider: mergedOpts.provider || 'aws',
       profile: mergedOpts.profile,
       region: mergedOpts.region,
-      accessKeyId: mergedOpts.accessKey,
-      secretAccessKey: mergedOpts.secretKey,
-      sessionToken: mergedOpts.sessionToken,
+      credentials: {
+        accessKeyId: mergedOpts.accessKey,
+        secretAccessKey: mergedOpts.secretKey,
+        sessionToken: mergedOpts.sessionToken,
+      },
     });
 
     // Calculate date range
