@@ -28,7 +28,7 @@ const CLI_MIGRATION_MAP: Record<string, string> = {
   '--inventory': 'infra-cost export inventory json',
   '--inventory-export json': 'infra-cost export inventory json',
   '--inventory-export csv': 'infra-cost export inventory csv',
-  '--inventory-export xlsx': 'infra-cost export xlsx',
+  '--inventory-export xlsx': 'infra-cost export inventory xlsx',
   '--inventory-export pdf': 'infra-cost export inventory pdf',
 
   // Optimization
