@@ -34,6 +34,9 @@ export class CloudProfileDiscovery {
    * Discover all available cloud provider profiles
    */
   async discoverAllProfiles(): Promise<ProfileDiscoveryResults> {
+    // Reset warnings for fresh discovery
+    this.warnings = [];
+
     console.log(chalk.yellow('🔍 Discovering cloud provider profiles...'));
 
     const results: ProfileDiscoveryResults = {
