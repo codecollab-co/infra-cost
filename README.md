@@ -75,50 +75,59 @@
 
 ## 📖 CLI Commands Overview
 
-infra-cost uses a modern subcommand-based architecture for better organization and discoverability:
+infra-cost v1.0 uses a modern subcommand-based architecture for better organization and discoverability.
 
-### Cost Commands (`infra-cost cost`)
-- `analyze` - Analyze cloud costs with delta comparison
-- `trends` - View cost trends over time
-- `compare` - Compare costs across cloud providers
-- `forecast` - Forecast future costs with AI
+### Command Migration Table
 
-### Optimization Commands (`infra-cost optimize`)
-- `recommendations` - Get AI-powered optimization recommendations
-- `quickwins` - Find quick wins for immediate savings
-- `rightsizing` - Get instance rightsizing recommendations
-- `cross-cloud` - Cross-cloud optimization analysis
+| Command Usage | Old Command (v0.x) | New Command (v1.0) |
+|--------------|-------------------|-------------------|
+| **Cost Analysis** |
+| Default cost analysis | `infra-cost` | `infra-cost cost analyze` |
+| Show cost deltas | `infra-cost --delta` | `infra-cost cost analyze --show-delta` |
+| Cost trends | `infra-cost --trends 30` | `infra-cost cost trends --period 30d` |
+| Compare clouds | `infra-cost --compare-clouds aws,gcp` | `infra-cost cost compare --providers aws,gcp` |
+| Forecast costs | `infra-cost --forecast 30` | `infra-cost cost forecast --days 30` |
+| **Optimization** |
+| Optimization recommendations | `infra-cost --finops` | `infra-cost optimize recommendations` |
+| Quick wins | `infra-cost --quick-wins` | `infra-cost optimize quickwins` |
+| Rightsizing | `infra-cost --rightsize` | `infra-cost optimize rightsizing` |
+| Cross-cloud optimization | `infra-cost --optimization-report` | `infra-cost optimize cross-cloud` |
+| **Monitoring & Alerts** |
+| Cost alerts | `infra-cost --alerts` | `infra-cost monitor alerts` |
+| Budget monitoring | `infra-cost --budgets` | `infra-cost monitor budgets` |
+| Real-time monitoring | `infra-cost --monitor` | `infra-cost monitor watch` |
+| Anomaly detection | `infra-cost --anomaly-detect` | `infra-cost monitor anomaly` |
+| **Export & Reports** |
+| Export inventory (JSON) | `infra-cost --inventory` | `infra-cost export inventory json` |
+| Export inventory (CSV) | `infra-cost --inventory-export csv` | `infra-cost export inventory csv` |
+| Export inventory (Excel) | `infra-cost --inventory-export xlsx` | `infra-cost export inventory xlsx` |
+| Export inventory (PDF) | `infra-cost --inventory-export pdf` | `infra-cost export inventory pdf` |
+| **AWS Organizations** |
+| List accounts | `infra-cost --organizations` | `infra-cost organizations list` |
+| Organization summary | `infra-cost --organizations-summary` | `infra-cost organizations summary` |
+| Daily costs | `infra-cost --organizations-daily` | `infra-cost organizations daily` |
+| **Chargeback** |
+| Chargeback report | `infra-cost --chargeback` | `infra-cost chargeback report` |
+| Send to Slack | `infra-cost --chargeback-slack` | `infra-cost chargeback slack` |
+| **Dashboards** |
+| Interactive dashboard | `infra-cost --dashboard` | `infra-cost dashboard interactive` |
+| Multi-cloud dashboard | `infra-cost --dashboard-multicloud` | `infra-cost dashboard multicloud` |
+| **Configuration** |
+| Show configuration | `infra-cost --config-status` | `infra-cost config show` |
+| Generate configuration | `infra-cost --config-generate` | `infra-cost config init` |
+| Validate configuration | `infra-cost --config-validate` | `infra-cost config validate` |
+| Migrate configuration | N/A (new in v1.0) | `infra-cost config migrate` |
 
-### Monitoring Commands (`infra-cost monitor`)
-- `alerts` - Check cost alerts and thresholds
-- `budgets` - Monitor budget status
-- `watch` - Real-time cost monitoring
-- `anomaly` - Detect cost anomalies
+### Available Command Groups
 
-### Export Commands (`infra-cost export`)
-- `inventory` - Export infrastructure inventory (JSON, CSV, XLSX, PDF)
-- `costs` - Export cost data
-- `reports` - Export comprehensive reports
-
-### Organizations Commands (`infra-cost organizations`)
-- `list` - List all accounts in AWS Organizations
-- `summary` - Organization-wide cost summary
-- `daily` - Daily costs for all accounts
-
-### Chargeback Commands (`infra-cost chargeback`)
-- `report` - Generate chargeback reports
-- `allocate` - Allocate costs to teams/projects
-- `slack` - Send chargeback reports to Slack
-
-### Configuration Commands (`infra-cost config`)
-- `init` - Initialize configuration file
-- `show` - Show current configuration
-- `validate` - Validate configuration
-- `migrate` - Migrate from v0.x to v1.0
-
-### Dashboard Commands (`infra-cost dashboard`)
-- `interactive` - Launch interactive terminal dashboard
-- `multicloud` - Multi-cloud dashboard view
+- **`cost`** - Cost analysis, trends, comparisons, and forecasting
+- **`optimize`** - Optimization recommendations and analysis
+- **`monitor`** - Alerts, budgets, and anomaly detection
+- **`export`** - Export data in multiple formats
+- **`organizations`** - AWS Organizations multi-account support
+- **`chargeback`** - Cost allocation and reporting
+- **`config`** - Configuration management
+- **`dashboard`** - Interactive dashboards
 
 **Get help for any command:**
 ```bash
