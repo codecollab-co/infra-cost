@@ -423,6 +423,72 @@ export class CostAllocationEngine {
       }
     }
 
+    // Handle shared cost allocation
+    if (this.config.includeSharedCosts) {
+      // Identify shared resources (resources tagged with 'shared' or in handleUntagged groups)
+      const sharedResources: ResourceCostDetail[] = [];
+      const sharedKeys = [this.config.handleUntagged, 'shared', 'unassigned'];
+
+      for (const [key, groupResources] of groups) {
+        if (sharedKeys.includes(key)) {
+          sharedResources.push(...groupResources);
+        }
+      }
+
+      if (sharedResources.length > 0) {
+        const sharedTotalCost = sharedResources.reduce((sum, r) => sum + r.monthlyCost, 0);
+
+        // Get non-shared groups for distribution
+        const nonSharedGroups = Array.from(taggedGroups.entries())
+          .filter(([key]) => !sharedKeys.includes(key));
+
+        if (nonSharedGroups.length > 0) {
+          // Remove shared resources from groups before redistribution
+          for (const key of sharedKeys) {
+            groups.delete(key);
+          }
+
+          // Calculate total cost of non-shared groups for proportional distribution
+          const nonSharedTotalCost = nonSharedGroups.reduce((sum, [, data]) => sum + data.cost, 0);
+
+          // Distribute shared costs according to allocation strategy
+          for (const [value, groupData] of nonSharedGroups) {
+            let sharedCostForGroup = 0;
+
+            if (this.config.sharedCostAllocation === 'equal') {
+              // Equal distribution
+              sharedCostForGroup = sharedTotalCost / nonSharedGroups.length;
+            } else if (this.config.sharedCostAllocation === 'proportional') {
+              // Proportional distribution based on group cost
+              const proportion = nonSharedTotalCost > 0 ? groupData.cost / nonSharedTotalCost : 1 / nonSharedGroups.length;
+              sharedCostForGroup = sharedTotalCost * proportion;
+            } else if (this.config.sharedCostAllocation === 'custom' && this.config.customAllocations) {
+              // Custom allocation based on configured percentages
+              const customPercentage = this.config.customAllocations[value];
+              if (customPercentage !== undefined) {
+                sharedCostForGroup = sharedTotalCost * (customPercentage / 100);
+              } else {
+                // Fallback to proportional if no custom allocation defined
+                const proportion = nonSharedTotalCost > 0 ? groupData.cost / nonSharedTotalCost : 1 / nonSharedGroups.length;
+                sharedCostForGroup = sharedTotalCost * proportion;
+              }
+            }
+
+            // Create virtual shared cost resources for this group
+            const sharedCostResources = sharedResources.map((r, idx) => ({
+              ...r,
+              resourceId: `${r.resourceId}-shared-${value}-${idx}`,
+              monthlyCost: (r.monthlyCost / sharedTotalCost) * sharedCostForGroup,
+            }));
+
+            // Add shared costs to the group
+            const currentResources = groups.get(value) || groupData.resources;
+            groups.set(value, [...currentResources, ...sharedCostResources]);
+          }
+        }
+      }
+    }
+
     // Second pass: create allocation results
     for (const [value, groupResources] of groups) {
       const groupCost = groupResources.reduce((sum, r) => sum + r.monthlyCost, 0);
