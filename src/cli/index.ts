@@ -8,7 +8,7 @@
 import { Command } from 'commander';
 // @ts-expect-error - esbuild doesn't support 'with' syntax yet, using 'assert' for bundler compatibility
 import packageJson from '../../package.json' assert { type: 'json' };
-import { initializeLogger } from '../core/logging';
+import { initializeLogger, LogOutput } from '../core/logging';
 import { autoLoadConfig } from '../core/config';
 
 // Import command groups
@@ -101,10 +101,14 @@ export function createCLI(): Command {
     // Initialize logging
     const opts = thisCommand.opts();
     const logLevel = opts.verbose ? 'debug' : opts.quiet ? 'error' : opts.logLevel;
+
+    // Properly type outputs array for TypeScript
+    const outputs: LogOutput[] = [{ type: 'console' }];
+
     initializeLogger({
       level: logLevel,
       format: opts.logFormat,
-      outputs: ['console'],
+      outputs,
     });
 
     // Load configuration
