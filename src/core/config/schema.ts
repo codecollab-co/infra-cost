@@ -98,13 +98,34 @@ const AlertThresholdSchema = z.object({
   service: z.string().optional(),
   severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
   enabled: z.boolean(),
+  cooldownPeriod: z.number(),
+  description: z.string(),
 });
 
-// Monitoring Configuration Schema
+// Notification Channel Schema
+const NotificationChannelSchema = z.object({
+  id: z.string(),
+  type: z.enum(['EMAIL', 'SLACK', 'WEBHOOK', 'SMS', 'TEAMS', 'DISCORD']),
+  config: z.record(z.any()),
+  enabled: z.boolean(),
+  filters: z.object({
+    minSeverity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+    providers: z.array(z.string()).optional(),
+    services: z.array(z.string()).optional(),
+  }),
+});
+
+// Monitoring Configuration Schema - aligned with MonitoringConfig interface
 export const MonitoringConfigSchema = z.object({
   enabled: z.boolean().default(false),
+  interval: z.number().default(300000), // 5 minutes in milliseconds
+  providers: z.array(z.string()).default([]),
   alertThresholds: z.array(AlertThresholdSchema).default([]),
-  anomalyDetection: z.boolean().default(false),
+  notificationChannels: z.array(NotificationChannelSchema).default([]),
+  enablePredictiveAlerts: z.boolean().default(false),
+  dataRetentionDays: z.number().default(90),
+  // Legacy fields for backwards compatibility
+  anomalyDetection: z.boolean().optional(),
   webhookUrl: z.string().url().optional(),
 });
 
