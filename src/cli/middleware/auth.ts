@@ -18,8 +18,10 @@ export async function authMiddleware(
   const logger = getGlobalLogger();
   const opts = thisCommand.opts();
 
-  // Skip auth for config commands
-  if (actionCommand.name() === 'config') {
+  // Skip auth for config commands (check both action and parent)
+  const isConfigCommand =
+    actionCommand.name() === 'config' || actionCommand.parent?.name() === 'config';
+  if (isConfigCommand) {
     return;
   }
 
