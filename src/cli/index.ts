@@ -124,12 +124,6 @@ export function createCLI(): Command {
     await validationMiddleware(thisCommand, actionCommand);
   });
 
-  // Global error handling
-  program.exitOverride((err) => {
-    errorHandler(err);
-    process.exit(err.exitCode || 1);
-  });
-
   return program;
 }
 
