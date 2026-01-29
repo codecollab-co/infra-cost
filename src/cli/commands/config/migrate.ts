@@ -196,16 +196,24 @@ export async function handleMigrate(options: MigrateOptions, command: any): Prom
       // Validate new config
       const validation = validateConfig(newConfig);
 
+      // Redaction function for sensitive values
+      const REDACT_KEYS = ['accessKey', 'secretKey', 'secret', 'token', 'webhook', 'password', 'apiKey', 'clientSecret', 'sessionToken'];
+      const redact = (key: string, value: any) => {
+        if (!key) return value;
+        const lowerKey = key.toLowerCase();
+        return REDACT_KEYS.some(k => lowerKey.includes(k.toLowerCase())) ? '***REDACTED***' : value;
+      };
+
       console.log(chalk.bold('📋 Migration Preview:'));
       console.log('');
       console.log(chalk.gray('Old format:'));
-      console.log(chalk.gray(JSON.stringify(oldConfig, null, 2).split('\n').slice(0, 10).join('\n')));
+      console.log(chalk.gray(JSON.stringify(oldConfig, redact, 2).split('\n').slice(0, 10).join('\n')));
       if (Object.keys(oldConfig).length > 10) {
         console.log(chalk.gray('  ... (truncated)'));
       }
       console.log('');
       console.log(chalk.gray('New format:'));
-      console.log(chalk.cyan(JSON.stringify(newConfig, null, 2)));
+      console.log(chalk.cyan(JSON.stringify(newConfig, redact, 2)));
       console.log('');
 
       if (options.dryRun) {
