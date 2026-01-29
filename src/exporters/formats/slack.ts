@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { TotalCosts } from '../cost';
+import { TotalCosts } from '../../providers/aws/cost';
 
 /**
  * Formats the costs by service for all time periods into a string
@@ -113,8 +113,7 @@ ${formatServiceBreakdown(costs)}
   const data = (await response.json()) as { ok: boolean; error?: string };
   if (!data.ok) {
     const message = data.error || 'Unknown error';
-    console.error(`\nFailed to send message to Slack: ${message}`);
-    process.exit(1);
+    throw new Error(`Failed to send message to Slack: ${message}`);
   }
 
   console.log('\nSuccessfully sent message to Slack');

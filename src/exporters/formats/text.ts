@@ -1,6 +1,6 @@
-import { TotalCosts } from '../cost';
-import { hideSpinner } from '../logger';
-import { CostDeltaAnalysis, formatDelta, getDeltaEmoji } from '../analytics/cost-delta';
+import { TotalCosts } from '../../providers/aws/cost';
+import { hideSpinner } from '../../logger';
+import { CostDeltaAnalysis, formatDelta, getDeltaEmoji } from '../../core/analytics/cost-delta/analyzer';
 
 export interface TotalCostsWithDelta extends TotalCosts {
   delta?: CostDeltaAnalysis;

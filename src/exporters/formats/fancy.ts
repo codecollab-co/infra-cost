@@ -1,8 +1,8 @@
 import chalk from 'chalk';
-import { TotalCosts } from '../cost';
-import { hideSpinner } from '../logger';
-import { TerminalUIEngine } from '../visualization/terminal-ui';
-import { CostBreakdown } from '../types/providers';
+import { TotalCosts } from '../../providers/aws/cost';
+import { hideSpinner } from '../../logger';
+import { TerminalUIEngine } from '../../visualization/terminal-ui';
+import { CostBreakdown } from '../../types/providers';
 
 export function printFancy(accountAlias: string, totals: TotalCosts, isSummary: boolean = false) {
   hideSpinner();

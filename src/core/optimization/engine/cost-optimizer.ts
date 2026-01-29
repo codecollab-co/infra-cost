@@ -1,5 +1,11 @@
-import { CloudProviderAdapter, CostBreakdown, ResourceInventory, FinOpsRecommendation } from '../types/providers';
-import { RightsizingEngine, RightsizingRecommendation, RightsizingConfiguration } from '../analytics/rightsizing-engine';
+import { CloudProviderAdapter, CostBreakdown, ResourceInventory, FinOpsRecommendation } from '../../../types/providers';
+import { RightsizingEngine, RightsizingRecommendation, RightsizingConfiguration } from '../../analytics/rightsizing/engine';
+import {
+  OptimizationCategory,
+  RiskLevel,
+  EffortLevel,
+  ConfidenceLevel
+} from './types';
 
 /**
  * Cost Optimization Engine
@@ -8,42 +14,6 @@ import { RightsizingEngine, RightsizingRecommendation, RightsizingConfiguration 
  * This engine aggregates recommendations from multiple sources and provides
  * a unified, prioritized view of optimization opportunities.
  */
-
-// Optimization Categories
-export enum OptimizationCategory {
-  COMPUTE = 'compute',
-  STORAGE = 'storage',
-  DATABASE = 'database',
-  NETWORK = 'network',
-  SERVERLESS = 'serverless',
-  RESERVED_CAPACITY = 'reserved_capacity',
-  UNUSED_RESOURCES = 'unused_resources',
-  ARCHITECTURE = 'architecture',
-}
-
-// Risk Levels
-export enum RiskLevel {
-  NONE = 'none',
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-}
-
-// Effort Levels
-export enum EffortLevel {
-  MINIMAL = 'minimal',      // < 1 hour
-  LOW = 'low',              // 1-4 hours
-  MEDIUM = 'medium',        // 1-2 days
-  HIGH = 'high',            // 1 week+
-}
-
-// Confidence Levels
-export enum ConfidenceLevel {
-  LOW = 'low',              // < 60%
-  MEDIUM = 'medium',        // 60-80%
-  HIGH = 'high',            // 80-95%
-  VERY_HIGH = 'very_high',  // > 95%
-}
 
 // Unified Optimization Recommendation
 export interface OptimizationRecommendation {

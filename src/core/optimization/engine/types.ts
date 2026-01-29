@@ -33,27 +33,3 @@ export enum ConfidenceLevel {
   HIGH = 'high',
   VERY_HIGH = 'very_high',
 }
-
-export interface OptimizationRecommendation {
-  id: string;
-  category: OptimizationCategory;
-  title: string;
-  description: string;
-  estimatedMonthlySavings: number;
-  estimatedAnnualSavings: number;
-  implementationCost?: number;
-  riskLevel: RiskLevel;
-  effortLevel: EffortLevel;
-  confidenceLevel: ConfidenceLevel;
-  affectedResources: string[];
-  steps: string[];
-  priority: number;
-  tags?: string[];
-}
-
-export interface OptimizationEngineConfig {
-  enabledCategories: OptimizationCategory[];
-  maxRiskLevel: RiskLevel;
-  minSavings: number;
-  includeArchitecturalRecommendations: boolean;
-}
