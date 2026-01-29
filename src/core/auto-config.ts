@@ -250,6 +250,10 @@ function mapCliOptionsToConfig(options: Record<string, any>): Partial<AutoConfig
     config.output = config.output || {};
     config.output.showQuickWins = options.showQuickWins === true || (options.noQuickWins !== true);
   }
+  if (options.quickWinsCount) {
+    config.output = config.output || {};
+    config.output.quickWinsCount = parseInt(options.quickWinsCount, 10);
+  }
 
   // Cache settings
   if (options.cache !== undefined || options.noCache !== undefined) {
