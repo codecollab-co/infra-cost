@@ -274,8 +274,10 @@ export function generateInsights(costs: CostBreakdown, deltas?: EnhancedCostRepo
   const dayOfMonth = new Date().getDate();
   const forecastedCost = (thisMonth / dayOfMonth) * daysInMonth;
 
-  if (forecastedCost > lastMonth * 1.2) {
+  if (forecastedCost > lastMonth * 1.2 && lastMonth > 0) {
     insights.push(`🔮 Projected month-end cost: $${forecastedCost.toFixed(2)} (${((forecastedCost / lastMonth - 1) * 100).toFixed(0)}% higher than last month)`);
+  } else if (forecastedCost > 0 && lastMonth === 0) {
+    insights.push(`🔮 Projected month-end cost: $${forecastedCost.toFixed(2)} (new spending this month)`);
   }
 
   return insights;
