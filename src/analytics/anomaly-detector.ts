@@ -651,7 +651,6 @@ export interface AIAnomalyDetectionReport {
   };
   anomalies: AIAnomaly[];
   trends: AIAnomalyTrend[];
-  modelPerformance: AIModelPerformanceMetrics;
   insights: string[];
   recommendations: AIRecommendation[];
 }
@@ -662,18 +661,6 @@ export interface AIAnomalyTrend {
   averageImpact: number;
   trend: 'increasing' | 'decreasing' | 'stable';
   seasonality: boolean;
-}
-
-export interface AIModelPerformanceMetrics {
-  accuracy: number;
-  precision: number;
-  recall: number;
-  f1Score: number;
-  falsePositiveRate: number;
-  falseNegativeRate: number;
-  modelVersion: string;
-  lastTrainingDate: Date;
-  trainingDataSize: number;
 }
 
 export class CostAnomalyDetectorAI extends EventEmitter {
@@ -1047,17 +1034,6 @@ export class CostAnomalyDetectorAI extends EventEmitter {
       },
       anomalies,
       trends: this.calculateAIAnomalyTrends(anomalies),
-      modelPerformance: {
-        accuracy: 0.92,
-        precision: 0.89,
-        recall: 0.94,
-        f1Score: 0.915,
-        falsePositiveRate: 0.08,
-        falseNegativeRate: 0.06,
-        modelVersion: '3.0.0-ai',
-        lastTrainingDate: new Date(),
-        trainingDataSize: 10000
-      },
       insights: this.generateAIInsights(anomalies),
       recommendations: this.consolidateAIRecommendations(anomalies)
     };

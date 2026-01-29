@@ -36,6 +36,7 @@ export default defineConfig([
       'express',
       'node-fetch',
       'exceljs',
+      '@slack/web-api',
     ],
   },
 ]);
