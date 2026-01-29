@@ -34,6 +34,10 @@ export function createCLI(): Command {
   // Create fresh program instance
   const program = new Command();
 
+  // Override exit to throw instead of calling process.exit()
+  // This allows us to handle help/version properly
+  program.exitOverride();
+
   program
     .name('infra-cost')
     .description(packageJson.description)
