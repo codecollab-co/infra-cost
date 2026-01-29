@@ -97,31 +97,40 @@ ${formatServiceBreakdown(costs)}
     message = truncatedMessage + '\n\n_...truncated (message too long)_';
   }
 
-  const response = await fetch('https://slack.com/api/chat.postMessage', {
-    method: 'post',
-    body: JSON.stringify({
-      channel,
-      text: `AWS Cost Report for ${accountAlias}`, // Fallback text for accessibility
-      blocks: [
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: message,
+  try {
+    const response = await fetch('https://slack.com/api/chat.postMessage', {
+      method: 'post',
+      body: JSON.stringify({
+        channel,
+        text: `AWS Cost Report for ${accountAlias}`, // Fallback text for accessibility
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: message,
+            },
           },
-        },
-      ],
-    }),
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      Authorization: `Bearer ${slackToken}`,
-    },
-  });
+        ],
+      }),
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        Authorization: `Bearer ${slackToken}`,
+      },
+      // Abort request after 10 seconds to prevent indefinite hanging
+      signal: AbortSignal.timeout(10000),
+    });
 
-  const data = (await response.json()) as { ok: boolean; error?: string };
-  if (!data.ok) {
-    const message = data.error || 'Unknown error';
-    throw new Error(`Failed to send message to Slack: ${message}`);
+    const data = (await response.json()) as { ok: boolean; error?: string };
+    if (!data.ok) {
+      const errorMessage = data.error || 'Unknown error';
+      throw new Error(`Failed to send message to Slack: ${errorMessage}`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      throw new Error(`Slack API request timed out after 10 seconds (channel: ${channel})`);
+    }
+    throw error;
   }
 
   console.log('\nSuccessfully sent message to Slack');
