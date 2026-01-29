@@ -34,6 +34,7 @@ export default defineConfig([
       'moment',
       'exceljs',
       'puppeteer',
+      '@slack/web-api',
     ],
   },
 ]);
