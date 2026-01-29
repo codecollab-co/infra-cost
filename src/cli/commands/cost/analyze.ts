@@ -59,7 +59,9 @@ export async function handleAnalyze(options: AnalyzeOptions, command: any): Prom
     logger.debug('Fetching cost data', { startDate, endDate });
 
     // Fetch costs from provider
-    const costs = await provider.getCosts(startDate, endDate);
+    // Note: getCostBreakdown() fetches the last 65 days of data internally
+    // startDate/endDate parameters are noted but not currently supported by the provider interface
+    const costs = await provider.getCostBreakdown();
 
     // Generate enhanced output with delta and quick wins
     const enhanced = generateEnhancedOutput(costs, undefined, {
