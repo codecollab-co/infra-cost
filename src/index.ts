@@ -601,8 +601,52 @@ if (options.configStatus || options.configGenerate) {
   }
 }
 
-// Sprint 6: Auto-load configuration
+// Sprint 6: Auto-load configuration and apply to options
 const autoConfig = autoLoadConfig(options);
+
+// Apply autoConfig to options where not explicitly set by CLI
+// Provider settings
+if (!program.getOptionValueSource('provider') || program.getOptionValueSource('provider') === 'default') {
+  options.provider = autoConfig.provider || options.provider;
+}
+if (!program.getOptionValueSource('profile') || program.getOptionValueSource('profile') === 'default') {
+  options.profile = autoConfig.profile || options.profile;
+}
+if (!program.getOptionValueSource('region') || program.getOptionValueSource('region') === 'default') {
+  options.region = autoConfig.region || options.region;
+}
+
+// Credentials
+if (!options.accessKey && autoConfig.accessKey) {
+  options.accessKey = autoConfig.accessKey;
+}
+if (!options.secretKey && autoConfig.secretKey) {
+  options.secretKey = autoConfig.secretKey;
+}
+if (!options.sessionToken && autoConfig.sessionToken) {
+  options.sessionToken = autoConfig.sessionToken;
+}
+
+// Output settings
+if (autoConfig.output) {
+  options.showDelta = autoConfig.output.showDelta ?? options.showDelta;
+  options.showQuickWins = autoConfig.output.showQuickWins ?? options.showQuickWins;
+  options.deltaThreshold = autoConfig.output.deltaThreshold ?? options.deltaThreshold;
+  options.quickWinsCount = autoConfig.output.quickWinsCount ?? options.quickWinsCount;
+}
+
+// Cache settings
+if (autoConfig.cache) {
+  options.cache = autoConfig.cache.enabled ?? options.cache;
+  options.cacheTtl = autoConfig.cache.ttl ?? options.cacheTtl;
+  options.cacheType = autoConfig.cache.type ?? options.cacheType;
+}
+
+// Slack settings
+if (autoConfig.slack?.enabled) {
+  options.slackToken = autoConfig.slack.token ?? options.slackToken;
+  options.slackChannel = autoConfig.slack.channel ?? options.slackChannel;
+}
 
 // Validate provider
 const supportedProviders = Object.values(CloudProvider);
