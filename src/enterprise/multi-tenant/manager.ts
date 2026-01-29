@@ -4,7 +4,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { Tenant, User, MultiTenantMetrics } from './types';
+import { Tenant, User, MultiTenantMetrics, TenantStatus } from './types';
 import { getAuditLogger } from '../../core/logging';
 
 export class MultiTenantManager extends EventEmitter {
@@ -109,9 +109,9 @@ export class MultiTenantManager extends EventEmitter {
    */
   getMetrics(): MultiTenantMetrics {
     const tenants = this.listTenants();
-    const activeTenants = tenants.filter(t => t.status === 'ACTIVE' as any).length;
-    const trialTenants = tenants.filter(t => t.status === 'TRIAL' as any).length;
-    const suspendedTenants = tenants.filter(t => t.status === 'SUSPENDED' as any).length;
+    const activeTenants = tenants.filter(t => t.status === TenantStatus.ACTIVE).length;
+    const trialTenants = tenants.filter(t => t.status === TenantStatus.TRIAL).length;
+    const suspendedTenants = tenants.filter(t => t.status === TenantStatus.SUSPENDED).length;
 
     return {
       totalTenants: tenants.length,
