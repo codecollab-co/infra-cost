@@ -217,8 +217,9 @@ export class CostAllocationEngine {
     const totalMonthlyCost = costBreakdown.totals.thisMonth || 0;
 
     // Process compute resources
+    const computeCount = inventory.resources.compute?.length ?? 0;
     for (const resource of inventory.resources.compute || []) {
-      const estimatedCost = this.estimateResourceCost(resource, 'compute', totalMonthlyCost, inventory.totalResources);
+      const estimatedCost = this.estimateResourceCost(resource, 'compute', totalMonthlyCost, computeCount);
       resourceCosts.push({
         resourceId: resource.id,
         resourceName: resource.name,
@@ -231,8 +232,9 @@ export class CostAllocationEngine {
     }
 
     // Process storage resources
+    const storageCount = inventory.resources.storage?.length ?? 0;
     for (const resource of inventory.resources.storage || []) {
-      const estimatedCost = this.estimateResourceCost(resource, 'storage', totalMonthlyCost, inventory.totalResources);
+      const estimatedCost = this.estimateResourceCost(resource, 'storage', totalMonthlyCost, storageCount);
       resourceCosts.push({
         resourceId: resource.id,
         resourceName: resource.name,
@@ -245,8 +247,9 @@ export class CostAllocationEngine {
     }
 
     // Process database resources
+    const databaseCount = inventory.resources.database?.length ?? 0;
     for (const resource of inventory.resources.database || []) {
-      const estimatedCost = this.estimateResourceCost(resource, 'database', totalMonthlyCost, inventory.totalResources);
+      const estimatedCost = this.estimateResourceCost(resource, 'database', totalMonthlyCost, databaseCount);
       resourceCosts.push({
         resourceId: resource.id,
         resourceName: resource.name,
@@ -259,8 +262,9 @@ export class CostAllocationEngine {
     }
 
     // Process serverless resources
+    const serverlessCount = inventory.resources.serverless?.length ?? 0;
     for (const resource of inventory.resources.serverless || []) {
-      const estimatedCost = this.estimateResourceCost(resource, 'serverless', totalMonthlyCost, inventory.totalResources);
+      const estimatedCost = this.estimateResourceCost(resource, 'serverless', totalMonthlyCost, serverlessCount);
       resourceCosts.push({
         resourceId: resource.id,
         resourceName: resource.name,
@@ -273,8 +277,9 @@ export class CostAllocationEngine {
     }
 
     // Process network resources
+    const networkCount = inventory.resources.network?.length ?? 0;
     for (const resource of inventory.resources.network || []) {
-      const estimatedCost = this.estimateResourceCost(resource, 'network', totalMonthlyCost, inventory.totalResources);
+      const estimatedCost = this.estimateResourceCost(resource, 'network', totalMonthlyCost, networkCount);
       resourceCosts.push({
         resourceId: resource.id,
         resourceName: resource.name,
@@ -296,7 +301,7 @@ export class CostAllocationEngine {
     resource: any,
     category: string,
     totalCost: number,
-    totalResources: number
+    categoryResourceCount: number
   ): number {
     // Cost weights by category (rough approximation)
     const categoryWeights: Record<string, number> = {
@@ -309,7 +314,7 @@ export class CostAllocationEngine {
 
     const weight = categoryWeights[category] || 0.1;
     const categoryCost = totalCost * weight;
-    const resourcesInCategory = Math.max(1, Math.floor(totalResources * weight));
+    const resourcesInCategory = Math.max(1, categoryResourceCount);
 
     return categoryCost / resourcesInCategory;
   }
