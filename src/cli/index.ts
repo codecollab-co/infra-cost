@@ -6,7 +6,7 @@
  */
 
 import { Command } from 'commander';
-import packageJson from '../../package.json' assert { type: 'json' };
+import packageJson from '../../package.json' with { type: 'json' };
 import { initializeLogger } from '../core/logging';
 import { autoLoadConfig } from '../core/config';
 
