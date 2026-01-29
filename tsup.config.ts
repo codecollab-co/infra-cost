@@ -17,6 +17,7 @@ export default defineConfig([
     minify: false,
     shims: false,
     dts: false,
+    keepNames: true, // Preserve function names to avoid bundling issues
     external: [
       // Core AWS SDK clients (in package.json dependencies)
       '@aws-sdk/client-cost-explorer',
