@@ -18,6 +18,17 @@
 
 ---
 
+> **📢 Migrating from v0.x?**
+> infra-cost v1.0 introduces a new subcommand-based CLI architecture for better organization and discoverability.
+>
+> - **Quick migration:** Run `infra-cost config migrate` to automatically update your configuration
+> - **Command changes:** Old flags are now organized subcommands (e.g., `--inventory` → `export inventory json`)
+> - **Full guide:** See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for complete migration instructions
+>
+> All new features and improvements are built on this solid foundation!
+
+---
+
 ## 🎯 Why infra-cost?
 
 **Save money. Optimize resources. Make informed decisions.**
@@ -62,6 +73,60 @@
 - **API Server**: REST endpoints for custom integrations
 - **Webhook Support**: Real-time notifications and integrations
 
+## 📖 CLI Commands Overview
+
+infra-cost uses a modern subcommand-based architecture for better organization and discoverability:
+
+### Cost Commands (`infra-cost cost`)
+- `analyze` - Analyze cloud costs with delta comparison
+- `trends` - View cost trends over time
+- `compare` - Compare costs across cloud providers
+- `forecast` - Forecast future costs with AI
+
+### Optimization Commands (`infra-cost optimize`)
+- `recommendations` - Get AI-powered optimization recommendations
+- `quickwins` - Find quick wins for immediate savings
+- `rightsizing` - Get instance rightsizing recommendations
+- `cross-cloud` - Cross-cloud optimization analysis
+
+### Monitoring Commands (`infra-cost monitor`)
+- `alerts` - Check cost alerts and thresholds
+- `budgets` - Monitor budget status
+- `watch` - Real-time cost monitoring
+- `anomaly` - Detect cost anomalies
+
+### Export Commands (`infra-cost export`)
+- `inventory` - Export infrastructure inventory (JSON, CSV, XLSX, PDF)
+- `costs` - Export cost data
+- `reports` - Export comprehensive reports
+
+### Organizations Commands (`infra-cost organizations`)
+- `list` - List all accounts in AWS Organizations
+- `summary` - Organization-wide cost summary
+- `daily` - Daily costs for all accounts
+
+### Chargeback Commands (`infra-cost chargeback`)
+- `report` - Generate chargeback reports
+- `allocate` - Allocate costs to teams/projects
+- `slack` - Send chargeback reports to Slack
+
+### Configuration Commands (`infra-cost config`)
+- `init` - Initialize configuration file
+- `show` - Show current configuration
+- `validate` - Validate configuration
+- `migrate` - Migrate from v0.x to v1.0
+
+### Dashboard Commands (`infra-cost dashboard`)
+- `interactive` - Launch interactive terminal dashboard
+- `multicloud` - Multi-cloud dashboard view
+
+**Get help for any command:**
+```bash
+infra-cost --help
+infra-cost cost --help
+infra-cost cost analyze --help
+```
+
 ## 📦 Installation
 
 ### npm (Recommended)
@@ -98,35 +163,50 @@ docker run --rm codecollab-co/infra-cost --help
 
 ### 1. Basic AWS Cost Analysis
 ```bash
-# Using default AWS credentials
-infra-cost
+# Analyze costs with default AWS credentials
+infra-cost cost analyze
 
-# Get a 6-month cost trend with forecasting
-infra-cost --trend --forecast 30
+# Show cost trends over time
+infra-cost cost trends --period 30d
 
-# Interactive multi-cloud dashboard
-infra-cost --multi-cloud-dashboard
+# Compare costs across multiple providers
+infra-cost cost compare --providers aws,gcp
 ```
 
-### 2. Advanced Analysis
+### 2. Optimization & Recommendations
 ```bash
-# Generate executive PDF report
-infra-cost --executive-summary --pdf-report quarterly-report.pdf
+# Get AI-powered optimization recommendations
+infra-cost optimize recommendations
 
-# AI-powered anomaly detection
-infra-cost --anomaly-detect --anomaly-realtime
+# Find quick wins for immediate savings
+infra-cost optimize quickwins
 
-# Comprehensive sustainability analysis
-infra-cost --sustainability --carbon-footprint --green-recommendations
+# Get rightsizing recommendations
+infra-cost optimize rightsizing
 ```
 
-### 3. Team Collaboration
+### 3. Monitoring & Alerts
 ```bash
-# Send daily cost report to Slack
-infra-cost --slack-token YOUR_TOKEN --slack-channel "#finops" --smart-alerts
+# Check cost alerts and budget status
+infra-cost monitor alerts
 
-# Start real-time cost monitoring
-infra-cost --monitor --alert-threshold 1000 --alert-channel slack
+# Monitor budgets
+infra-cost monitor budgets
+
+# Detect cost anomalies
+infra-cost monitor anomaly
+```
+
+### 4. Team Collaboration
+```bash
+# Send cost report to Slack
+infra-cost chargeback slack
+
+# Generate chargeback report
+infra-cost chargeback report
+
+# Interactive dashboard
+infra-cost dashboard interactive
 ```
 
 ## 🔐 Authentication
@@ -138,67 +218,98 @@ infra-cost --monitor --alert-threshold 1000 --alert-channel slack
 export AWS_ACCESS_KEY_ID=your_access_key
 export AWS_SECRET_ACCESS_KEY=your_secret_key
 export AWS_REGION=us-east-1
-infra-cost
+infra-cost cost analyze
 ```
 
 #### 2. AWS Profiles
 ```bash
 # Use default profile
-infra-cost
+infra-cost cost analyze
 
 # Use specific profile
-infra-cost --profile production
+infra-cost cost analyze --profile production
 
-# Auto-discover profiles
-infra-cost --discover-profiles --auto-profile
+# Discover available profiles
+infra-cost config show --discover-profiles
 ```
 
 #### 3. IAM Roles (EC2/Lambda/ECS)
 ```bash
 # Automatically uses attached IAM role
-infra-cost
+infra-cost cost analyze
 ```
 
 #### 4. AWS SSO
 ```bash
 aws sso login --profile my-sso-profile
-infra-cost --profile my-sso-profile
+infra-cost cost analyze --profile my-sso-profile
+```
+
+#### 5. Configuration File
+```bash
+# Initialize configuration
+infra-cost config init
+
+# Validate configuration
+infra-cost config validate
+
+# Show current configuration
+infra-cost config show
 ```
 
 ### Multi-Cloud Setup (Coming Soon)
 ```bash
 # Google Cloud Platform
-infra-cost --provider gcp --project-id my-project --key-file service-account.json
+infra-cost cost analyze --provider gcp --project-id my-project --key-file service-account.json
 
 # Microsoft Azure
-infra-cost --provider azure --subscription-id sub-id --tenant-id tenant-id
+infra-cost cost analyze --provider azure --subscription-id sub-id --tenant-id tenant-id
+
+# Oracle Cloud
+infra-cost cost analyze --provider oracle --user-id user-ocid --tenancy-id tenancy-ocid
 
 # Cross-cloud comparison
-infra-cost --compare-clouds aws,gcp,azure --optimization-report
+infra-cost cost compare --providers aws,gcp,azure
+
+# Cross-cloud optimization report
+infra-cost optimize cross-cloud
 ```
 
 ## 📊 Output Examples
 
 ### Default Rich Terminal UI
 ```bash
-infra-cost --smart-alerts --compact
+infra-cost cost analyze --output fancy
 ```
 ![Cost Analysis](./.github/images/aws-cost.png)
 
-### Executive Dashboard
+### Export Options
 ```bash
-infra-cost --executive-summary
+# Export inventory to JSON
+infra-cost export inventory json
+
+# Export to CSV
+infra-cost export inventory csv
+
+# Export to Excel
+infra-cost export inventory xlsx
+
+# Export to PDF
+infra-cost export inventory pdf
 ```
-![Executive Summary](./.github/images/executive-dashboard.png)
 
 ### JSON for Automation
 ```bash
-infra-cost --json --forecast 30 --analytics-insights
+infra-cost cost analyze --output json
 ```
 
-### PDF Reports
+### Interactive Dashboard
 ```bash
-infra-cost --pdf-report monthly-report.pdf --trend --optimization-tips
+# Launch interactive terminal dashboard
+infra-cost dashboard interactive
+
+# Multi-cloud dashboard
+infra-cost dashboard multicloud
 ```
 
 ## 💬 Slack Integration
@@ -211,14 +322,15 @@ infra-cost --pdf-report monthly-report.pdf --trend --optimization-tips
 
 ### Setup & Usage
 ```bash
-# Create Slack app with chat:write permissions
-# Get OAuth token and channel ID
+# Configure Slack credentials (one-time setup)
+export SLACK_TOKEN=xoxb-your-token
+export SLACK_CHANNEL="#finops"
 
-# Send cost report
-infra-cost --slack-token xoxb-your-token --slack-channel "#finops"
+# Send chargeback report to Slack
+infra-cost chargeback slack
 
-# Enable smart alerts
-infra-cost --slack-token xoxb-your-token --slack-channel "#alerts" --smart-alerts
+# Or provide inline
+infra-cost chargeback slack --slack-token xoxb-your-token --slack-channel "#finops"
 ```
 
 ### Automated Daily Reports
@@ -232,11 +344,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          npx infra-cost \
-            --executive-summary \
+          npx infra-cost chargeback slack \
             --slack-token ${{ secrets.SLACK_TOKEN }} \
-            --slack-channel ${{ secrets.SLACK_CHANNEL }} \
-            --smart-alerts --trends 7
+            --slack-channel ${{ secrets.SLACK_CHANNEL }}
 ```
 
 ## 🤖 GitHub Actions Integration
@@ -334,67 +444,130 @@ See [example workflows](.github/workflows/examples/) for more use cases.
 
 ## 🔧 Advanced Usage
 
-### Cost Forecasting & Analytics
+### AWS Organizations Support
 ```bash
-# AI-powered forecasting with multiple models
-infra-cost --forecast 90 --forecast-model AUTO --forecast-confidence 95
+# List all accounts in organization
+infra-cost organizations list
 
-# Business intelligence insights
-infra-cost --analytics --analytics-insights --analytics-drivers
+# Get organization-wide cost summary
+infra-cost organizations summary
 
-# Custom dashboards
-infra-cost --dashboard-create "Monthly Review" --chart-create "line:Cost Trends"
+# Get daily costs for all accounts
+infra-cost organizations daily
 ```
 
-### Optimization & Automation
+### Cost Analysis & Forecasting
 ```bash
-# Generate optimization recommendations
-infra-cost --finops --optimization-tips --rightsize --sustainability
+# Analyze costs with delta comparison
+infra-cost cost analyze --show-delta --delta-threshold 10
 
-# Automated optimization (dry-run first!)
-infra-cost --optimize-dry-run --optimize-rules resize,schedule,unused
+# Get cost trends
+infra-cost cost trends --period 90d
 
-# Cross-cloud cost comparison
-infra-cost --compare-clouds aws,gcp --optimization-report
+# Compare costs across providers
+infra-cost cost compare --providers aws,gcp,azure
+
+# Forecast future costs
+infra-cost cost forecast --days 30
 ```
 
-### Enterprise Features
+### Optimization Commands
 ```bash
-# Multi-tenant management
-infra-cost --enterprise --tenants --platform-metrics
+# Get all optimization recommendations
+infra-cost optimize recommendations
 
-# API server for integrations
-infra-cost --api-server --api-port 3000 --webhook-create
+# Find quick wins for immediate savings
+infra-cost optimize quickwins
 
-# Comprehensive audit logging
-infra-cost --audit --compliance-check soc2 --audit-export json
+# Get rightsizing recommendations
+infra-cost optimize rightsizing
+
+# Cross-cloud optimization analysis
+infra-cost optimize cross-cloud
+```
+
+### Monitoring & Alerts
+```bash
+# Check cost alerts
+infra-cost monitor alerts
+
+# Monitor budgets
+infra-cost monitor budgets
+
+# Watch for cost changes in real-time
+infra-cost monitor watch
+
+# Detect anomalies
+infra-cost monitor anomaly
+```
+
+### Configuration Management
+```bash
+# Initialize new configuration
+infra-cost config init
+
+# Show current configuration
+infra-cost config show
+
+# Validate configuration
+infra-cost config validate
+
+# Migrate from old version
+infra-cost config migrate
 ```
 
 ## 🏗️ Architecture & Extensibility
 
-### Multi-Cloud Provider Pattern
+### Clean Architecture Structure (v1.0)
 ```
 src/
-├── providers/
-│   ├── factory.ts      # Provider factory
-│   ├── aws.ts          # AWS implementation ✅
-│   ├── gcp.ts          # Google Cloud 🚧
-│   ├── azure.ts        # Azure 🚧
-│   ├── alicloud.ts     # Alibaba Cloud 🚧
-│   └── oracle.ts       # Oracle Cloud 🚧
-├── analytics/          # AI/ML cost analysis
-├── optimization/       # Cost optimization engines
-├── visualization/      # Dashboards & charts
-├── integrations/       # Third-party integrations
-└── enterprise/         # Multi-tenant features
+├── cli/                        # CLI layer
+│   ├── commands/              # Subcommand structure
+│   │   ├── cost/             # Cost analysis commands
+│   │   ├── optimize/         # Optimization commands
+│   │   ├── monitor/          # Monitoring commands
+│   │   ├── export/           # Export commands
+│   │   ├── organizations/    # AWS Organizations commands
+│   │   ├── chargeback/       # Chargeback commands
+│   │   ├── config/           # Configuration commands
+│   │   └── dashboard/        # Dashboard commands
+│   ├── middleware/           # Auth, validation, error handling
+│   └── index.ts              # CLI entry point
+├── core/                      # Core business logic
+│   ├── config/               # Configuration system
+│   │   ├── schema.ts         # Zod validation schemas
+│   │   ├── loader.ts         # Config file loading
+│   │   ├── discovery.ts      # Profile discovery
+│   │   └── profiles.ts       # Profile management
+│   ├── logging/              # Structured logging
+│   ├── analytics/            # Cost analytics engines
+│   ├── optimization/         # Optimization engines
+│   └── monitoring/           # Monitoring systems
+├── providers/                 # Cloud provider implementations
+│   ├── factory.ts            # Provider factory
+│   └── aws/                  # AWS implementation ✅
+│       ├── provider.ts       # Main provider class
+│       ├── cost.ts           # Cost Explorer integration
+│       ├── account.ts        # Account/Organizations
+│       └── config.ts         # AWS-specific config
+├── exporters/                # Output formatters
+│   └── formats/
+│       ├── fancy.ts          # Rich terminal output
+│       ├── json.ts           # JSON output
+│       ├── text.ts           # Plain text
+│       └── slack.ts          # Slack formatting
+└── enterprise/               # Enterprise features
+    ├── multi-tenant/         # Multi-tenancy support
+    └── audit/                # Audit logging
 ```
 
 ### Key Design Principles
-- **Abstract provider interface** for consistent multi-cloud API
-- **Plugin architecture** for easy extensibility
-- **Type-safe implementation** with comprehensive TypeScript coverage
-- **Modular design** allowing feature composition
-- **Performance optimized** with efficient data processing
+- **Subcommand Architecture** - Domain-organized, discoverable commands
+- **Clean Separation** - CLI, core logic, and providers are decoupled
+- **Type Safety** - Comprehensive TypeScript with Zod validation
+- **Testability** - Dependency injection and mocking support
+- **Extensibility** - Plugin architecture for new providers
+- **Configuration First** - Unified config system with profiles
 
 ## 🚀 Roadmap
 
@@ -583,7 +756,27 @@ MIT © [Code Collab](https://github.com/codecollab-co)
 
 ## 🔄 Changelog
 
-### v0.3.0 - Latest Release
+### v1.0.0 - Major Release (Phase 1: Clean Architecture) 🎉
+- ✅ **Subcommand-Based CLI** - New organized command structure
+  - `cost` - Cost analysis and trends
+  - `optimize` - Optimization recommendations
+  - `monitor` - Alerts and monitoring
+  - `export` - Data export in multiple formats
+  - `organizations` - AWS Organizations support
+  - `chargeback` - Cost allocation and reporting
+  - `config` - Configuration management
+  - `dashboard` - Interactive dashboards
+- ✅ **Unified Configuration System** - Single config file with profiles
+- ✅ **Profile Discovery** - Auto-detect cloud provider profiles
+- ✅ **Clean Architecture** - Separation of CLI, core, and providers
+- ✅ **Enhanced Logging** - Structured logging with multiple outputs
+- ✅ **Migration Tool** - Automated migration from v0.x (`infra-cost config migrate`)
+- ✅ **Improved Error Handling** - Better error messages and validation
+- ✅ **TypeScript Improvements** - Full type safety with Zod schemas
+
+**Breaking Changes:** See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for upgrading from v0.x
+
+### v0.3.0
 - ✅ **GitHub Marketplace Action** - Integrate cost analysis into CI/CD workflows
 - ✅ **Node.js 20+ support** - Updated runtime requirements
 - ✅ **Sprint 6 UX improvements** - Enhanced user experience
@@ -603,8 +796,8 @@ MIT © [Code Collab](https://github.com/codecollab-co)
 - ✅ **Multi-cloud architecture** ready for expansion
 - ✅ **Enterprise features** including multi-tenancy and API server
 
-### Migration from aws-cost-cli
-This tool evolved from `aws-cost-cli` with full backward compatibility. Both `infra-cost` and `aws-cost` commands work seamlessly.
+### Migration from v0.x
+See the comprehensive [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for step-by-step instructions on migrating from v0.x to v1.0.
 
 ---
 
