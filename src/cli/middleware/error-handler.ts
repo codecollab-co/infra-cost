@@ -11,14 +11,17 @@ import { getGlobalLogger } from '../../core/logging';
  * Format and display error to user
  */
 export function errorHandler(error: Error | any): void {
-  const logger = getGlobalLogger();
-
   // Normalize error object for defensive handling
   const message = (error as any)?.message ?? String(error);
   const stack = (error as any)?.stack;
 
-  // Log the full error for debugging
-  logger.error('Command failed', { error: message, stack });
+  // Try to log with structured logger, but don't fail if logger isn't initialized
+  try {
+    const logger = getGlobalLogger();
+    logger.error('Command failed', { error: message, stack });
+  } catch (loggerError) {
+    // Logger not initialized yet, skip structured logging
+  }
 
   // Display user-friendly error message
   console.error('');
