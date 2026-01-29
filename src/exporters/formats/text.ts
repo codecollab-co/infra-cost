@@ -60,7 +60,7 @@ export function printPlainText(accountAlias: string, totals: TotalCostsWithDelta
   console.log('');
   console.log('  Yesterday:');
   allServices.forEach((service) => {
-    const cost = serviceTotals.yesterday[service];
+    const cost = serviceTotals.yesterday[service] ?? 0;
     // Find service delta if available
     if (totals.delta) {
       const serviceDelta = totals.delta.serviceDeltas.find(s => s.serviceName === service);
