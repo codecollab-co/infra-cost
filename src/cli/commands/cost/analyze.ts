@@ -72,11 +72,15 @@ export async function handleAnalyze(options: AnalyzeOptions, command: any): Prom
     // startDate/endDate parameters are noted but not currently supported by the provider interface
     const costs = await provider.getCostBreakdown();
 
+    // Parse and validate deltaThreshold once to avoid NaN propagation
+    const parsedDeltaThreshold = parseFloat(options.deltaThreshold || '');
+    const deltaThreshold = Number.isFinite(parsedDeltaThreshold) ? parsedDeltaThreshold : 10;
+
     // Generate enhanced output with delta and quick wins
     const enhanced = generateEnhancedOutput(costs, undefined, {
       showDelta: options.showDelta !== false,
       showQuickWins: options.showQuickWins !== false,
-      deltaThreshold: parseFloat(options.deltaThreshold || '10'),
+      deltaThreshold,
       quickWinsCount: 3,
       colorOutput: mergedOpts.color !== false,
     });
@@ -100,7 +104,7 @@ export async function handleAnalyze(options: AnalyzeOptions, command: any): Prom
         console.log(formatEnhancedSections(enhanced, {
           showDelta: options.showDelta !== false,
           showQuickWins: options.showQuickWins !== false,
-          deltaThreshold: parseFloat(options.deltaThreshold || '10'),
+          deltaThreshold,
           quickWinsCount: 3,
           colorOutput: false,
         }));
@@ -113,7 +117,7 @@ export async function handleAnalyze(options: AnalyzeOptions, command: any): Prom
         console.log(formatEnhancedSections(enhanced, {
           showDelta: options.showDelta !== false,
           showQuickWins: options.showQuickWins !== false,
-          deltaThreshold: parseFloat(options.deltaThreshold || '10'),
+          deltaThreshold,
           quickWinsCount: 3,
           colorOutput: mergedOpts.color !== false,
         }));
