@@ -580,7 +580,7 @@ src/
 
 ## 🚀 Roadmap
 
-### ✅ Completed (2024)
+### ✅ Completed (2025)
 - ✅ Enhanced terminal UI and visualization
 - ✅ AI-powered anomaly detection
 - ✅ Comprehensive PDF reporting
