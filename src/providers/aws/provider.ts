@@ -33,7 +33,7 @@ import {
 } from '../../types/providers';
 import type { AwsCredentialIdentityProvider } from "@aws-sdk/types";
 import { showSpinner } from '../../logger';
-import { CostAnalyticsEngine, DataPoint, Anomaly } from '../../analytics/anomaly-detector';
+import { CostAnalyticsEngine, DataPoint, Anomaly } from '../../core/analytics/anomaly';
 
 export class AWSProvider extends CloudProviderAdapter {
   constructor(config: ProviderConfig) {

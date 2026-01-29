@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
 import chalk from 'chalk';
-import { CloudProvider } from '../types/providers';
+import { CloudProvider } from '../../types/providers';
 
 interface DiscoveredProfile {
   name: string;
