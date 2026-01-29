@@ -1,7 +1,7 @@
 import { CostExplorerClient, GetCostAndUsageCommand } from '@aws-sdk/client-cost-explorer';
 import dayjs from 'dayjs';
 import { AWSClientConfig } from './config';
-import { showSpinner } from './logger';
+import { showSpinner } from '../../logger';
 
 export type RawCostByService = {
   [key: string]: {
