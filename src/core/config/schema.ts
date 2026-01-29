@@ -59,12 +59,24 @@ export const SlackConfigSchema = z.object({
 });
 
 // Logging Configuration Schema
+// Log Output Schema matching LogOutput interface
+const LogOutputSchema = z.object({
+  type: z.enum(['console', 'file', 'syslog', 'http']),
+  destination: z.string().optional(),
+  level: z.enum(['error', 'warn', 'info', 'debug', 'trace']).optional(),
+});
+
+// Logging Configuration Schema - aligned with LoggingConfig interface
 export const LoggingConfigSchema = z.object({
-  level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  format: z.enum(['pretty', 'json']).default('pretty'),
-  outputs: z.array(z.string()).default(['console']),
-  auditEnabled: z.boolean().default(false),
-  auditDir: z.string().optional(),
+  level: z.enum(['error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  format: z.enum(['json', 'pretty', 'compact']).default('pretty'),
+  outputs: z.array(LogOutputSchema).default([{ type: 'console' }]),
+  enableAudit: z.boolean().default(false),
+  auditOutput: z.string().optional(),
+  correlationId: z.string().optional(),
+  component: z.string().optional(),
+  enablePerformance: z.boolean().optional(),
+  silent: z.boolean().optional(),
 });
 
 // Chargeback Configuration Schema
