@@ -33,6 +33,7 @@ export enum ComplianceFramework {
   NIST = 'nist',
   ISO27001 = 'iso27001',
   CIS = 'cis',
+  FedRAMP = 'fedramp',
   CUSTOM = 'custom'
 }
 
@@ -219,7 +220,7 @@ export class AuditLogger extends EventEmitter {
   private encryptionEnabled: boolean = false;
   private retentionDays: number = 2555; // 7 years default for financial records
 
-  private flushTimer: NodeJS.Timer | null = null;
+  private flushTimer: NodeJS.Timeout | null = null;
 
   constructor(config: {
     logDirectory?: string;
@@ -374,6 +375,30 @@ export class AuditLogger extends EventEmitter {
         controlsAffected: controlsChecked,
         riskLevel: violations.length > 5 ? 'critical' : violations.length > 0 ? 'high' : 'low',
         requiresReview: violations.length > 0
+      }
+    });
+  }
+
+  /**
+   * Generic log method for simple event logging
+   */
+  async log(action: string, metadata?: Record<string, any>): Promise<string> {
+    return this.logEvent({
+      eventType: AuditEventType.SYSTEM_ERROR,
+      severity: AuditSeverity.INFO,
+      actor: {
+        type: 'system',
+        id: 'system',
+        name: 'System'
+      },
+      cloudContext: {
+        provider: CloudProvider.AWS,
+        environment: process.env.NODE_ENV || 'production'
+      },
+      action,
+      outcome: 'success',
+      data: {
+        metadata
       }
     });
   }

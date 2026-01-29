@@ -1,6 +1,5 @@
 export default {
-  preset: 'ts-jest/presets/default-esm',
-  extensionsToTreatAsEsm: ['.ts'],
+  preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: [
@@ -10,16 +9,19 @@ export default {
   ],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
-      useESM: true,
       tsconfig: {
-        module: 'ESNext',
-        moduleResolution: 'node'
+        module: 'commonjs',
+        moduleResolution: 'node',
+        esModuleInterop: true
       }
     }]
   },
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1'
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(ora|chalk|cli-spinners|strip-ansi|ansi-regex|is-interactive|is-unicode-supported|log-symbols|chalk-template)/)'
+  ],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
