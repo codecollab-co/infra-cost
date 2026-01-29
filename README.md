@@ -580,24 +580,67 @@ src/
 
 ## 🚀 Roadmap
 
-### Q4 2024
+### ✅ Completed (2024)
 - ✅ Enhanced terminal UI and visualization
 - ✅ AI-powered anomaly detection
 - ✅ Comprehensive PDF reporting
 - ✅ Advanced Slack integration
-- 🚧 Google Cloud Platform support
+- ✅ **Phase 1: Clean Architecture Restructuring**
+  - Subcommand-based CLI
+  - Unified configuration system
+  - Profile discovery
+  - Structured logging
+  - AWS Organizations support
 
-### Q1 2025
-- 🔮 Microsoft Azure integration
-- 🔮 Advanced forecasting models
-- 🔮 Mobile app companion
+### Q1 2026 (In Progress)
+- 🚧 **Google Cloud Platform support**
+  - GCP Cost Management API integration
+  - Multi-project support
+  - GCP-specific optimizations
+- 🚧 **Advanced forecasting models**
+  - ML-based cost predictions
+  - Seasonal trend analysis
+  - Budget recommendations
+- 🚧 **Enhanced analytics**
+  - Advanced cost attribution
+  - Custom tagging strategies
+  - Cost optimization scoring
+
+### Q2 2026
+- 🔮 **Microsoft Azure integration**
+  - Azure Cost Management API
+  - Subscription and resource group support
+  - Azure-specific recommendations
+- 🔮 **Alibaba Cloud support**
+  - Alibaba Cloud Cost API integration
+  - Multi-region support
+- 🔮 **Oracle Cloud support**
+  - OCI Cost Management integration
+  - Compartment-based analysis
+- 🔮 **Advanced automation engine**
+  - Automated cost optimization actions
+  - Policy-based automation
+  - Approval workflows
+
+### Q3 2026
+- 🔮 **Enterprise SSO integration**
+  - SAML/OAuth support
+  - Azure AD, Okta, Auth0 integration
+  - Role-based access control (RBAC)
+- 🔮 **Custom plugin system**
+  - Plugin SDK
+  - Custom provider support
+  - Third-party integrations
+- 🔮 **Mobile app companion**
+  - iOS and Android apps
+  - Real-time cost alerts
+  - Executive dashboards on mobile
+
+### Future
 - 🔮 Sustainability tracking expansion
-
-### Q2 2025
-- 🔮 Alibaba Cloud & Oracle Cloud support
-- 🔮 Advanced automation engine
-- 🔮 Enterprise SSO integration
-- 🔮 Custom plugin system
+- 🔮 FinOps best practices automation
+- 🔮 Multi-tenant SaaS platform
+- 🔮 AI-powered cost conversations (ChatOps)
 
 ## 📋 Requirements & Permissions
 
