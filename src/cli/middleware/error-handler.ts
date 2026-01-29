@@ -15,6 +15,12 @@ export function errorHandler(error: Error | any): void {
   const message = (error as any)?.message ?? String(error);
   const stack = (error as any)?.stack;
 
+  // Commander.js throws these for --help and --version, which aren't real errors
+  // Just ignore them and let the process exit normally
+  if (message === '(outputHelp)' || message === '(outputVersion)') {
+    return;
+  }
+
   // Try to log with structured logger, but don't fail if logger isn't initialized
   try {
     const logger = getGlobalLogger();
