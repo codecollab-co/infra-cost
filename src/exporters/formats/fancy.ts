@@ -41,7 +41,7 @@ export function printFancy(accountAlias: string, totals: TotalCosts, isSummary: 
 
   // Add footer with useful information
   console.log('\n' + chalk.gray('━'.repeat(70)));
-  console.log(chalk.gray('💡 Use --json for machine-readable output or --audit for detailed analysis'));
-  console.log(chalk.gray('📊 Add --trend to see 6-month cost trend visualization'));
-  console.log(chalk.gray('📧 Add --slack-token to send reports to Slack channels'));
+  console.log(chalk.gray('💡 Use --output json for machine-readable output'));
+  console.log(chalk.gray('📊 Run "infra-cost cost trends" to see cost trend visualization'));
+  console.log(chalk.gray('📧 Run "infra-cost chargeback slack" to send reports to Slack channels'));
 }
