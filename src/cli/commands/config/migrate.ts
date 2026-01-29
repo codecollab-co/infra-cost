@@ -164,7 +164,15 @@ export async function handleMigrate(options: MigrateOptions, command: any): Prom
   console.log('');
 
   // Discover old config files
-  const oldConfigFiles = discoverOldConfigFiles();
+  // Prefer explicit --config-file path, otherwise discover
+  const oldConfigFiles = options.configFile
+    ? [options.configFile]
+    : discoverOldConfigFiles();
+
+  // Validate explicit config file path if provided
+  if (options.configFile && !existsSync(options.configFile)) {
+    throw new Error(`Config file not found: ${options.configFile}`);
+  }
 
   if (oldConfigFiles.length === 0) {
     console.log(chalk.yellow('⚠️  No old configuration files found'));
