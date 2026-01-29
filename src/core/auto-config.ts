@@ -133,33 +133,33 @@ export function loadConfigFile(configPath: string): Partial<AutoConfig> {
  * Resolve environment variables in config values
  */
 export function resolveEnvVars(config: Partial<AutoConfig>): Partial<AutoConfig> {
-  const resolved = JSON.parse(JSON.stringify(config));
+  const resolved: Partial<AutoConfig> = JSON.parse(JSON.stringify(config));
 
-  // Resolve credentials from environment
-  if (!resolved.accessKey && process.env.AWS_ACCESS_KEY_ID) {
+  // Resolve credentials from environment (env vars always override config)
+  if (process.env.AWS_ACCESS_KEY_ID) {
     resolved.accessKey = process.env.AWS_ACCESS_KEY_ID;
   }
-  if (!resolved.secretKey && process.env.AWS_SECRET_ACCESS_KEY) {
+  if (process.env.AWS_SECRET_ACCESS_KEY) {
     resolved.secretKey = process.env.AWS_SECRET_ACCESS_KEY;
   }
-  if (!resolved.sessionToken && process.env.AWS_SESSION_TOKEN) {
+  if (process.env.AWS_SESSION_TOKEN) {
     resolved.sessionToken = process.env.AWS_SESSION_TOKEN;
   }
-  if (!resolved.region && process.env.AWS_REGION) {
+  if (process.env.AWS_REGION) {
     resolved.region = process.env.AWS_REGION;
   }
-  if (!resolved.profile && process.env.AWS_PROFILE) {
+  if (process.env.AWS_PROFILE) {
     resolved.profile = process.env.AWS_PROFILE;
   }
 
-  // Resolve Slack from environment
-  if (resolved.slack) {
-    if (!resolved.slack.token && process.env.SLACK_TOKEN) {
-      resolved.slack.token = process.env.SLACK_TOKEN;
-    }
-    if (!resolved.slack.channel && process.env.SLACK_CHANNEL) {
-      resolved.slack.channel = process.env.SLACK_CHANNEL;
-    }
+  // Resolve Slack from environment (env vars always override config)
+  if (process.env.SLACK_TOKEN || process.env.SLACK_CHANNEL) {
+    resolved.slack = {
+      ...resolved.slack,
+      token: process.env.SLACK_TOKEN ?? resolved.slack?.token,
+      channel: process.env.SLACK_CHANNEL ?? resolved.slack?.channel,
+      enabled: true,
+    };
   }
 
   return resolved;
