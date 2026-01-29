@@ -77,7 +77,12 @@ export async function handleAnalyze(options: AnalyzeOptions, command: any): Prom
 
     switch (outputFormat) {
       case 'json':
-        printJson({ costs: enhanced.costs, deltas: enhanced.deltas, quickWins: enhanced.quickWins });
+        // Pass account alias, costs with enhanced data, and summary flag
+        printJson(
+          mergedOpts.profile || 'default',
+          { ...enhanced.costs, delta: enhanced.deltas, quickWins: enhanced.quickWins } as any,
+          false
+        );
         break;
 
       case 'text':
