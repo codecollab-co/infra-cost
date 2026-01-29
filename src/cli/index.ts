@@ -134,6 +134,13 @@ export async function main(argv: string[] = process.argv): Promise<void> {
   try {
     await program.parseAsync(argv);
   } catch (error) {
+    // Commander.js throws these for --help and --version
+    const message = (error as any)?.message;
+    if (message === '(outputHelp)' || message === '(outputVersion)') {
+      // Help/version was displayed successfully, exit normally
+      process.exit(0);
+    }
+
     errorHandler(error as Error);
     process.exit(1);
   }
