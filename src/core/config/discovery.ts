@@ -375,6 +375,10 @@ export class CloudProfileDiscovery {
 
     content.split('\n').forEach(line => {
       line = line.trim();
+      // Skip empty lines and comments (lines starting with ; or #)
+      if (line === '' || line.startsWith(';') || line.startsWith('#')) {
+        return;
+      }
       if (line.startsWith('[') && line.endsWith(']')) {
         currentProfile = line.slice(1, -1);
         profiles[currentProfile] = {};
