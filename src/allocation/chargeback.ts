@@ -351,22 +351,64 @@ export class CostAllocationEngine {
     dimension: string
   ): AllocationResult[] {
     const groups = new Map<string, ResourceCostDetail[]>();
+    const untaggedResources: ResourceCostDetail[] = [];
 
     // Group resources by dimension value
     for (const resource of resources) {
       const tagValue = this.getTagValue(resource.tags, dimension);
-      const key = tagValue || this.config.handleUntagged;
 
-      if (!groups.has(key)) {
-        groups.set(key, []);
+      if (!tagValue && this.config.handleUntagged === 'proportional') {
+        // Collect untagged resources separately for proportional distribution
+        untaggedResources.push(resource);
+      } else {
+        const key = tagValue || this.config.handleUntagged;
+        if (!groups.has(key)) {
+          groups.set(key, []);
+        }
+        groups.get(key)!.push(resource);
       }
-      groups.get(key)!.push(resource);
     }
 
     // Calculate allocations
     const totalCost = resources.reduce((sum, r) => sum + r.monthlyCost, 0);
     const results: AllocationResult[] = [];
 
+    // First pass: calculate tagged group costs
+    const taggedGroups = new Map<string, { cost: number; resources: ResourceCostDetail[] }>();
+    let totalTaggedCost = 0;
+
+    for (const [value, groupResources] of groups) {
+      const groupCost = groupResources.reduce((sum, r) => sum + r.monthlyCost, 0);
+      taggedGroups.set(value, { cost: groupCost, resources: groupResources });
+      totalTaggedCost += groupCost;
+    }
+
+    // Distribute untagged resources proportionally
+    if (this.config.handleUntagged === 'proportional' && untaggedResources.length > 0) {
+      const untaggedTotalCost = untaggedResources.reduce((sum, r) => sum + r.monthlyCost, 0);
+
+      if (totalTaggedCost > 0) {
+        // Distribute each untagged resource proportionally to tagged groups
+        for (const [value, groupData] of taggedGroups) {
+          const proportion = groupData.cost / totalTaggedCost;
+          const proportionalUntaggedCost = untaggedTotalCost * proportion;
+
+          // Create virtual resources for proportional allocation
+          const proportionalResources = untaggedResources.map(r => ({
+            ...r,
+            monthlyCost: (r.monthlyCost / untaggedTotalCost) * proportionalUntaggedCost,
+          }));
+
+          // Add proportional resources to the group
+          groups.set(value, [...groupData.resources, ...proportionalResources]);
+        }
+      } else {
+        // If no tagged groups exist, create a single "proportional" group
+        groups.set('unassigned', untaggedResources);
+      }
+    }
+
+    // Second pass: create allocation results
     for (const [value, groupResources] of groups) {
       const groupCost = groupResources.reduce((sum, r) => sum + r.monthlyCost, 0);
 
