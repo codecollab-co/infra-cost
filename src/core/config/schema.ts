@@ -74,14 +74,24 @@ export const ChargebackConfigSchema = z.object({
   requiredTags: z.array(z.string()).default([]),
 });
 
+// Alert Threshold Schema
+const AlertThresholdSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  type: z.enum(['ABSOLUTE', 'PERCENTAGE', 'ANOMALY', 'TREND', 'BUDGET_FORECAST']),
+  condition: z.enum(['GREATER_THAN', 'LESS_THAN', 'EQUALS', 'DEVIATION']),
+  value: z.number(),
+  timeWindow: z.number(),
+  provider: z.string().optional(),
+  service: z.string().optional(),
+  severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+  enabled: z.boolean(),
+});
+
 // Monitoring Configuration Schema
 export const MonitoringConfigSchema = z.object({
   enabled: z.boolean().default(false),
-  alertThresholds: z.object({
-    daily: z.number().optional(),
-    weekly: z.number().optional(),
-    monthly: z.number().optional(),
-  }).optional(),
+  alertThresholds: z.array(AlertThresholdSchema).default([]),
   anomalyDetection: z.boolean().default(false),
   webhookUrl: z.string().url().optional(),
 });

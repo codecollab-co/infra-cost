@@ -42,19 +42,19 @@ export function printPlainText(accountAlias: string, totals: TotalCostsWithDelta
 
   console.log('  Last Month:');
   allServices.forEach((service) => {
-    console.log(`    ${service}: $${serviceTotals.lastMonth[service].toFixed(2)}`);
+    console.log(`    ${service}: $${(serviceTotals.lastMonth[service] ?? 0).toFixed(2)}`);
   });
 
   console.log('');
   console.log('  This Month:');
   allServices.forEach((service) => {
-    console.log(`    ${service}: $${serviceTotals.thisMonth[service].toFixed(2)}`);
+    console.log(`    ${service}: $${(serviceTotals.thisMonth[service] ?? 0).toFixed(2)}`);
   });
 
   console.log('');
   console.log('  Last 7 Days:');
   allServices.forEach((service) => {
-    console.log(`    ${service}: $${serviceTotals.last7Days[service].toFixed(2)}`);
+    console.log(`    ${service}: $${(serviceTotals.last7Days[service] ?? 0).toFixed(2)}`);
   });
 
   console.log('');

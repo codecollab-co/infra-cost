@@ -58,15 +58,17 @@ export class MultiTenantManager extends EventEmitter {
   /**
    * Update tenant
    */
-  async updateTenant(tenantId: string, updates: Partial<Tenant>): Promise<Tenant> {
+  async updateTenant(tenantId: string, updates: Partial<Omit<Tenant, 'id' | 'createdAt'>>): Promise<Tenant> {
     const tenant = this.tenants.get(tenantId);
     if (!tenant) {
       throw new Error(`Tenant not found: ${tenantId}`);
     }
 
-    const updated = {
+    const updated: Tenant = {
       ...tenant,
       ...updates,
+      id: tenant.id, // Preserve immutable ID
+      createdAt: tenant.createdAt, // Preserve immutable creation date
       updatedAt: new Date(),
     };
 
