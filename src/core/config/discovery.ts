@@ -302,7 +302,9 @@ export class CloudProfileDiscovery {
       return;
     }
 
-    console.log(chalk.green(`✅ Found ${results.totalFound} profiles across ${Object.keys(results.byProvider).length} providers`));
+    // Count only providers with actual discovered profiles
+    const providersWithProfiles = Object.values(results.byProvider).filter(p => p.length > 0).length;
+    console.log(chalk.green(`✅ Found ${results.totalFound} profile${results.totalFound !== 1 ? 's' : ''} across ${providersWithProfiles} provider${providersWithProfiles !== 1 ? 's' : ''}`));
 
     // Display by provider
     for (const [provider, profiles] of Object.entries(results.byProvider)) {
