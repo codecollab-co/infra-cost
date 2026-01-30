@@ -219,6 +219,17 @@ infra-cost cost analyze \
   --provider gcp \
   --project-id my-project \
   --output json > costs.json
+
+# Get resource inventory
+infra-cost export inventory json \
+  --provider gcp \
+  --project-id my-project
+
+# Check budget status
+infra-cost monitor budgets \
+  --provider gcp \
+  --project-id my-project \
+  --billing-account-id 012345-ABCDEF-678901
 ```
 
 ### Cost Trends and Comparisons
@@ -281,34 +292,106 @@ infra-cost cost analyze \
 
 ### Analyze Multiple Projects
 
+**Using Configuration File:**
+```json
+{
+  "provider": "gcp",
+  "credentials": {
+    "projectId": "my-main-project",
+    "keyFilePath": "~/service-account.json",
+    "allProjects": true
+  }
+}
+```
+
+**Using Specific Project IDs:**
+```json
+{
+  "provider": "gcp",
+  "credentials": {
+    "projectId": "my-main-project",
+    "keyFilePath": "~/service-account.json",
+    "projectIds": ["project-1", "project-2", "project-3"]
+  }
+}
+```
+
+**Command Line:**
 ```bash
-# Compare costs across multiple projects
-infra-cost cost compare \
+# Aggregate costs from all accessible projects
+infra-cost cost analyze --provider gcp --all-projects
+
+# Specific projects
+infra-cost cost analyze \
   --provider gcp \
   --projects project-1,project-2,project-3
 
-# Aggregate costs from multiple projects
+# Get detailed per-project breakdown
 infra-cost cost analyze \
   --provider gcp \
-  --projects project-1,project-2,project-3 \
-  --aggregate
+  --all-projects \
+  --detailed
 ```
 
-### Project Labels and Filtering
+### Organization-Level Cost Aggregation
 
+**Configuration File:**
+```json
+{
+  "provider": "gcp",
+  "credentials": {
+    "projectId": "my-main-project",
+    "keyFilePath": "~/service-account.json",
+    "organizationId": "123456789"
+  }
+}
+```
+
+**Command Line:**
 ```bash
-# Filter projects by label
+# Organization-wide costs
 infra-cost cost analyze \
   --provider gcp \
-  --projects all \
-  --filter-label environment=production
+  --organization-id 123456789
 
-# Analyze by team/department
+# Show organization hierarchy with costs
 infra-cost cost analyze \
   --provider gcp \
-  --projects all \
-  --filter-label team=backend \
-  --group-by team
+  --organization-id 123456789 \
+  --show-hierarchy
+
+# Export organization cost report
+infra-cost export inventory json \
+  --provider gcp \
+  --organization-id 123456789 \
+  --output org-costs.json
+```
+
+### Folder-Level Cost Aggregation
+
+**Configuration File:**
+```json
+{
+  "provider": "gcp",
+  "credentials": {
+    "projectId": "my-main-project",
+    "keyFilePath": "~/service-account.json",
+    "folderId": "987654321"
+  }
+}
+```
+
+**Command Line:**
+```bash
+# Folder-level costs
+infra-cost cost analyze \
+  --provider gcp \
+  --folder-id 987654321
+
+# Multiple folders
+infra-cost cost analyze \
+  --provider gcp \
+  --folder-ids prod-folder,dev-folder,staging-folder
 ```
 
 ## Advanced Features
@@ -529,6 +612,244 @@ gcp-cost-analysis:
     - schedules
 ```
 
+## Complete Examples
+
+### Example 1: Single Project Cost Analysis
+
+```bash
+# Set up environment
+export GOOGLE_APPLICATION_CREDENTIALS=~/gcp-key.json
+export GOOGLE_PROJECT_ID=my-production-project
+
+# Analyze current month costs
+infra-cost cost analyze --provider gcp
+
+# Get detailed cost breakdown with trends
+infra-cost cost trends --provider gcp --period 90d
+
+# Export to JSON for further analysis
+infra-cost cost analyze --provider gcp --output json > costs.json
+```
+
+### Example 2: Multi-Project Cost Aggregation
+
+```bash
+# Create config file
+cat > ~/.infra-cost/config.json <<EOF
+{
+  "provider": "gcp",
+  "credentials": {
+    "projectId": "my-main-project",
+    "keyFilePath": "~/gcp-key.json",
+    "projectIds": [
+      "prod-backend",
+      "prod-frontend",
+      "prod-data"
+    ],
+    "billingDatasetId": "billing_export",
+    "billingTableId": "gcp_billing_export"
+  }
+}
+EOF
+
+# Analyze all specified projects
+infra-cost cost analyze
+
+# Get per-project breakdown
+infra-cost cost analyze --detailed --output json > multi-project-costs.json
+```
+
+### Example 3: Organization-Wide Cost Report
+
+```bash
+# Organization-level configuration
+cat > ~/.infra-cost/config.json <<EOF
+{
+  "provider": "gcp",
+  "credentials": {
+    "projectId": "org-admin-project",
+    "keyFilePath": "~/org-admin-key.json",
+    "organizationId": "123456789"
+  }
+}
+EOF
+
+# Get organization-wide costs
+infra-cost cost analyze --show-hierarchy
+
+# Export full report
+infra-cost export inventory json --output org-report.json
+```
+
+### Example 4: Resource Inventory with Costs
+
+```bash
+# Get all resources across compute, storage, and databases
+infra-cost export inventory json \
+  --provider gcp \
+  --project-id my-project \
+  --include-costs \
+  --output inventory.json
+
+# Filter by region
+infra-cost export inventory json \
+  --provider gcp \
+  --project-id my-project \
+  --regions us-central1,us-east1 \
+  --output us-inventory.json
+
+# Filter by tags
+infra-cost export inventory json \
+  --provider gcp \
+  --project-id my-project \
+  --tags environment=production,team=backend \
+  --output prod-backend-inventory.json
+```
+
+### Example 5: Budget Monitoring and Alerts
+
+```bash
+# Check all budgets
+infra-cost monitor budgets \
+  --provider gcp \
+  --project-id my-project \
+  --billing-account-id 012345-ABCDEF-678901
+
+# Get budget alerts
+infra-cost monitor alerts \
+  --provider gcp \
+  --project-id my-project \
+  --billing-account-id 012345-ABCDEF-678901
+
+# Export budget status
+infra-cost monitor budgets \
+  --provider gcp \
+  --project-id my-project \
+  --billing-account-id 012345-ABCDEF-678901 \
+  --output json > budget-status.json
+```
+
+### Example 6: Scheduled Cost Reports
+
+**Daily Cost Report Script:**
+```bash
+#!/bin/bash
+# daily-cost-report.sh
+
+DATE=$(date +%Y-%m-%d)
+REPORT_DIR=~/cost-reports/gcp
+
+# Create report directory
+mkdir -p $REPORT_DIR
+
+# Generate cost report
+infra-cost cost analyze \
+  --provider gcp \
+  --project-id my-project \
+  --output json > $REPORT_DIR/costs-$DATE.json
+
+# Generate resource inventory
+infra-cost export inventory json \
+  --provider gcp \
+  --project-id my-project \
+  --include-costs \
+  --output $REPORT_DIR/inventory-$DATE.json
+
+# Check for budget alerts
+infra-cost monitor alerts \
+  --provider gcp \
+  --project-id my-project \
+  --billing-account-id 012345-ABCDEF-678901 \
+  --output json > $REPORT_DIR/alerts-$DATE.json
+
+# Send to Slack if alerts exist
+if [ -s $REPORT_DIR/alerts-$DATE.json ]; then
+  # Post to Slack (requires slack webhook)
+  curl -X POST $SLACK_WEBHOOK_URL \
+    -H 'Content-Type: application/json' \
+    -d "{\"text\":\"⚠️ GCP Budget Alerts - $DATE\", \"attachments\":[{\"text\":\"\$(cat $REPORT_DIR/alerts-$DATE.json)\"}]}"
+fi
+
+echo "✅ Cost report generated: $REPORT_DIR/costs-$DATE.json"
+```
+
+**Cron Schedule:**
+```bash
+# Add to crontab
+crontab -e
+
+# Run daily at 9 AM
+0 9 * * * /path/to/daily-cost-report.sh
+```
+
+### Example 7: Multi-Project Cost Comparison
+
+```bash
+# Compare costs across environments
+infra-cost cost compare \
+  --provider gcp \
+  --projects prod-project,staging-project,dev-project \
+  --output fancy
+
+# Compare by service
+infra-cost cost compare \
+  --provider gcp \
+  --projects prod-project,staging-project \
+  --group-by service \
+  --output json > cost-comparison.json
+```
+
+### Example 8: Integration with CI/CD
+
+**GitHub Actions - PR Cost Check:**
+```yaml
+name: GCP Cost Check on PR
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  cost-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup credentials
+        run: |
+          echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}" > /tmp/gcp-key.json
+
+      - name: Analyze costs
+        id: cost-analysis
+        run: |
+          COSTS=$(npx infra-cost cost analyze \
+            --provider gcp \
+            --project-id ${{ secrets.GCP_PROJECT_ID }} \
+            --key-file /tmp/gcp-key.json \
+            --output json)
+
+          THIS_MONTH=$(echo $COSTS | jq -r '.totals.thisMonth')
+          LAST_MONTH=$(echo $COSTS | jq -r '.totals.lastMonth')
+
+          echo "this_month=$THIS_MONTH" >> $GITHUB_OUTPUT
+          echo "last_month=$LAST_MONTH" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const thisMonth = '${{ steps.cost-analysis.outputs.this_month }}';
+            const lastMonth = '${{ steps.cost-analysis.outputs.last_month }}';
+            const change = ((thisMonth - lastMonth) / lastMonth * 100).toFixed(2);
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 💰 GCP Cost Analysis\n\n` +
+                    `- **This Month:** $${thisMonth}\n` +
+                    `- **Last Month:** $${lastMonth}\n` +
+                    `- **Change:** ${change}%`
+            });
+```
+
 ## Best Practices
 
 1. **Use Service Accounts for Automation:** Create dedicated service accounts with minimal permissions
@@ -538,6 +859,9 @@ gcp-cost-analysis:
 5. **Monitor Costs Regularly:** Set up scheduled reports (daily/weekly)
 6. **Review Recommendations:** Check optimization recommendations quarterly
 7. **Multi-Project Analysis:** Aggregate costs across projects for organization-wide visibility
+8. **Automate Budget Alerts:** Set up automated alerts for budget threshold breaches
+9. **Track Trends:** Monitor cost trends over time to identify anomalies
+10. **Regular Audits:** Review resource inventory monthly to identify unused resources
 
 ## Security Considerations
 
