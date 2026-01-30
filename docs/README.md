@@ -26,6 +26,10 @@ This directory contains comprehensive documentation for the infra-cost project.
 - **[MULTI-CLOUD-INVENTORY.md](./MULTI-CLOUD-INVENTORY.md)** - Multi-cloud inventory and dashboard features
 - **[ENHANCED-FEATURES.md](./ENHANCED-FEATURES.md)** - Advanced features and capabilities
 
+### ☁️ Cloud Provider Guides
+
+- **[GCP_SETUP.md](./GCP_SETUP.md)** - Complete Google Cloud Platform setup and usage guide
+
 ---
 
 ## 🎯 Quick Links by Use Case
@@ -50,6 +54,11 @@ This directory contains comprehensive documentation for the infra-cost project.
 1. Review [MULTI-CLOUD-INVENTORY.md](./MULTI-CLOUD-INVENTORY.md) - Existing feature patterns
 2. Check [ENHANCED-FEATURES.md](./ENHANCED-FEATURES.md) - Feature implementation examples
 3. Follow [code_flow.md](./code_flow.md) - Architecture patterns
+
+### I want to set up GCP integration
+1. Read [GCP_SETUP.md](./GCP_SETUP.md) - Complete GCP setup guide
+2. Follow authentication methods for your use case
+3. Enable BigQuery billing export (required)
 
 ---
 

@@ -45,7 +45,7 @@
 
 ### 🌐 **Multi-Cloud Support**
 - **AWS** ✅ (Full support with Cost Explorer integration)
-- **Google Cloud** 🚧 (Architecture ready, coming soon)
+- **Google Cloud** ✅ (BigQuery billing export, multi-project support)
 - **Microsoft Azure** 🚧 (Architecture ready, coming soon)
 - **Alibaba Cloud** 🚧 (Architecture ready, coming soon)
 - **Oracle Cloud** 🚧 (Architecture ready, coming soon)
@@ -182,7 +182,34 @@ infra-cost cost trends --period 30d
 infra-cost cost compare --providers aws,gcp
 ```
 
-### 2. Optimization & Recommendations
+### 2. Google Cloud Platform Cost Analysis
+```bash
+# Analyze GCP costs with service account
+infra-cost cost analyze \
+  --provider gcp \
+  --project-id my-project \
+  --key-file /path/to/service-account.json
+
+# List all accessible GCP projects
+infra-cost cost analyze \
+  --provider gcp \
+  --project-id my-project \
+  --list-projects
+
+# Analyze costs with custom billing dataset
+infra-cost cost analyze \
+  --provider gcp \
+  --project-id my-project \
+  --billing-dataset custom_billing \
+  --billing-table custom_table
+
+# Compare costs across multiple GCP projects
+infra-cost cost compare \
+  --provider gcp \
+  --projects project-1,project-2,project-3
+```
+
+### 3. Optimization & Recommendations
 ```bash
 # Get AI-powered optimization recommendations
 infra-cost optimize recommendations
@@ -194,7 +221,7 @@ infra-cost optimize quickwins
 infra-cost optimize rightsizing
 ```
 
-### 3. Monitoring & Alerts
+### 4. Monitoring & Alerts
 ```bash
 # Check cost alerts and budget status
 infra-cost monitor alerts
@@ -206,7 +233,7 @@ infra-cost monitor budgets
 infra-cost monitor anomaly
 ```
 
-### 4. Team Collaboration
+### 5. Team Collaboration
 ```bash
 # Send cost report to Slack
 infra-cost chargeback slack
@@ -266,21 +293,89 @@ infra-cost config validate
 infra-cost config show
 ```
 
-### Multi-Cloud Setup (Coming Soon)
+### Google Cloud Platform Authentication
+
+#### 1. Service Account Key File (Recommended)
+```bash
+# Download service account key from GCP Console
+# IAM & Admin > Service Accounts > Create Key (JSON)
+
+export GOOGLE_PROJECT_ID=your-project-id
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
+infra-cost cost analyze --provider gcp
+```
+
+#### 2. Application Default Credentials (ADC)
+```bash
+# Authenticate with gcloud CLI
+gcloud auth application-default login
+
+# Set default project
+gcloud config set project your-project-id
+
+# Run infra-cost
+infra-cost cost analyze --provider gcp --project-id your-project-id
+```
+
+#### 3. Command-Line Arguments
+```bash
+infra-cost cost analyze \
+  --provider gcp \
+  --project-id my-project \
+  --key-file /path/to/service-account.json
+```
+
+#### 4. Configuration File
+```bash
+# Initialize configuration with GCP
+infra-cost config init
+
+# Edit ~/.infra-cost/config.json
+{
+  "provider": "gcp",
+  "credentials": {
+    "projectId": "my-project",
+    "keyFilePath": "/path/to/service-account.json",
+    "billingDatasetId": "billing_export",
+    "billingTableId": "gcp_billing_export"
+  }
+}
+```
+
+#### GCP Permissions Required
+Your service account needs the following IAM permissions:
+- `resourcemanager.projects.get` - Read project information
+- `bigquery.jobs.create` - Query billing data
+- `bigquery.tables.getData` - Read billing tables
+
+**Recommended IAM Role:** `roles/bigquery.user` + custom role for project access
+
+#### Enable BigQuery Billing Export
+infra-cost requires BigQuery billing export to be enabled:
+
+1. Go to [GCP Billing Console](https://console.cloud.google.com/billing)
+2. Select your billing account
+3. Navigate to "Billing export"
+4. Enable "BigQuery export"
+5. Configure dataset (default: `billing_export`)
+6. Wait 24 hours for initial data
+
+### Multi-Cloud Setup
+
 ```bash
 # Google Cloud Platform
 infra-cost cost analyze --provider gcp --project-id my-project --key-file service-account.json
 
-# Microsoft Azure
+# Microsoft Azure (Coming Soon)
 infra-cost cost analyze --provider azure --subscription-id sub-id --tenant-id tenant-id
 
-# Oracle Cloud
+# Oracle Cloud (Coming Soon)
 infra-cost cost analyze --provider oracle --user-id user-ocid --tenancy-id tenancy-ocid
 
 # Cross-cloud comparison
-infra-cost cost compare --providers aws,gcp,azure
+infra-cost cost compare --providers aws,gcp
 
-# Cross-cloud optimization report
+# Cross-cloud optimization report (Coming Soon)
 infra-cost optimize cross-cloud
 ```
 
@@ -609,11 +704,16 @@ src/
 ### Q1 2026 (Current - In Progress)
 
 **Priority: Multi-Cloud Expansion**
-- 🚧 **Google Cloud Platform support** (Issue #20 - partial)
-  - Provider implementation: Architecture ready → API integration pending
-  - GCP Cost Management API integration
-  - Multi-project support
-  - GCP-specific optimizations
+- ✅ **Google Cloud Platform support - Week 1 Complete** (Issue #66)
+  - ✅ Provider implementation with BigQuery billing export
+  - ✅ GCP authentication (service account, ADC)
+  - ✅ Multi-project support with parallel retrieval
+  - ✅ Multi-currency cost aggregation
+  - ✅ Cost breakdown by service and time period
+  - ✅ Comprehensive unit tests (32 tests passing)
+  - 🚧 CLI integration and documentation (Week 1)
+  - 🔜 Resource inventory discovery (Week 2)
+  - 🔜 Budget tracking and alerts (Week 2)
 - 📋 **Advanced forecasting models** (No GitHub issue)
   - ML-based cost predictions
   - Seasonal trend analysis
