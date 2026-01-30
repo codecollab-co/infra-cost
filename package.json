@@ -1,6 +1,6 @@
 {
   "name": "infra-cost",
-  "version": "0.3.3",
+  "version": "1.1.0",
   "description": "Multi-cloud FinOps CLI tool for comprehensive cost analysis and infrastructure optimization across AWS, GCP, Azure, Alibaba Cloud, and Oracle Cloud",
   "keywords": [
     "aws",
@@ -82,6 +82,15 @@
     "@aws-sdk/client-s3": "^3.975.0",
     "@aws-sdk/client-sts": "^3.975.0",
     "@aws-sdk/credential-providers": "^3.975.0",
+    "@azure/arm-compute": "^22.1.0",
+    "@azure/arm-consumption": "^11.0.0",
+    "@azure/arm-containerservice": "^22.0.0",
+    "@azure/arm-costmanagement": "^1.1.0",
+    "@azure/arm-network": "^34.1.0",
+    "@azure/arm-sql": "^11.1.0",
+    "@azure/arm-storage": "^18.2.0",
+    "@azure/arm-subscriptions": "^6.1.0",
+    "@azure/identity": "^4.7.0",
     "@google-cloud/bigquery": "^8.1.1",
     "@google-cloud/billing": "^5.1.1",
     "@google-cloud/compute": "^6.7.0",
