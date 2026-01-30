@@ -29,6 +29,7 @@ import { registerSchedulerCommands } from './commands/scheduler';
 import { registerRBACCommands } from './commands/rbac';
 import { registerSSOCommands } from './commands/sso';
 import { registerPluginCommands } from './commands/plugin';
+import { registerServerCommands } from './commands/server';
 
 // Import middleware
 import { authMiddleware } from './middleware/auth';
@@ -116,6 +117,7 @@ export function createCLI(): Command {
   registerRBACCommands(program);
   registerSSOCommands(program);
   registerPluginCommands(program);
+  registerServerCommands(program);
 
   // Global hooks
   program.hook('preAction', async (thisCommand, actionCommand) => {
