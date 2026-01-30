@@ -21,6 +21,7 @@ import {
   discoverCloudSQLInstances,
   discoverGKEClusters,
 } from './inventory';
+import { getBudgets, getBudgetAlerts } from './budget';
 import { showSpinner } from '../../logger';
 
 /**
@@ -36,6 +37,7 @@ export class GCPProvider extends CloudProviderAdapter {
   private gcpConfig?: GCPClientConfig;
   private billingDatasetId?: string;
   private billingTableId?: string;
+  private billingAccountId?: string;
 
   constructor(config: ProviderConfig) {
     super(config);
@@ -46,6 +48,9 @@ export class GCPProvider extends CloudProviderAdapter {
     }
     if (config.credentials?.billingTableId) {
       this.billingTableId = config.credentials.billingTableId;
+    }
+    if (config.credentials?.billingAccountId) {
+      this.billingAccountId = config.credentials.billingAccountId;
     }
   }
 
@@ -227,13 +232,13 @@ export class GCPProvider extends CloudProviderAdapter {
   }
 
   async getBudgets(): Promise<BudgetInfo[]> {
-    // Will implement in Issue #75 (Implement budget tracking and alerts)
-    throw new Error('GCP budget tracking not yet implemented - see Issue #75');
+    const config = await this.initializeConfig();
+    return getBudgets(config, this.billingAccountId);
   }
 
   async getBudgetAlerts(): Promise<BudgetAlert[]> {
-    // Will implement in Issue #75
-    throw new Error('GCP budget alerts not yet implemented - see Issue #75');
+    const config = await this.initializeConfig();
+    return getBudgetAlerts(config, this.billingAccountId);
   }
 
   async getCostTrendAnalysis(months?: number): Promise<CostTrendAnalysis> {
