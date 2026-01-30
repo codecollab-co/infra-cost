@@ -580,67 +580,120 @@ src/
 
 ## 🚀 Roadmap
 
-### ✅ Completed (2025)
+### ✅ Completed (2024-2025)
+
+**Core Platform & Architecture:**
 - ✅ Enhanced terminal UI and visualization
 - ✅ AI-powered anomaly detection
 - ✅ Comprehensive PDF reporting
 - ✅ Advanced Slack integration
-- ✅ **Phase 1: Clean Architecture Restructuring**
-  - Subcommand-based CLI
-  - Unified configuration system
-  - Profile discovery
-  - Structured logging
-  - AWS Organizations support
+- ✅ GitHub Actions integration
+- ✅ npm and Homebrew distribution
+- ✅ **Phase 1: Clean Architecture Restructuring (v1.0)**
+  - Subcommand-based CLI architecture
+  - Unified configuration system with profiles
+  - Automatic cloud profile discovery
+  - Structured logging with audit trails
+  - AWS Organizations support (Issue #10 ✅)
+  - Cost allocation and chargeback reporting (Issue #30 ✅)
+  - Configuration file support (Issue #29 ✅)
+  - Caching layer for performance (Issue #28 ✅)
+  - IAM Roles and environment variables auth (Issues #12, #13 ✅)
+  - AWS SSO login support (Issue #9 ✅)
 
-### Q1 2026 (In Progress)
-- 🚧 **Google Cloud Platform support**
+**Multi-Cloud Foundation:**
+- ✅ Multi-cloud provider architecture (Issue #20 - foundation)
+  - AWS provider fully implemented
+  - GCP, Azure, Alibaba Cloud, Oracle Cloud - architecture ready
+
+### Q1 2026 (Current - In Progress)
+
+**Priority: Multi-Cloud Expansion**
+- 🚧 **Google Cloud Platform support** (Issue #20 - partial)
+  - Provider implementation: Architecture ready → API integration pending
   - GCP Cost Management API integration
   - Multi-project support
   - GCP-specific optimizations
-- 🚧 **Advanced forecasting models**
+- 📋 **Advanced forecasting models** (No GitHub issue)
   - ML-based cost predictions
   - Seasonal trend analysis
   - Budget recommendations
-- 🚧 **Enhanced analytics**
+- 📋 **Enhanced analytics** (No GitHub issue)
   - Advanced cost attribution
   - Custom tagging strategies
   - Cost optimization scoring
 
-### Q2 2026
-- 🔮 **Microsoft Azure integration**
+### Q2 2026 (Planned)
+
+**Priority: Complete Multi-Cloud & Automation**
+- 🔮 **Microsoft Azure integration** (Issue #20 - partial)
   - Azure Cost Management API
   - Subscription and resource group support
   - Azure-specific recommendations
-- 🔮 **Alibaba Cloud support**
+- 🔮 **Alibaba Cloud support** (Issue #20 - partial)
   - Alibaba Cloud Cost API integration
   - Multi-region support
-- 🔮 **Oracle Cloud support**
+- 🔮 **Oracle Cloud support** (Issue #20 - partial)
   - OCI Cost Management integration
   - Compartment-based analysis
-- 🔮 **Advanced automation engine**
+- 📋 **Advanced automation engine** (No GitHub issue)
   - Automated cost optimization actions
   - Policy-based automation
   - Approval workflows
+  - Related: Issue #42 (Scheduled Reports), Issue #49 (API Server)
 
-### Q3 2026
-- 🔮 **Enterprise SSO integration**
-  - SAML/OAuth support
-  - Azure AD, Okta, Auth0 integration
-  - Role-based access control (RBAC)
-- 🔮 **Custom plugin system**
+### Q3 2026 (Planned)
+
+**Priority: Enterprise Features**
+- ✅/🚧 **Enterprise SSO integration**
+  - AWS SSO: ✅ Completed (Issue #9)
+  - SAML/OAuth support: 🔲 Planned (Issue #52)
+  - Azure AD, Okta, Auth0 integration: 🔲 Planned
+  - Role-based access control (RBAC): 🔲 Planned (Issue #50)
+- 📋 **Custom plugin system** (No GitHub issue)
   - Plugin SDK
   - Custom provider support
   - Third-party integrations
-- 🔮 **Mobile app companion**
+- 📋 **Mobile app companion** (No GitHub issue)
   - iOS and Android apps
   - Real-time cost alerts
   - Executive dashboards on mobile
 
-### Future
-- 🔮 Sustainability tracking expansion
-- 🔮 FinOps best practices automation
-- 🔮 Multi-tenant SaaS platform
-- 🔮 AI-powered cost conversations (ChatOps)
+### Future Vision
+
+**FinOps & Intelligence:**
+- 📋 **Sustainability tracking expansion** (No GitHub issue)
+  - Carbon footprint tracking
+  - Green cloud recommendations
+  - Renewable energy usage analytics
+- 🔲 **FinOps best practices automation** (Issue #59 - partial)
+  - FinOps Scorecards implementation
+  - Automated best practices enforcement
+  - Team performance metrics
+- 🔲 **AI-powered cost conversations** (Issue #44 - partial)
+  - Natural language cost queries
+  - ChatOps integration
+  - AI cost assistant
+
+**Platform & Scale:**
+- 📋 **Multi-tenant SaaS platform** (No GitHub issue)
+  - Organization management
+  - Team collaboration features
+  - Centralized cost governance
+- 🔲 **Additional integrations** (Various open issues)
+  - Microsoft Teams (Issue #45)
+  - PagerDuty/OpsGenie (Issue #48)
+  - Terraform cost preview (Issue #47)
+  - API Server mode (Issue #49)
+  - Multi-cloud dashboard (Issue #62)
+  - Web-based dashboards (Issue #60)
+
+**Legend:**
+- ✅ Completed
+- 🚧 In Progress
+- 🔮 Planned (this quarter)
+- 🔲 Open GitHub Issue
+- 📋 Not yet tracked in GitHub issues
 
 ## 📋 Requirements & Permissions
 
