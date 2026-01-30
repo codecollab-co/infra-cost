@@ -240,6 +240,75 @@ infra-cost annotate --path ./terraform/ --remove
 
 ---
 
+#### `infra-cost history` - Git Cost History (NEW in v1.3.0)
+
+Correlate cost changes with git commits - see which code changes impact costs!
+
+```bash
+# Show cost history with git correlation
+infra-cost history --git
+
+# Output:
+# 📊 Cost History with Git Correlation
+# ═══════════════════════════════════════════════════════════
+# Date          Cost        Change      Commit
+# ─────────────────────────────────────────────────────────
+# 2026-01-28    $142.30     +$12.40     abc1234 Add GPU instances
+# 2026-01-27    $129.90     +$45.20     def5678 Deploy new RDS
+# 2026-01-26    $84.70      -$8.30      ghi9012 Cleanup unused EBS
+# 2026-01-25    $93.00      +$3.10      jkl3456 Update Lambda memory
+# ═══════════════════════════════════════════════════════════
+#
+# 🔍 Significant cost changes:
+# • +$45.20 on 2026-01-27: def5678 "Deploy new RDS for analytics"
+# • +$12.40 on 2026-01-28: abc1234 "Add GPU instances for ML"
+
+# Analyze specific commit
+infra-cost history --commit abc1234
+
+# Who caused the most cost changes this month?
+infra-cost blame --period month
+```
+
+**Features:**
+- 📊 **Cost-commit correlation** - see which commits changed costs
+- 👤 **Author attribution** - track cost impact by developer
+- 📈 **Trend analysis** - understand cost evolution over time
+- 🔍 **Commit details** - deep dive into specific commits
+- 📝 **Multiple formats** - text, JSON, markdown output
+- ⚠️ **Significant change alerts** - highlight big cost impacts
+
+**Commands:**
+```bash
+# Show cost history for the past week (default)
+infra-cost history --git
+
+# Show history for different periods
+infra-cost history --period month
+infra-cost history --period quarter
+
+# Filter by author
+infra-cost history --author john@example.com
+
+# Analyze specific commit
+infra-cost history --commit abc1234
+
+# Blame analysis - who impacted costs most?
+infra-cost blame --period month
+
+# Export to JSON for analysis
+infra-cost history --format json > cost-history.json
+```
+
+**Perfect for:**
+- Engineering teams tracking cost accountability
+- Understanding which features drive costs
+- Cost-aware code reviews
+- FinOps culture and awareness
+- Retrospectives on cost trends
+
+---
+
 ### Command Migration Table
 
 | Command Usage | Old Command (v0.x) | New Command (v1.0) |

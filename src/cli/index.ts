@@ -23,6 +23,7 @@ import { registerChargebackCommands } from './commands/chargeback';
 import { registerConfigCommands } from './commands/config';
 import { registerDashboardCommands } from './commands/dashboard';
 import { registerAnnotateCommand } from './commands/annotate';
+import { registerGitCommands } from './commands/git';
 
 // Import middleware
 import { authMiddleware } from './middleware/auth';
@@ -104,6 +105,7 @@ export function createCLI(): Command {
   registerChargebackCommands(program);
   registerConfigCommands(program);
   registerDashboardCommands(program);
+  registerGitCommands(program);
 
   // Global hooks
   program.hook('preAction', async (thisCommand, actionCommand) => {
