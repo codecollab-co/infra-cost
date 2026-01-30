@@ -121,16 +121,8 @@ export class GCPProvider extends CloudProviderAdapter {
     );
 
     return {
-      provider: CloudProvider.GOOGLE_CLOUD,
-      accountId: config.projectId,
-      totalCost: totalCosts.totals.thisMonth,
-      costByService: totalCosts.totalsByService.thisMonth,
-      costByRegion: {}, // Will implement in future issue
-      topServices: this.getTopServices(totalCosts.totalsByService.thisMonth),
-      period: {
-        start: new Date(),
-        end: new Date(),
-      },
+      totals: totalCosts.totals,
+      totalsByService: totalCosts.totalsByService,
     };
   }
 
