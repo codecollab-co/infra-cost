@@ -5,7 +5,6 @@
  */
 
 import chalk from 'chalk';
-import { getGlobalLogger } from '../../core/logging';
 
 /**
  * Format and display error to user
@@ -19,14 +18,6 @@ export function errorHandler(error: Error | any): void {
   // Just ignore them and let the process exit normally
   if (message === '(outputHelp)' || message === '(outputVersion)') {
     return;
-  }
-
-  // Try to log with structured logger, but don't fail if logger isn't initialized
-  try {
-    const logger = getGlobalLogger();
-    logger.error('Command failed', { error: message, stack });
-  } catch (loggerError) {
-    // Logger not initialized yet, skip structured logging
   }
 
   // Display user-friendly error message

@@ -5,7 +5,6 @@
  */
 
 import { Command } from 'commander';
-import { getGlobalLogger } from '../../core/logging';
 
 /**
  * Validation middleware
@@ -15,10 +14,7 @@ export async function validationMiddleware(
   thisCommand: Command,
   actionCommand: Command
 ): Promise<void> {
-  const logger = getGlobalLogger();
   const opts = thisCommand.opts();
-
-  logger.debug('Running validation middleware');
 
   // Validate provider
   const validProviders = ['aws', 'gcp', 'azure', 'alibaba', 'oracle'];
@@ -37,6 +33,4 @@ export async function validationMiddleware(
   if (opts.logLevel && !validLogLevels.includes(opts.logLevel)) {
     throw new Error(`Invalid log level: ${opts.logLevel}. Must be one of: ${validLogLevels.join(', ')}`);
   }
-
-  logger.debug('Validation check passed');
 }

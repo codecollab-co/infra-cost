@@ -63,10 +63,14 @@ inputs:
     required: false
 
   # Analysis Options
-  analysis-type:
-    description: 'Type of analysis to run (summary, detailed, delta, forecast, anomaly, finops, audit)'
+  command:
+    description: 'Command to run (now, free-tier, annotate, dashboard, history, blame, cost, optimize, monitor, export)'
     required: false
-    default: 'summary'
+    default: 'now'
+
+  subcommand:
+    description: 'Subcommand for nested commands (e.g., cost breakdown, optimize recommendations)'
+    required: false
 
   forecast-days:
     description: 'Number of days for cost forecast (default: 30)'
@@ -77,6 +81,16 @@ inputs:
     description: 'Number of months for trend analysis (default: 6)'
     required: false
     default: '6'
+
+  # Cost Gates
+  fail-on-increase:
+    description: 'Fail if costs increased compared to previous period (true/false)'
+    required: false
+    default: 'false'
+
+  cost-threshold:
+    description: 'Maximum acceptable cost (e.g., 1000 for $1000/month)'
+    required: false
 
   # Output Options
   output-format:
@@ -124,10 +138,22 @@ inputs:
     required: false
 
 outputs:
+  today-cost:
+    description: 'Cost for today'
+
+  mtd-cost:
+    description: 'Month-to-date cost'
+
+  ytd-cost:
+    description: 'Year-to-date cost'
+
   total-cost:
     description: 'Total cost for the analysis period'
 
   cost-change:
+    description: 'Cost change compared to previous period'
+
+  cost-change-percent:
     description: 'Cost change percentage compared to previous period'
 
   forecast-cost:
@@ -139,11 +165,17 @@ outputs:
   optimization-savings:
     description: 'Potential savings from optimization recommendations'
 
+  free-tier-usage:
+    description: 'Free tier usage percentage'
+
   report-json:
     description: 'Full report in JSON format'
 
   exit-code:
     description: 'Exit code of the analysis (0 = success, 1 = threshold exceeded)'
+
+  threshold-exceeded:
+    description: 'Whether cost threshold was exceeded (true/false)'
 
 runs:
   using: 'composite'
@@ -155,7 +187,7 @@ runs:
 
     - name: Install infra-cost
       shell: bash
-      run: npm install -g infra-cost@${{ github.action_ref || '0.3.0' }}
+      run: npm install -g infra-cost@${{ github.action_ref || 'latest' }}
 
     - name: Run Cost Analysis
       id: analysis
@@ -170,8 +202,19 @@ runs:
         AZURE_CLIENT_ID: ${{ inputs.azure-client-id }}
         AZURE_CLIENT_SECRET: ${{ inputs.azure-client-secret }}
       run: |
-        # Build the command
-        CMD="infra-cost --provider ${{ inputs.provider }}"
+        # Build the command with new subcommand structure
+        CMD="infra-cost"
+
+        # Add command (defaults to 'now' for quick cost check)
+        CMD="$CMD ${{ inputs.command }}"
+
+        # Add subcommand if specified
+        if [ -n "${{ inputs.subcommand }}" ]; then
+          CMD="$CMD ${{ inputs.subcommand }}"
+        fi
+
+        # Add global options
+        CMD="$CMD --provider ${{ inputs.provider }}"
 
         # Add profile if specified
         if [ -n "${{ inputs.profile }}" ] && [ "${{ inputs.profile }}" != "default" ]; then
@@ -181,48 +224,32 @@ runs:
         # Add region
         CMD="$CMD --region ${{ inputs.region }}"
 
-        # Add analysis type flags
-        case "${{ inputs.analysis-type }}" in
-          "detailed")
-            CMD="$CMD"
-            ;;
-          "delta")
-            CMD="$CMD --delta --delta-threshold ${{ inputs.delta-threshold }}"
-            ;;
-          "forecast")
-            CMD="$CMD --forecast ${{ inputs.forecast-days }}"
-            ;;
-          "anomaly")
-            CMD="$CMD --anomaly-detect"
-            ;;
-          "finops")
-            CMD="$CMD --finops"
-            ;;
-          "audit")
-            CMD="$CMD --audit"
-            ;;
-          "trend")
-            CMD="$CMD --trend"
-            ;;
-          "summary"|*)
-            CMD="$CMD --summary"
-            ;;
-        esac
-
         # Add output format
-        if [ "${{ inputs.output-format }}" = "json" ]; then
-          CMD="$CMD --json"
-        fi
-
-        # Add export format if specified
-        if [ -n "${{ inputs.export-format }}" ]; then
-          CMD="$CMD --forecast-export ${{ inputs.export-format }}"
-        fi
+        CMD="$CMD --output ${{ inputs.output-format }}"
 
         # Add GCP project ID
         if [ -n "${{ inputs.gcp-project-id }}" ]; then
           CMD="$CMD --project-id ${{ inputs.gcp-project-id }}"
         fi
+
+        # Add command-specific options
+        case "${{ inputs.command }}" in
+          "cost")
+            if [ -n "${{ inputs.forecast-days }}" ]; then
+              CMD="$CMD --forecast-days ${{ inputs.forecast-days }}"
+            fi
+            ;;
+          "monitor")
+            if [ -n "${{ inputs.delta-threshold }}" ]; then
+              CMD="$CMD --threshold ${{ inputs.delta-threshold }}"
+            fi
+            ;;
+          "export")
+            if [ -n "${{ inputs.export-format }}" ]; then
+              CMD="$CMD --format ${{ inputs.export-format }}"
+            fi
+            ;;
+        esac
 
         # Add additional arguments
         if [ -n "${{ inputs.additional-args }}" ]; then
@@ -233,28 +260,93 @@ runs:
 
         # Run the analysis and capture output
         OUTPUT_FILE=$(mktemp)
+        JSON_OUTPUT=$(mktemp)
         set +e
-        $CMD > "$OUTPUT_FILE" 2>&1
-        EXIT_CODE=$?
+
+        # Run command with JSON output for parsing
+        if [ "${{ inputs.output-format }}" = "json" ]; then
+          $CMD > "$OUTPUT_FILE" 2>&1
+          EXIT_CODE=$?
+          cp "$OUTPUT_FILE" "$JSON_OUTPUT"
+        else
+          # Run twice: once for display, once for JSON parsing
+          $CMD > "$OUTPUT_FILE" 2>&1
+          EXIT_CODE=$?
+          $CMD --output json > "$JSON_OUTPUT" 2>&1 || true
+        fi
         set -e
 
         # Display output
         cat "$OUTPUT_FILE"
 
-        # Parse JSON output if available
-        if [ "${{ inputs.output-format }}" = "json" ]; then
-          echo "report-json=$(cat "$OUTPUT_FILE" | tr -d '\n')" >> $GITHUB_OUTPUT
+        # Parse JSON output for structured data
+        if [ -f "$JSON_OUTPUT" ] && [ -s "$JSON_OUTPUT" ]; then
+          # Extract cost metrics using jq if available
+          if command -v jq &> /dev/null; then
+            TODAY_COST=$(jq -r '.todayCost // .currentCost // "0"' "$JSON_OUTPUT" 2>/dev/null || echo "0")
+            MTD_COST=$(jq -r '.mtdCost // .monthToDate // "0"' "$JSON_OUTPUT" 2>/dev/null || echo "0")
+            YTD_COST=$(jq -r '.ytdCost // .yearToDate // "0"' "$JSON_OUTPUT" 2>/dev/null || echo "0")
+            TOTAL_COST=$(jq -r '.totalCost // .total // "0"' "$JSON_OUTPUT" 2>/dev/null || echo "0")
+            COST_CHANGE=$(jq -r '.costChange // .change // "0"' "$JSON_OUTPUT" 2>/dev/null || echo "0")
+            COST_CHANGE_PERCENT=$(jq -r '.costChangePercent // .changePercent // "0"' "$JSON_OUTPUT" 2>/dev/null || echo "0")
+            FREE_TIER_USAGE=$(jq -r '.freeTierUsage // "0"' "$JSON_OUTPUT" 2>/dev/null || echo "0")
+            OPTIMIZATION_SAVINGS=$(jq -r '.optimizationSavings // .potentialSavings // "0"' "$JSON_OUTPUT" 2>/dev/null || echo "0")
+
+            echo "today-cost=$TODAY_COST" >> $GITHUB_OUTPUT
+            echo "mtd-cost=$MTD_COST" >> $GITHUB_OUTPUT
+            echo "ytd-cost=$YTD_COST" >> $GITHUB_OUTPUT
+            echo "total-cost=$TOTAL_COST" >> $GITHUB_OUTPUT
+            echo "cost-change=$COST_CHANGE" >> $GITHUB_OUTPUT
+            echo "cost-change-percent=$COST_CHANGE_PERCENT" >> $GITHUB_OUTPUT
+            echo "free-tier-usage=$FREE_TIER_USAGE" >> $GITHUB_OUTPUT
+            echo "optimization-savings=$OPTIMIZATION_SAVINGS" >> $GITHUB_OUTPUT
+          fi
+
+          # Store full JSON report
+          echo "report-json=$(cat "$JSON_OUTPUT" | tr -d '\n')" >> $GITHUB_OUTPUT
         fi
 
         echo "exit-code=$EXIT_CODE" >> $GITHUB_OUTPUT
 
-        # Clean up
-        rm -f "$OUTPUT_FILE"
+        # Check cost gates
+        THRESHOLD_EXCEEDED="false"
 
-        # Check threshold if enabled
-        if [ "${{ inputs.fail-on-threshold }}" = "true" ] && [ $EXIT_CODE -ne 0 ]; then
-          echo "::error::Cost analysis failed or threshold exceeded"
-          exit 1
+        # Check cost threshold if specified
+        if [ -n "${{ inputs.cost-threshold }}" ] && command -v jq &> /dev/null; then
+          CURRENT_COST=$(jq -r '.totalCost // .mtdCost // "0"' "$JSON_OUTPUT" 2>/dev/null || echo "0")
+          THRESHOLD="${{ inputs.cost-threshold }}"
+
+          if (( $(echo "$CURRENT_COST > $THRESHOLD" | bc -l) )); then
+            echo "::warning::Cost threshold exceeded: \$$CURRENT_COST > \$$THRESHOLD"
+            THRESHOLD_EXCEEDED="true"
+
+            if [ "${{ inputs.fail-on-threshold }}" = "true" ]; then
+              echo "::error::Failing due to cost threshold exceeded"
+              EXIT_CODE=1
+            fi
+          fi
+        fi
+
+        # Check cost increase if enabled
+        if [ "${{ inputs.fail-on-increase }}" = "true" ] && command -v jq &> /dev/null; then
+          COST_CHANGE=$(jq -r '.costChange // "0"' "$JSON_OUTPUT" 2>/dev/null || echo "0")
+
+          if (( $(echo "$COST_CHANGE > 0" | bc -l) )); then
+            echo "::warning::Cost increased by \$$COST_CHANGE"
+            THRESHOLD_EXCEEDED="true"
+            echo "::error::Failing due to cost increase detected"
+            EXIT_CODE=1
+          fi
+        fi
+
+        echo "threshold-exceeded=$THRESHOLD_EXCEEDED" >> $GITHUB_OUTPUT
+
+        # Clean up
+        rm -f "$OUTPUT_FILE" "$JSON_OUTPUT"
+
+        # Exit with appropriate code
+        if [ $EXIT_CODE -ne 0 ]; then
+          exit $EXIT_CODE
         fi
 
     - name: Comment on PR
@@ -264,17 +356,96 @@ runs:
         script: |
           const fs = require('fs');
 
+          // Get outputs from analysis step
+          const todayCost = '${{ steps.analysis.outputs.today-cost }}' || 'N/A';
+          const mtdCost = '${{ steps.analysis.outputs.mtd-cost }}' || 'N/A';
+          const totalCost = '${{ steps.analysis.outputs.total-cost }}' || 'N/A';
+          const costChange = '${{ steps.analysis.outputs.cost-change }}' || '0';
+          const costChangePercent = '${{ steps.analysis.outputs.cost-change-percent }}' || '0';
+          const freeTierUsage = '${{ steps.analysis.outputs.free-tier-usage }}' || 'N/A';
+          const optimizationSavings = '${{ steps.analysis.outputs.optimization-savings }}' || '0';
+          const thresholdExceeded = '${{ steps.analysis.outputs.threshold-exceeded }}' === 'true';
+
+          // Determine status emoji
+          let statusEmoji = '✅';
+          if (thresholdExceeded) {
+            statusEmoji = '❌';
+          } else if (parseFloat(costChange) > 0) {
+            statusEmoji = '⚠️';
+          }
+
           // Build comment body
-          let body = '## 💰 Infra Cost Analysis\n\n';
+          let body = `## ${statusEmoji} Infra Cost Analysis\n\n`;
+
+          // Cost Summary Table
+          body += '### 📊 Cost Summary\n\n';
           body += '| Metric | Value |\n';
           body += '|--------|-------|\n';
+          body += `| **Today's Cost** | \$${todayCost} |\n`;
+          body += `| **Month-to-Date** | \$${mtdCost} |\n`;
+          body += `| **Total Cost** | \$${totalCost} |\n`;
+
+          if (parseFloat(costChange) !== 0) {
+            const changeSymbol = parseFloat(costChange) > 0 ? '📈' : '📉';
+            body += `| **Cost Change** | ${changeSymbol} \$${costChange} (${costChangePercent}%) |\n`;
+          }
+
+          if (freeTierUsage !== 'N/A') {
+            body += `| **Free Tier Usage** | ${freeTierUsage}% |\n`;
+          }
+
+          if (parseFloat(optimizationSavings) > 0) {
+            body += `| **Optimization Potential** | 💡 \$${optimizationSavings}/month |\n`;
+          }
+
+          body += '\n';
+
+          // Threshold Warning
+          if (thresholdExceeded) {
+            body += '### ❌ Cost Gate Failed\n\n';
+            if ('${{ inputs.cost-threshold }}') {
+              body += `Cost threshold of \$${{ inputs.cost-threshold }} has been exceeded.\n\n`;
+            }
+            if ('${{ inputs.fail-on-increase }}' === 'true' && parseFloat(costChange) > 0) {
+              body += `Cost has increased by \$${costChange}.\n\n`;
+            }
+          } else if (parseFloat(costChange) > 0) {
+            body += '### ⚠️ Cost Increase Detected\n\n';
+            body += `Costs have increased by \$${costChange} (${costChangePercent}%).\n\n`;
+          }
+
+          // Configuration Details
+          body += '<details><summary>📋 Configuration</summary>\n\n';
+          body += '| Setting | Value |\n';
+          body += '|---------|-------|\n';
           body += `| Provider | ${{ inputs.provider }} |\n`;
           body += `| Region | ${{ inputs.region }} |\n`;
-          body += `| Analysis Type | ${{ inputs.analysis-type }} |\n`;
-          body += '\n<details><summary>Full Report</summary>\n\n```\n';
-          body += 'See workflow logs for full report\n';
-          body += '```\n</details>\n';
-          body += '\n---\n*Generated by [infra-cost](https://github.com/codecollab-co/infra-cost)*';
+          body += `| Command | \`${{ inputs.command }}\` |\n`;
+          if ('${{ inputs.subcommand }}') {
+            body += `| Subcommand | \`${{ inputs.subcommand }}\` |\n`;
+          }
+          if ('${{ inputs.cost-threshold }}') {
+            body += `| Cost Threshold | \$${{ inputs.cost-threshold }} |\n`;
+          }
+          body += `| Fail on Increase | ${{ inputs.fail-on-increase }} |\n`;
+          body += `| Fail on Threshold | ${{ inputs.fail-on-threshold }} |\n`;
+          body += '</details>\n\n';
+
+          // Full Report
+          const reportJson = '${{ steps.analysis.outputs.report-json }}';
+          if (reportJson && reportJson !== '') {
+            body += '<details><summary>📄 Full Report (JSON)</summary>\n\n';
+            body += '```json\n';
+            try {
+              body += JSON.stringify(JSON.parse(reportJson), null, 2);
+            } catch (e) {
+              body += reportJson;
+            }
+            body += '\n```\n</details>\n\n';
+          }
+
+          body += '---\n';
+          body += '*Generated by [infra-cost](https://github.com/codecollab-co/infra-cost) v${{ github.action_ref }}*';
 
           // Find existing comment
           const { data: comments } = await github.rest.issues.listComments({

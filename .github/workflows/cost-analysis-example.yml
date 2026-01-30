@@ -1,0 +1,185 @@
+# Example: Complete Cost Analysis Workflow
+# This workflow demonstrates the GitHub Action integration for infra-cost
+# Copy this file and customize for your needs
+
+name: Infrastructure Cost Analysis
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: '0 8 * * 1'  # Weekly on Monday at 8 AM
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  # Job 1: Quick cost check on every PR
+  quick-check:
+    name: Quick Cost Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Quick Cost Snapshot
+        id: quick
+        uses: codecollab-co/infra-cost@v1.4.0
+        with:
+          provider: aws
+          region: us-east-1
+          command: now
+          output-format: json
+          comment-on-pr: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # AWS credentials from secrets
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Display Results
+        run: |
+          echo "## 💰 Quick Cost Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Today: \$${{ steps.quick.outputs.today-cost }}" >> $GITHUB_STEP_SUMMARY
+          echo "- MTD: \$${{ steps.quick.outputs.mtd-cost }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Change: \$${{ steps.quick.outputs.cost-change }} (${{ steps.quick.outputs.cost-change-percent }}%)" >> $GITHUB_STEP_SUMMARY
+
+  # Job 2: Cost gate to prevent increases
+  cost-gate:
+    name: Cost Gate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enforce Cost Threshold
+        uses: codecollab-co/infra-cost@v1.4.0
+        with:
+          provider: aws
+          command: now
+          cost-threshold: 1000
+          fail-on-increase: true  # Fail if any cost increase detected
+          comment-on-pr: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Job 3: Free tier monitoring
+  free-tier:
+    name: Free Tier Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Free Tier Usage
+        id: freetier
+        uses: codecollab-co/infra-cost@v1.4.0
+        with:
+          provider: aws
+          command: free-tier
+          slack-webhook: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Alert if Over 80%
+        if: steps.freetier.outputs.free-tier-usage > 80
+        run: |
+          echo "::warning::Free tier usage is at ${{ steps.freetier.outputs.free-tier-usage }}%"
+
+  # Job 4: Weekly optimization recommendations
+  optimize:
+    name: Optimization Report
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get Recommendations
+        id: optimize
+        uses: codecollab-co/infra-cost@v1.4.0
+        with:
+          provider: aws
+          command: optimize
+          subcommand: recommendations
+          output-format: json
+
+      - name: Report Savings
+        run: |
+          echo "## 💡 Optimization Opportunities" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Potential monthly savings: \$${{ steps.optimize.outputs.optimization-savings }}" >> $GITHUB_STEP_SUMMARY
+
+  # Job 5: Cost history analysis (on PR)
+  history:
+    name: Cost History
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for git analysis
+
+      - name: Analyze Cost History
+        uses: codecollab-co/infra-cost@v1.4.0
+        with:
+          provider: aws
+          command: history
+          additional-args: '--git --period week --format markdown'
+
+  # Job 6: Multi-cloud summary (weekly)
+  multi-cloud:
+    name: Multi-Cloud Summary
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        provider: [aws, gcp, azure]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cost Analysis - ${{ matrix.provider }}
+        uses: codecollab-co/infra-cost@v1.4.0
+        with:
+          provider: ${{ matrix.provider }}
+          command: cost
+          subcommand: breakdown
+          output-format: json
+        env:
+          # AWS
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # GCP
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+          # Azure
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+
+  # Job 7: Export monthly report
+  export:
+    name: Export Report
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate Report
+        uses: codecollab-co/infra-cost@v1.4.0
+        with:
+          provider: aws
+          command: export
+          export-format: xlsx
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cost-report-${{ github.run_number }}
+          path: cost-report.xlsx
+          retention-days: 90

@@ -309,6 +309,83 @@ infra-cost history --format json > cost-history.json
 
 ---
 
+#### `infra-cost terraform` - Terraform Cost Preview (NEW in v1.4.0)
+
+**Estimate infrastructure costs BEFORE deploying - shift-left cost management!**
+
+```bash
+# Generate terraform plan and estimate costs
+terraform plan -out=tfplan
+infra-cost terraform --plan tfplan
+
+# Output:
+# ╭─────────────────────────────────────────────────────────────╮
+# │             Terraform Cost Estimate                         │
+# ├─────────────────────────────────────────────────────────────┤
+# │ Resources to CREATE:                                        │
+# │ ───────────────────────────────────────────────────────────│
+# │ + aws_instance.web_server (t3.xlarge)                       │
+# │   └── Monthly: $121.47 | Hourly: $0.1664                   │
+# │ + aws_db_instance.primary (db.r5.large, 100GB gp2)          │
+# │   └── Monthly: $182.80 | Hourly: $0.25                     │
+# ├─────────────────────────────────────────────────────────────┤
+# │ Resources to MODIFY:                                        │
+# │ ───────────────────────────────────────────────────────────│
+# │ ~ aws_instance.api_server                                   │
+# │   └── t3.medium → t3.large: +$30.37/month                  │
+# ├─────────────────────────────────────────────────────────────┤
+# │ Resources to DESTROY:                                       │
+# │ ───────────────────────────────────────────────────────────│
+# │ - aws_instance.old_server                                   │
+# │   └── Savings: -$60.74/month                               │
+# ├─────────────────────────────────────────────────────────────┤
+# │ SUMMARY                                                     │
+# │ ───────────────────────────────────────────────────────────│
+# │ Current Monthly Cost:     $1,240.50                         │
+# │ Estimated New Cost:       $1,520.83                         │
+# │ Difference:               +$280.33/month (+22.6%)          │
+# │                                                             │
+# │ ⚠️  Cost increase exceeds 20% threshold!                    │
+# ╰─────────────────────────────────────────────────────────────╯
+```
+
+**Usage Examples:**
+
+```bash
+# Basic cost estimate
+terraform plan -out=tfplan
+infra-cost terraform --plan tfplan
+
+# With cost threshold (fail if > 20% change)
+infra-cost terraform --plan tfplan --threshold 20
+
+# JSON format for automation
+infra-cost terraform --plan tfplan --output json
+
+# From JSON plan
+terraform show -json tfplan > tfplan.json
+infra-cost terraform --plan tfplan.json
+```
+
+**Supported Resources:**
+- ✅ EC2 instances (all types)
+- ✅ RDS instances with storage
+- ✅ EBS volumes (gp2, gp3, io1, io2, st1, sc1)
+- ✅ Load Balancers (ALB, NLB, CLB)
+- ✅ NAT Gateways
+- ✅ ElastiCache clusters
+- ✅ S3 buckets (estimated)
+- ✅ Lambda functions (estimated)
+
+**Perfect for:**
+- CI/CD cost gates
+- Preventing expensive deployments
+- Cost-aware infrastructure changes
+- Shift-left FinOps culture
+- Pre-deployment cost reviews
+
+---
+
 ### Command Migration Table
 
 | Command Usage | Old Command (v0.x) | New Command (v1.0) |
@@ -719,48 +796,71 @@ jobs:
             --slack-channel ${{ secrets.SLACK_CHANNEL }}
 ```
 
-## 🤖 GitHub Actions Integration
+## 🤖 GitHub Actions Integration (v1.4.0+)
 
-**infra-cost** is available as a GitHub Action on the [GitHub Marketplace](https://github.com/marketplace/actions/infra-cost-multi-cloud-finops-analysis), making it easy to integrate cost analysis into your CI/CD workflows.
+**infra-cost** is available as a GitHub Action, making it easy to integrate cost analysis into your CI/CD workflows with cost gates and automated PR comments.
 
-### Basic Usage
+### Quick Cost Check
 ```yaml
 name: Cost Analysis
-on: [push, pull_request]
-
-jobs:
-  analyze:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: codecollab-co/infra-cost@v0.3.0
-        with:
-          provider: aws
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          analysis-type: summary
-```
-
-### PR Cost Check with Comments
-```yaml
-name: PR Cost Check
-on:
-  pull_request:
-    branches: [main]
+on: [pull_request]
 
 jobs:
   cost-check:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
     steps:
-      - uses: codecollab-co/infra-cost@v0.3.0
+      - uses: actions/checkout@v4
+      - uses: codecollab-co/infra-cost@v1.4.0
         with:
           provider: aws
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          analysis-type: delta
-          delta-threshold: '10'
-          comment-on-pr: 'true'
+          command: now
+          comment-on-pr: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Cost Gate - Fail on Increase
+```yaml
+name: Cost Gate
+on: pull_request
+
+jobs:
+  cost-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: codecollab-co/infra-cost@v1.4.0
+        with:
+          provider: aws
+          command: now
+          fail-on-increase: true  # Fail if ANY cost increase
+          cost-threshold: 1000     # Fail if monthly cost exceeds $1000
+          comment-on-pr: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+### Terraform Cost Preview (Shift-Left)
+```yaml
+name: Terraform Cost Check
+on: pull_request
+
+jobs:
+  terraform-cost:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Cost Estimate
+        uses: codecollab-co/infra-cost@v1.4.0
+        with:
+          command: terraform
+          additional-args: '--plan tfplan --threshold 20'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### Daily Cost Report to Slack
@@ -1062,6 +1162,24 @@ src/
   - Hover information with alternatives
   - **Note:** VS Code extension will be a separate repository
   - Integration points with CLI for cost data
+
+### Q2 2026 (v1.4.0 - Phase 3: CI/CD & Shift-Left)
+
+**Priority: CI/CD Integration & Shift-Left Cost Management**
+- ✅ **GitHub Actions Integration** (Issue #46)
+  - Native GitHub Action for cost analysis in PRs
+  - Cost gates with fail-on-increase and threshold checks
+  - Enhanced PR comments with cost breakdown
+  - Multiple output variables for downstream jobs
+  - Slack notification support
+- ✅ **Terraform Cost Preview** (Issue #47)
+  - Parse terraform plan files (binary and JSON)
+  - Estimate costs before deployment
+  - Show create/modify/destroy breakdown
+  - Cost threshold gates for CI/CD
+  - Support for EC2, RDS, EBS, Load Balancers, and more
+  - Monthly and hourly cost estimates
+  - Shift-left cost management
 
 ### Q3 2026 (Planned)
 

@@ -24,6 +24,7 @@ import { registerConfigCommands } from './commands/config';
 import { registerDashboardCommands } from './commands/dashboard';
 import { registerAnnotateCommand } from './commands/annotate';
 import { registerGitCommands } from './commands/git';
+import { registerTerraformCommand } from './commands/terraform';
 
 // Import middleware
 import { authMiddleware } from './middleware/auth';
@@ -106,6 +107,7 @@ export function createCLI(): Command {
   registerConfigCommands(program);
   registerDashboardCommands(program);
   registerGitCommands(program);
+  registerTerraformCommand(program);
 
   // Global hooks
   program.hook('preAction', async (thisCommand, actionCommand) => {
