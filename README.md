@@ -1181,6 +1181,33 @@ src/
   - Monthly and hourly cost estimates
   - Shift-left cost management
 
+### Q2 2026 (v1.5.0 - Phase 4: Communication & Collaboration)
+
+**Priority: Communication & Collaboration**
+- ✅ **Scheduled Reports with Daemon Mode** (Issue #42)
+  - Built-in scheduler daemon for automated reports
+  - Cron-based scheduling with timezone support
+  - Multiple schedules per instance
+  - Systemd service file generation
+  - Execution logs and status monitoring
+- ✅ **Microsoft Teams Integration** (Issue #45)
+  - Incoming webhook support with Adaptive Cards
+  - Multiple card styles (compact, detailed, executive)
+  - Cost summaries and alert integration
+  - Chargeback reports for Teams
+- ✅ **PagerDuty & OpsGenie Integration** (Issue #48)
+  - PagerDuty Events API v2 support
+  - OpsGenie Alert API integration
+  - Severity/priority mapping
+  - Auto-resolve functionality
+  - Deduplication to prevent spam
+- ✅ **Email Report Scheduling** (Issue #58)
+  - SendGrid and Mailgun support
+  - Beautiful HTML email templates
+  - Multiple recipient support
+  - Scheduler integration for automated emails
+  - Plain text fallback
+
 ### Q3 2026 (Planned)
 
 **Priority: Enterprise Features**

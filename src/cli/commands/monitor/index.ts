@@ -49,4 +49,27 @@ export function registerMonitorCommands(program: Command): void {
       const { handleBudgets } = await import('./budgets');
       await handleBudgets(options, command);
     });
+
+  monitor
+    .command('alert-pagerduty')
+    .description('Send cost alert to PagerDuty')
+    .option('--pagerduty-key <key>', 'PagerDuty routing key')
+    .option('--severity <level>', 'Alert severity (critical, error, warning, info)', 'warning')
+    .option('--threshold <percent>', 'Alert threshold percentage')
+    .action(async (options) => {
+      const { handlePagerDuty } = await import('./alert');
+      await handlePagerDuty(options);
+    });
+
+  monitor
+    .command('alert-opsgenie')
+    .description('Send cost alert to OpsGenie')
+    .option('--opsgenie-key <key>', 'OpsGenie API key')
+    .option('--priority <level>', 'Alert priority (P1, P2, P3, P4, P5)', 'P3')
+    .option('--threshold <percent>', 'Alert threshold percentage')
+    .option('--team <name>', 'Team to notify')
+    .action(async (options) => {
+      const { handleOpsGenie } = await import('./alert');
+      await handleOpsGenie(options);
+    });
 }

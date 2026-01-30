@@ -38,4 +38,15 @@ export function registerChargebackCommands(program: Command): void {
       const { handleSlack } = await import('./slack');
       await handleSlack(options, command);
     });
+
+  chargeback
+    .command('teams')
+    .description('Send chargeback report to Microsoft Teams')
+    .option('--teams-webhook <url>', 'Teams incoming webhook URL')
+    .option('--card-style <style>', 'Card style (compact, detailed, executive)', 'detailed')
+    .option('--account <name>', 'Account name for report')
+    .action(async (options, command) => {
+      const { handleTeams } = await import('./teams');
+      await handleTeams(options, command);
+    });
 }

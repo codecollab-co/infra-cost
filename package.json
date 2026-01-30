@@ -1,6 +1,6 @@
 {
   "name": "infra-cost",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Multi-cloud FinOps CLI tool for comprehensive cost analysis and infrastructure optimization across AWS, GCP, Azure, Alibaba Cloud, and Oracle Cloud",
   "keywords": [
     "aws",

@@ -40,4 +40,20 @@ export function registerExportCommands(program: Command): void {
       const { handleReports } = await import('./reports');
       await handleReports(format, options, command);
     });
+
+  exportCmd
+    .command('email')
+    .description('Send cost report via email')
+    .option('--email-to <addresses>', 'Recipient email addresses (comma-separated)')
+    .option('--email-from <address>', 'Sender email address')
+    .option('--email-provider <provider>', 'Email provider (sendgrid, mailgun, smtp, ses)', 'sendgrid')
+    .option('--sendgrid-key <key>', 'SendGrid API key')
+    .option('--mailgun-key <key>', 'Mailgun API key')
+    .option('--mailgun-domain <domain>', 'Mailgun domain')
+    .option('--subject <text>', 'Email subject')
+    .option('--account <name>', 'Account name for report')
+    .action(async (options) => {
+      const { handleEmail } = await import('./email');
+      await handleEmail(options);
+    });
 }
