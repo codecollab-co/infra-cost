@@ -27,6 +27,15 @@ export interface ProviderCredentials {
   // GCP credentials
   projectId?: string;
   keyFile?: string;
+  keyFilePath?: string;
+
+  // Alibaba Cloud credentials
+  accessKeySecret?: string;
+  regionId?: string;
+  accountId?: string;
+  accountIds?: string[];
+  allAccounts?: boolean;
+  endpoint?: string;
 
   // Oracle Cloud credentials
   userId?: string;
@@ -35,6 +44,15 @@ export interface ProviderCredentials {
   privateKey?: string;
 
   // Generic/other credentials
+  profile?: string;
+  billingDatasetId?: string;
+  billingTableId?: string;
+  billingAccountId?: string;
+  allProjects?: boolean;
+  projectIds?: string[];
+  organizationId?: string;
+  folderId?: string;
+
   [key: string]: string | string[] | boolean | undefined;
 }
 
