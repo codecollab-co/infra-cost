@@ -181,6 +181,65 @@ infra-cost free-tier --json                # JSON output
 
 ---
 
+#### `infra-cost annotate` - Cost Annotations for IaC Files (NEW in v1.3.0)
+
+Add cost estimates directly in your Infrastructure as Code files - see costs during code review!
+
+```bash
+# Annotate Terraform files
+infra-cost annotate --path ./terraform/
+
+# Before:
+resource "aws_instance" "web" {
+  instance_type = "t3.xlarge"
+  ami           = "ami-12345678"
+}
+
+# After:
+# 💰 infra-cost: $121.47/month | aws_instance @ us-east-1
+# 💡 Consider t3.large for 50% savings if CPU < 40% (saves $60.74/month)
+# 📊 Last updated: 2026-01-30
+resource "aws_instance" "web" {
+  instance_type = "t3.xlarge"
+  ami           = "ami-12345678"
+}
+```
+
+**Features:**
+- 📝 **Terraform & CloudFormation support** - HCL and YAML annotations
+- 💰 **Monthly cost estimates** - see the cost of each resource
+- 💡 **Optimization suggestions** - inline recommendations for savings
+- 📊 **Auto-update** - keep annotations fresh with --update flag
+- 🧹 **Clean removal** - remove all annotations with --remove
+- 🔍 **Dry run** - preview changes before applying
+
+**Commands:**
+```bash
+# Annotate all Terraform files in a directory
+infra-cost annotate --path ./terraform/
+
+# CloudFormation templates
+infra-cost annotate --path ./cloudformation/ --format cloudformation
+
+# Preview without modifying files
+infra-cost annotate --path ./terraform/ --dry-run
+
+# Update existing annotations
+infra-cost annotate --path ./terraform/ --update
+
+# Remove all cost annotations
+infra-cost annotate --path ./terraform/ --remove
+```
+
+**Perfect for:**
+- Code reviews with cost visibility
+- DevOps engineers writing IaC
+- Cost-aware development culture
+- Pre-commit cost checks
+- Documentation of infrastructure costs
+
+---
+
 ### Command Migration Table
 
 | Command Usage | Old Command (v0.x) | New Command (v1.0) |

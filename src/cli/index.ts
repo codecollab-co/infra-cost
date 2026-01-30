@@ -22,6 +22,7 @@ import { registerOrganizationsCommands } from './commands/organizations';
 import { registerChargebackCommands } from './commands/chargeback';
 import { registerConfigCommands } from './commands/config';
 import { registerDashboardCommands } from './commands/dashboard';
+import { registerAnnotateCommand } from './commands/annotate';
 
 // Import middleware
 import { authMiddleware } from './middleware/auth';
@@ -92,6 +93,7 @@ export function createCLI(): Command {
   // Quick commands (top-level for easy access)
   registerNowCommand(program);
   registerFreeTierCommand(program);
+  registerAnnotateCommand(program);
 
   // Feature command groups
   registerCostCommands(program);

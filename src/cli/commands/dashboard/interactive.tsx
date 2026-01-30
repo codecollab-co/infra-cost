@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { render, Box, Text, useInput, useApp } from 'ink';
-import { getGlobalLogger } from '../../../core/logging';
 import { CloudProviderFactory } from '../../../providers/factory';
 import { CloudProvider } from '../../../types/providers';
 import dayjs from 'dayjs';
@@ -372,8 +371,6 @@ const Dashboard: React.FC<DashboardProps> = ({ options }) => {
 };
 
 export async function handleInteractive(options: any, command: any): Promise<void> {
-  getGlobalLogger().info('Launching interactive dashboard', options);
-
   try {
     render(<Dashboard options={options} />);
   } catch (error: any) {
