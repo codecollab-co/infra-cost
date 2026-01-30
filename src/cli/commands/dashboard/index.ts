@@ -9,6 +9,13 @@ export function registerDashboardCommands(program: Command): void {
     .command('dashboard')
     .description('Interactive dashboards and visualizations');
 
+  // Default action - launch interactive dashboard
+  dashboard
+    .action(async (options, command) => {
+      const { handleInteractive } = await import('./interactive');
+      await handleInteractive(options, command);
+    });
+
   dashboard
     .command('interactive')
     .description('Launch interactive terminal dashboard')

@@ -511,14 +511,48 @@ infra-cost export inventory pdf
 infra-cost cost analyze --output json
 ```
 
-### Interactive Dashboard
+### Interactive TUI Dashboard
+
+**Real-time cost monitoring with keyboard navigation**
+
 ```bash
-# Launch interactive terminal dashboard
+# Launch interactive TUI dashboard (shortcut)
+infra-cost dashboard
+
+# Or explicitly
 infra-cost dashboard interactive
+
+# Custom refresh interval (default: 60 seconds)
+infra-cost dashboard --refresh 30
 
 # Multi-cloud dashboard
 infra-cost dashboard multicloud
 ```
+
+**Features:**
+- 🎨 Beautiful terminal UI with real-time updates
+- ⌨️ Full keyboard navigation (vim-style supported)
+- 📊 Multiple views: Services, Resources, Trends, Alerts
+- 📈 Live trend indicators (↗ up, ↘ down, → stable)
+- 🔔 Real-time alert notifications
+- 🔄 Auto-refresh with configurable intervals
+- 🎯 Drill-down into services and resources
+
+**Keyboard Shortcuts:**
+```
+q       - Quit
+r       - Refresh data
+↑↓/jk   - Navigate rows
+←→/hl   - Switch tabs
+1-4     - Quick tab switch
+?       - Help
+```
+
+**Perfect for:**
+- DevOps engineers monitoring costs in terminal
+- SREs with terminal-based workflows
+- Real-time cost exploration
+- Server environments without GUI
 
 ## 💬 Slack Integration
 
