@@ -10,6 +10,14 @@ export type RawCostByService = {
   };
 };
 
+export interface CostQueryOptions {
+  startDate?: Date;
+  endDate?: Date;
+  currency?: string; // Filter by specific currency
+  maxResults?: number; // For pagination
+  pageToken?: string; // For pagination
+}
+
 /**
  * Get billing account for the project
  */
@@ -41,7 +49,8 @@ async function getBillingAccountName(
 export async function getRawCostByService(
   gcpConfig: GCPClientConfig,
   billingDatasetId?: string,
-  billingTableId?: string
+  billingTableId?: string,
+  options?: CostQueryOptions
 ): Promise<RawCostByService> {
   showSpinner('Getting GCP billing data');
 
@@ -54,8 +63,20 @@ export async function getRawCostByService(
     auth: gcpConfig.auth as any,
   });
 
-  const endDate = dayjs().subtract(1, 'day');
-  const startDate = endDate.subtract(65, 'day');
+  // Use provided dates or default to last 65 days
+  const endDate = options?.endDate ? dayjs(options.endDate) : dayjs().subtract(1, 'day');
+  const startDate = options?.startDate ? dayjs(options.startDate) : endDate.subtract(65, 'day');
+
+  // Build WHERE clause
+  const whereConditions = [
+    `DATE(usage_start_time) BETWEEN '${startDate.format('YYYY-MM-DD')}' AND '${endDate.format('YYYY-MM-DD')}'`,
+    'cost > 0',
+  ];
+
+  // Add currency filter if specified
+  if (options?.currency) {
+    whereConditions.push(`currency = '${options.currency}'`);
+  }
 
   // Query billing data from BigQuery export
   // This assumes standard billing export schema
@@ -63,38 +84,72 @@ export async function getRawCostByService(
     SELECT
       service.description AS service_name,
       DATE(usage_start_time) AS usage_date,
-      SUM(cost) AS total_cost
+      SUM(cost) AS total_cost,
+      currency
     FROM
       \`${gcpConfig.projectId}.${datasetId}.${tableId}\`
     WHERE
-      DATE(usage_start_time) BETWEEN '${startDate.format('YYYY-MM-DD')}' AND '${endDate.format('YYYY-MM-DD')}'
-      AND cost > 0
+      ${whereConditions.join(' AND ')}
     GROUP BY
       service_name,
-      usage_date
+      usage_date,
+      currency
     ORDER BY
       usage_date DESC,
       service_name
+    ${options?.maxResults ? `LIMIT ${options.maxResults}` : ''}
   `;
 
   try {
-    const [rows] = await bigquery.query({
+    const queryOptions: any = {
       query,
       location: 'US', // BigQuery billing export is typically in US location
-    });
+    };
 
+    // Add pagination support
+    if (options?.maxResults) {
+      queryOptions.maxResults = options.maxResults;
+    }
+    if (options?.pageToken) {
+      queryOptions.pageToken = options.pageToken;
+    }
+
+    const [rows] = await bigquery.query(queryOptions);
+
+    // First pass: collect all currencies
+    const currencies = new Set<string>();
+    for (const row of rows) {
+      const currency = row.currency || 'USD';
+      currencies.add(currency);
+    }
+
+    const multiCurrency = currencies.size > 1;
+
+    // Warn if multiple currencies detected
+    if (multiCurrency) {
+      console.warn(
+        `⚠️  Multiple currencies detected in billing data: ${Array.from(currencies).join(', ')}. ` +
+        `Costs are grouped by currency. Consider using --currency filter to analyze a specific currency.`
+      );
+    }
+
+    // Second pass: aggregate costs
     const costByService: RawCostByService = {};
 
     for (const row of rows) {
       const serviceName = row.service_name || 'Unknown Service';
       const usageDate = dayjs(row.usage_date).format('YYYY-MM-DD');
       const cost = parseFloat(row.total_cost) || 0;
+      const currency = row.currency || 'USD';
 
-      if (!costByService[serviceName]) {
-        costByService[serviceName] = {};
+      // Append currency to service name if multiple currencies exist
+      const serviceKey = multiCurrency ? `${serviceName} (${currency})` : serviceName;
+
+      if (!costByService[serviceKey]) {
+        costByService[serviceKey] = {};
       }
 
-      costByService[serviceName][usageDate] = cost;
+      costByService[serviceKey][usageDate] = cost;
     }
 
     return costByService;
@@ -230,10 +285,72 @@ function calculateServiceTotals(rawCostByService: RawCostByService): TotalCosts 
 export async function getTotalCosts(
   gcpConfig: GCPClientConfig,
   billingDatasetId?: string,
-  billingTableId?: string
+  billingTableId?: string,
+  options?: CostQueryOptions
 ): Promise<TotalCosts> {
-  const rawCosts = await getRawCostByService(gcpConfig, billingDatasetId, billingTableId);
+  const rawCosts = await getRawCostByService(gcpConfig, billingDatasetId, billingTableId, options);
   const totals = calculateServiceTotals(rawCosts);
 
   return totals;
+}
+
+/**
+ * Get detailed cost breakdown with additional metadata
+ */
+export async function getDetailedCostBreakdown(
+  gcpConfig: GCPClientConfig,
+  billingDatasetId?: string,
+  billingTableId?: string,
+  options?: CostQueryOptions
+): Promise<{
+  costByService: RawCostByService;
+  metadata: {
+    totalCost: number;
+    serviceCount: number;
+    dateRange: { start: string; end: string };
+    currencies: string[];
+    rowCount: number;
+  };
+}> {
+  const costByService = await getRawCostByService(
+    gcpConfig,
+    billingDatasetId,
+    billingTableId,
+    options
+  );
+
+  // Calculate metadata
+  let totalCost = 0;
+  const currencies = new Set<string>();
+  let rowCount = 0;
+
+  for (const service of Object.keys(costByService)) {
+    // Extract currency from service name if present
+    const currencyMatch = service.match(/\(([A-Z]{3})\)$/);
+    if (currencyMatch) {
+      currencies.add(currencyMatch[1]);
+    }
+
+    for (const cost of Object.values(costByService[service])) {
+      totalCost += cost;
+      rowCount++;
+    }
+  }
+
+  const endDate = options?.endDate ? dayjs(options.endDate) : dayjs().subtract(1, 'day');
+  const startDate = options?.startDate ? dayjs(options.startDate) : endDate.subtract(65, 'day');
+
+  return {
+    costByService,
+    metadata: {
+      totalCost,
+      serviceCount: Object.keys(costByService).length,
+      dateRange: {
+        start: startDate.format('YYYY-MM-DD'),
+        end: endDate.format('YYYY-MM-DD'),
+      },
+      currencies: Array.from(currencies),
+      rowCount,
+    },
+  };
 }
