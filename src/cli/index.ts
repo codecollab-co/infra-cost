@@ -26,6 +26,9 @@ import { registerAnnotateCommand } from './commands/annotate';
 import { registerGitCommands } from './commands/git';
 import { registerTerraformCommand } from './commands/terraform';
 import { registerSchedulerCommands } from './commands/scheduler';
+import { registerRBACCommands } from './commands/rbac';
+import { registerSSOCommands } from './commands/sso';
+import { registerPluginCommands } from './commands/plugin';
 
 // Import middleware
 import { authMiddleware } from './middleware/auth';
@@ -110,6 +113,9 @@ export function createCLI(): Command {
   registerGitCommands(program);
   registerTerraformCommand(program);
   registerSchedulerCommands(program);
+  registerRBACCommands(program);
+  registerSSOCommands(program);
+  registerPluginCommands(program);
 
   // Global hooks
   program.hook('preAction', async (thisCommand, actionCommand) => {
