@@ -5,8 +5,6 @@ export default defineConfig([
     entry: [
       'src/cli/index.ts', // New CLI entry point after restructuring
       'src/index.ts', // Legacy entry point for backwards compatibility
-      'src/demo/test-enhanced-ui.ts',
-      'src/demo/test-multi-cloud-dashboard.ts'
     ],
     outDir: 'dist',
     target: 'node20',

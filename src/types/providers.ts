@@ -20,6 +20,9 @@ export interface ProviderCredentials {
   clientSecret?: string;
   tenantId?: string;
   subscriptionId?: string;
+  subscriptionIds?: string[];
+  managementGroupId?: string;
+  allSubscriptions?: boolean;
 
   // GCP credentials
   projectId?: string;
@@ -32,7 +35,7 @@ export interface ProviderCredentials {
   privateKey?: string;
 
   // Generic/other credentials
-  [key: string]: string | undefined;
+  [key: string]: string | string[] | boolean | undefined;
 }
 
 export interface CostBreakdown {
