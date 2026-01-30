@@ -22,6 +22,12 @@ import {
   discoverGKEClusters,
 } from './inventory';
 import { getBudgets, getBudgetAlerts } from './budget';
+import {
+  getMultiProjectCostBreakdown,
+  getOrganizationCosts,
+  getFolderCosts,
+  MultiProjectCostBreakdown,
+} from './multi-project';
 import { showSpinner } from '../../logger';
 
 /**
@@ -38,6 +44,10 @@ export class GCPProvider extends CloudProviderAdapter {
   private billingDatasetId?: string;
   private billingTableId?: string;
   private billingAccountId?: string;
+  private allProjects?: boolean;
+  private projectIds?: string[];
+  private organizationId?: string;
+  private folderId?: string;
 
   constructor(config: ProviderConfig) {
     super(config);
@@ -51,6 +61,18 @@ export class GCPProvider extends CloudProviderAdapter {
     }
     if (config.credentials?.billingAccountId) {
       this.billingAccountId = config.credentials.billingAccountId;
+    }
+    if (config.credentials?.allProjects) {
+      this.allProjects = config.credentials.allProjects;
+    }
+    if (config.credentials?.projectIds) {
+      this.projectIds = config.credentials.projectIds;
+    }
+    if (config.credentials?.organizationId) {
+      this.organizationId = config.credentials.organizationId;
+    }
+    if (config.credentials?.folderId) {
+      this.folderId = config.credentials.folderId;
     }
   }
 
@@ -125,6 +147,13 @@ export class GCPProvider extends CloudProviderAdapter {
 
   async getCostBreakdown(): Promise<CostBreakdown> {
     const config = await this.initializeConfig();
+
+    // Check if multi-project mode is enabled
+    if (this.allProjects || this.projectIds || this.organizationId || this.folderId) {
+      return this.getMultiProjectCostBreakdown();
+    }
+
+    // Single project mode
     const totalCosts = await getTotalCosts(
       config,
       this.billingDatasetId,
@@ -135,6 +164,93 @@ export class GCPProvider extends CloudProviderAdapter {
       totals: totalCosts.totals,
       totalsByService: totalCosts.totalsByService,
     };
+  }
+
+  /**
+   * Get cost breakdown for multiple projects
+   */
+  async getMultiProjectCostBreakdown(): Promise<CostBreakdown> {
+    const config = await this.initializeConfig();
+
+    const multiProjectBreakdown = await getMultiProjectCostBreakdown(
+      config,
+      this.billingDatasetId,
+      this.billingTableId,
+      {
+        activeOnly: true,
+        projectIds: this.projectIds,
+      }
+    );
+
+    return {
+      totals: multiProjectBreakdown.aggregatedTotals,
+      totalsByService: multiProjectBreakdown.aggregatedTotalsByService,
+    };
+  }
+
+  /**
+   * Get detailed multi-project cost breakdown with per-project details
+   */
+  async getDetailedMultiProjectCostBreakdown(): Promise<MultiProjectCostBreakdown> {
+    const config = await this.initializeConfig();
+
+    return getMultiProjectCostBreakdown(
+      config,
+      this.billingDatasetId,
+      this.billingTableId,
+      {
+        activeOnly: true,
+        projectIds: this.projectIds,
+      }
+    );
+  }
+
+  /**
+   * Get organization-wide cost aggregation
+   */
+  async getOrganizationCostBreakdown(): Promise<{
+    organizationId: string;
+    totals: any;
+    totalsByService: any;
+    projectCount: number;
+  }> {
+    if (!this.organizationId) {
+      throw new Error(
+        'Organization ID not provided. Set organizationId in credentials configuration.'
+      );
+    }
+
+    const config = await this.initializeConfig();
+
+    return getOrganizationCosts(
+      config,
+      this.organizationId,
+      this.billingDatasetId,
+      this.billingTableId
+    );
+  }
+
+  /**
+   * Get folder-level cost aggregation
+   */
+  async getFolderCostBreakdown(): Promise<{
+    folderId: string;
+    totals: any;
+    totalsByService: any;
+    projectCount: number;
+  }> {
+    if (!this.folderId) {
+      throw new Error('Folder ID not provided. Set folderId in credentials configuration.');
+    }
+
+    const config = await this.initializeConfig();
+
+    return getFolderCosts(
+      config,
+      this.folderId,
+      this.billingDatasetId,
+      this.billingTableId
+    );
   }
 
   private getTopServices(costByService: { [key: string]: number }): Array<{
