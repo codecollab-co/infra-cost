@@ -15,6 +15,12 @@ import {
 import { getGcpConfigFromOptionsOrEnv, GCPClientConfig } from './config';
 import { getProjectInfo, listProjects, getMultipleProjects } from './project';
 import { getRawCostByService, getTotalCosts, TotalCosts } from './cost';
+import {
+  discoverGCEInstances,
+  discoverStorageBuckets,
+  discoverCloudSQLInstances,
+  discoverGKEClusters,
+} from './inventory';
 import { showSpinner } from '../../logger';
 
 /**
@@ -137,8 +143,72 @@ export class GCPProvider extends CloudProviderAdapter {
   }
 
   async getResourceInventory(filters?: InventoryFilters): Promise<ResourceInventory> {
-    // Will implement in Issue #73 (Implement resource inventory discovery)
-    throw new Error('GCP resource inventory not yet implemented - see Issue #73');
+    const config = await this.initializeConfig();
+
+    try {
+      // Discover resources in parallel
+      const [computeInstances, storageBuckets, databases, gkeClusters] = await Promise.all([
+        discoverGCEInstances(config, filters),
+        discoverStorageBuckets(config, filters),
+        discoverCloudSQLInstances(config, filters),
+        discoverGKEClusters(config, filters),
+      ]);
+
+      // Count resources by type
+      const resourcesByType: Record<string, number> = {
+        compute: computeInstances.length,
+        storage: storageBuckets.length,
+        database: databases.length,
+        container: gkeClusters.length,
+        network: 0,
+        security: 0,
+        serverless: 0,
+        analytics: 0,
+      };
+
+      // Calculate total cost
+      let totalCost = 0;
+      if (filters?.includeCosts) {
+        const allResources = [
+          ...computeInstances,
+          ...storageBuckets,
+          ...databases,
+          ...gkeClusters,
+        ];
+        totalCost = allResources.reduce(
+          (sum, resource) => sum + (resource.costToDate || 0),
+          0
+        );
+      }
+
+      return {
+        provider: CloudProvider.GOOGLE_CLOUD,
+        region: config.projectId, // Use project ID as region for GCP
+        totalResources:
+          computeInstances.length +
+          storageBuckets.length +
+          databases.length +
+          gkeClusters.length,
+        resourcesByType,
+        totalCost,
+        resources: {
+          compute: computeInstances,
+          storage: storageBuckets,
+          database: databases,
+          network: [],
+          container: gkeClusters,
+        },
+        lastUpdated: new Date(),
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to get resource inventory: ${error.message}\n\n` +
+          `Common issues:\n` +
+          `1. Ensure required APIs are enabled (Compute, Storage, SQL Admin)\n` +
+          `2. Verify credentials have necessary permissions\n` +
+          `3. Check project ID is correct: ${config.projectId}`
+      );
+    }
   }
 
   async getResourceCosts(resourceId: string): Promise<number> {
