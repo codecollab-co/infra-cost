@@ -30,6 +30,7 @@ import { registerRBACCommands } from './commands/rbac';
 import { registerSSOCommands } from './commands/sso';
 import { registerPluginCommands } from './commands/plugin';
 import { registerServerCommands } from './commands/server';
+import { registerScorecardCommand } from './commands/scorecard';
 
 // Import middleware
 import { authMiddleware } from './middleware/auth';
@@ -118,6 +119,7 @@ export function createCLI(): Command {
   registerSSOCommands(program);
   registerPluginCommands(program);
   registerServerCommands(program);
+  registerScorecardCommand(program);
 
   // Global hooks
   program.hook('preAction', async (thisCommand, actionCommand) => {
