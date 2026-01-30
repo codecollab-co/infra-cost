@@ -121,6 +121,66 @@ infra-cost now --json               # JSON output for scripting
 
 ---
 
+#### `infra-cost free-tier` - AWS Free Tier Tracker (NEW in v1.2.0)
+
+Track your AWS Free Tier usage and prevent surprise bills - perfect for solo developers and indie hackers!
+
+```bash
+# Check free tier status
+infra-cost free-tier
+
+# Output:
+# 🆓 AWS Free Tier Status (Account: 123456789012)
+# ════════════════════════════════════════════════════════════
+#
+# EC2 (t2.micro/t3.micro instances)
+# ├── Used: 620.0 hours / 750 hours (82.7%)
+# ├── [████████████████████████░░░░░░] 83%
+# └── ⚠️ Warning: 130.0 hours remaining
+#
+# S3 (Standard storage)
+# ├── Used: 4.2 GB / 5 GB (84.0%)
+# ├── [████████████████████████░░░░░░] 84%
+# └── ⚠️ Warning: 0.8 GB remaining
+#
+# Lambda (1M requests, 400K GB-sec)
+# ├── Used: 0.0 cost / 0 cost (0.0%)
+# ├── [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0%
+# └── ✅ On track
+#
+# ────────────────────────────────────────────────────────────
+# 💡 Tip: You have 8 days until month end
+```
+
+**Features:**
+- 🆓 **Tracks popular free tier services**: EC2, S3, Lambda, RDS
+- 📊 **Visual progress bars** - see usage at a glance
+- ⚡ **Smart alerts** - warns when approaching limits (default: 80%)
+- 💰 **Cost projection** - estimate month-end overages
+- 🎯 **Perfect for beginners** - avoid surprise AWS bills
+- 🚨 **Status indicators** - green=safe, yellow=warning, red=critical
+
+**Options:**
+```bash
+infra-cost free-tier                       # Check current status
+infra-cost free-tier --alert-threshold 90  # Custom threshold
+infra-cost free-tier --show-projection     # Show projected overages
+infra-cost free-tier --json                # JSON output
+```
+
+**Tracked Services:**
+- **EC2**: 750 hours/month (t2.micro/t3.micro)
+- **S3**: 5 GB storage
+- **Lambda**: Cost-based tracking (free tier = $0 cost)
+
+**Perfect for:**
+- Solo developers and indie hackers
+- Students learning AWS
+- New AWS users avoiding surprise bills
+- Monthly free tier checkups
+
+---
+
 ### Command Migration Table
 
 | Command Usage | Old Command (v0.x) | New Command (v1.0) |

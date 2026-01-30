@@ -13,6 +13,7 @@ import { autoLoadConfig } from '../core/config';
 
 // Import command groups
 import { registerNowCommand } from './commands/now';
+import { registerFreeTierCommand } from './commands/free-tier';
 import { registerCostCommands } from './commands/cost';
 import { registerOptimizeCommands } from './commands/optimize';
 import { registerMonitorCommands } from './commands/monitor';
@@ -88,8 +89,9 @@ export function createCLI(): Command {
     .option('--log-format <format>', 'Log format (pretty, json)', 'pretty');
 
   // Register command groups
-  // Quick command (top-level for easy access)
+  // Quick commands (top-level for easy access)
   registerNowCommand(program);
+  registerFreeTierCommand(program);
 
   // Feature command groups
   registerCostCommands(program);
