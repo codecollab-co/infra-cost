@@ -13,7 +13,7 @@ import {
   FinOpsRecommendation,
 } from '../../types/providers';
 import { getGcpConfigFromOptionsOrEnv, GCPClientConfig } from './config';
-import { getProjectInfo } from './project';
+import { getProjectInfo, listProjects, getMultipleProjects } from './project';
 import { getRawCostByService, getTotalCosts, TotalCosts } from './cost';
 import { showSpinner } from '../../logger';
 
@@ -73,13 +73,32 @@ export class GCPProvider extends CloudProviderAdapter {
 
   async getAccountInfo(): Promise<AccountInfo> {
     const config = await this.initializeConfig();
-    const projectInfo = await getProjectInfo(config);
 
-    return {
-      id: projectInfo.projectId,
-      name: projectInfo.projectName,
-      provider: CloudProvider.GOOGLE_CLOUD,
-    };
+    try {
+      const projectInfo = await getProjectInfo(config);
+
+      // Warn if project is not active
+      if (projectInfo.state !== 'ACTIVE') {
+        console.warn(
+          `⚠️  Warning: Project ${projectInfo.projectId} is in state: ${projectInfo.state}`
+        );
+      }
+
+      return {
+        id: projectInfo.projectId,
+        name: projectInfo.projectName,
+        provider: CloudProvider.GOOGLE_CLOUD,
+      };
+    } catch (error) {
+      // Provide helpful error message
+      throw new Error(
+        `Failed to get account information for project ${config.projectId}: ${error.message}\n\n` +
+        `Troubleshooting:\n` +
+        `1. Verify project ID is correct: ${config.projectId}\n` +
+        `2. Ensure credentials have 'resourcemanager.projects.get' permission\n` +
+        `3. Check that the project is not deleted or suspended`
+      );
+    }
   }
 
   async getRawCostData(): Promise<RawCostData> {
@@ -163,6 +182,41 @@ export class GCPProvider extends CloudProviderAdapter {
   async getFinOpsRecommendations(): Promise<FinOpsRecommendation[]> {
     // Will implement in future analytics module
     throw new Error('GCP FinOps recommendations not yet implemented');
+  }
+
+  /**
+   * List all accessible GCP projects
+   * Useful for discovering projects available to current credentials
+   */
+  async listAccessibleProjects(options?: {
+    activeOnly?: boolean;
+  }): Promise<Array<{
+    projectId: string;
+    projectNumber: string;
+    name: string;
+    state: string;
+    labels?: Record<string, string>;
+  }>> {
+    const config = await this.initializeConfig();
+    return listProjects(config, options);
+  }
+
+  /**
+   * Get account info for multiple projects
+   * Useful for multi-project cost aggregation
+   */
+  async getMultiProjectInfo(projectIds: string[]): Promise<
+    Array<{
+      projectId: string;
+      projectNumber: string;
+      projectName: string;
+      state: string;
+      labels?: Record<string, string>;
+      error?: string;
+    }>
+  > {
+    const config = await this.initializeConfig();
+    return getMultipleProjects(config, projectIds);
   }
 
   /**
