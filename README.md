@@ -77,6 +77,50 @@
 
 infra-cost v1.0 uses a modern subcommand-based architecture for better organization and discoverability.
 
+### ⚡ Quick Commands
+
+#### `infra-cost now` - Instant Cost Check (NEW in v1.2.0)
+
+See today's cloud spending in one second - perfect for morning cost checks!
+
+```bash
+# Quick daily cost check (zero config)
+infra-cost now
+
+# Output:
+# 💰 Today's Cost: $45.23 (+$3.12 ↑ from yesterday)
+# 📊 Top Services: EC2 $22.10 | RDS $15.30 | S3 $4.20
+# 📈 Month-to-Date: $892.45 / $1,500 (59%)
+#    [███████████████████░░░░░░░░░░] 59%
+#
+# Provider: AWS
+# Run `infra-cost cost` for detailed breakdown
+```
+
+**Features:**
+- 🚀 **Zero configuration** - auto-detects your default AWS profile
+- 📊 **Smart summary** - today's cost + delta from yesterday
+- 🎯 **Top 3 services** - see where your money is going at a glance
+- 💹 **Budget progress** - visual progress bar if budgets configured
+- 🎨 **Color-coded** - green = under budget, red = over budget
+- ⚡ **Lightning fast** - get your answer in ~1 second
+
+**Options:**
+```bash
+infra-cost now                      # Default profile
+infra-cost now --profile prod       # Specific profile
+infra-cost now --provider gcp       # Google Cloud
+infra-cost now --json               # JSON output for scripting
+```
+
+**Perfect for:**
+- Morning stand-ups: "How much did we spend yesterday?"
+- Quick sanity checks before demos
+- Solo developers and indie hackers
+- Anyone who wants instant cost visibility
+
+---
+
 ### Command Migration Table
 
 | Command Usage | Old Command (v0.x) | New Command (v1.0) |

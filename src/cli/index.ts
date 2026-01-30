@@ -12,6 +12,7 @@ import { initializeLogger, LogOutput } from '../core/logging';
 import { autoLoadConfig } from '../core/config';
 
 // Import command groups
+import { registerNowCommand } from './commands/now';
 import { registerCostCommands } from './commands/cost';
 import { registerOptimizeCommands } from './commands/optimize';
 import { registerMonitorCommands } from './commands/monitor';
@@ -87,6 +88,10 @@ export function createCLI(): Command {
     .option('--log-format <format>', 'Log format (pretty, json)', 'pretty');
 
   // Register command groups
+  // Quick command (top-level for easy access)
+  registerNowCommand(program);
+
+  // Feature command groups
   registerCostCommands(program);
   registerOptimizeCommands(program);
   registerMonitorCommands(program);
