@@ -1040,6 +1040,29 @@ src/
   - Approval workflows
   - Related: Issue #42 (Scheduled Reports), Issue #49 (API Server)
 
+### Q2 2026 (v1.3.0 - Phase 2 Complete)
+
+**Priority: Developer Experience & IDE Integration**
+- ✅ **Interactive TUI Dashboard** (Issue #43)
+  - React Ink-based terminal UI
+  - Real-time cost monitoring with keyboard navigation
+  - Multiple views: Services, Resources, Trends, Alerts
+- ✅ **Cost Annotations for IaC Files** (Issue #54)
+  - Terraform and CloudFormation cost comments
+  - Inline optimization suggestions
+  - Update/remove annotations
+- ✅ **Git Cost History** (Issue #56)
+  - Cost-commit correlation
+  - Blame analysis by author
+  - Historical trend analysis
+- 🔮 **VS Code Extension** (Issue #55 - Planned)
+  - Inline cost display for Terraform/CloudFormation
+  - Sidebar panel with cost summaries
+  - CodeLens integration
+  - Hover information with alternatives
+  - **Note:** VS Code extension will be a separate repository
+  - Integration points with CLI for cost data
+
 ### Q3 2026 (Planned)
 
 **Priority: Enterprise Features**
