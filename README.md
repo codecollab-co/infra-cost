@@ -653,16 +653,47 @@ See [example workflows](.github/workflows/examples/) for more use cases.
 ## 🔧 Advanced Usage
 
 ### AWS Organizations Support
+
+#### Multi-Account Management
 ```bash
 # List all accounts in organization
 infra-cost organizations list
 
 # Get organization-wide cost summary
 infra-cost organizations summary
+```
 
+#### Daily Cost Reports with Slack Integration
+```bash
 # Get daily costs for all accounts
 infra-cost organizations daily
+
+# Send daily report to Slack
+infra-cost organizations daily --slack-webhook https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+
+# View 30-day history
+infra-cost organizations daily --days 30
+
+# Get scheduling instructions for automated daily reports
+infra-cost organizations daily --schedule-daily --schedule-time 09:00
+
+# Export to JSON for automation
+infra-cost organizations daily --json
 ```
+
+**Features:**
+- 📊 Multi-account cost breakdown
+- 📈 Day-over-day cost trends with visual indicators
+- 🔥 Top 5 spender accounts
+- 📊 Weekly averages and projections
+- 💬 Slack webhook integration for team notifications
+- ⏰ Scheduling instructions (cron, Lambda, GitHub Actions)
+
+**Perfect for:**
+- Large organizations with multiple AWS accounts
+- FinOps teams managing cross-account costs
+- Daily cost visibility and team accountability
+- Automated cost reporting workflows
 
 ### Cost Analysis & Forecasting
 ```bash

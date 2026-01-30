@@ -32,6 +32,10 @@ export function registerOrganizationsCommands(program: Command): void {
     .command('daily')
     .description('Daily cost breakdown by account')
     .option('--days <n>', 'Number of days to show', '7')
+    .option('--slack-webhook <url>', 'Send report to Slack webhook URL')
+    .option('--schedule-daily', 'Show instructions to set up daily automated reports')
+    .option('--schedule-time <time>', 'Preferred schedule time (HH:MM)', '09:00')
+    .option('--json', 'Output in JSON format')
     .action(async (options, command) => {
       const { handleDaily } = await import('./daily');
       await handleDaily(options, command);
