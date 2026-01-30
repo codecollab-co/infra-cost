@@ -1,9 +1,9 @@
 import { CloudProvider, CloudProviderAdapter, ProviderConfig, ProviderFactory } from '../types/providers';
 import { AWSProvider } from './aws';
-import { GCPProvider } from './gcp';
-import { AzureProvider } from './azure';
-import { AlibabaCloudProvider } from './alicloud';
-import { OracleCloudProvider } from './oracle';
+import { GCPProvider } from './gcp/provider';
+import { AzureProvider } from './azure/provider';
+import { AlibabaCloudProvider } from './alicloud/provider';
+import { OracleCloudProvider } from './oracle/provider';
 
 export class CloudProviderFactory implements ProviderFactory {
   createProvider(config: ProviderConfig): CloudProviderAdapter {
