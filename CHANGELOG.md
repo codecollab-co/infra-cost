@@ -63,6 +63,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Graceful degradation**: Handles partial data and provider failures
 - **Detailed documentation**: In-line help and guidance for all options
 
+### Distribution
+
+- **npm**: Published to npm registry as `infra-cost@1.11.0`
+- **Homebrew**: Updated tap formula to v1.11.0 (codecollab-co/tap)
+- **GitHub Releases**: Full release notes for v1.10.0 and v1.11.0
+
 ## [1.10.0] - 2026-01-31
 
 ### Security Fixes - Critical
@@ -323,6 +329,9 @@ This release contains the same features as 0.3.1. Version 0.3.1 was unpublished 
 
 ## Release Links
 
+- [1.11.0 on GitHub](https://github.com/codecollab-co/infra-cost/releases/tag/v1.11.0)
+- [1.11.0 on npm](https://www.npmjs.com/package/infra-cost/v/1.11.0)
+- [1.10.0 on GitHub](https://github.com/codecollab-co/infra-cost/releases/tag/v1.10.0)
 - [0.3.3 on GitHub](https://github.com/codecollab-co/infra-cost/releases/tag/v0.3.3)
 - [0.3.3 on npm](https://www.npmjs.com/package/infra-cost/v/0.3.3)
 - [0.3.2 on npm](https://www.npmjs.com/package/infra-cost/v/0.3.2)
@@ -340,7 +349,7 @@ brew tap codecollab-co/tap
 brew install infra-cost
 
 # GitHub Action
-- uses: codecollab-co/infra-cost@v0.3.3
+- uses: codecollab-co/infra-cost@v1.11.0
 ```
 
 ## Documentation
