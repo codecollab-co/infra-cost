@@ -5,7 +5,7 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import { getGlobalLogger } from '../../../core/logging';
-import { loadAutoConfig } from '../../../core/auto-config';
+import { autoLoadConfig } from '../../../core/auto-config';
 import { CloudProviderFactory } from '../../../providers/factory';
 import { CloudProvider } from '../../../types/providers';
 
@@ -42,7 +42,7 @@ export async function handleCompare(options: any, command: any): Promise<void> {
       try {
         console.log(chalk.gray(`  Fetching ${providerName.toUpperCase()} costs...`));
 
-        const config = await loadAutoConfig({ provider: providerName as any });
+        const config = autoLoadConfig({ provider: providerName as any });
         const provider = factory.createProvider({
           provider: providerName as CloudProvider,
           credentials: config.credentials || {},

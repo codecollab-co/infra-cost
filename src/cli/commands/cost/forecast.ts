@@ -5,7 +5,7 @@
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import { getGlobalLogger } from '../../../core/logging';
-import { getProviderFromConfig } from '../../../core/config/discovery';
+import { getProviderFromConfig } from '../../../api/utils';
 import { CostForecaster, ForecastDataPoint } from '../../../core/forecasting/forecaster';
 import dayjs from 'dayjs';
 
