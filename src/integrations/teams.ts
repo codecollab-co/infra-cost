@@ -28,10 +28,44 @@ export interface TeamsConfig {
   mentions?: string[];
 }
 
+interface AdaptiveCardElement {
+  type: string;
+  text?: string;
+  weight?: string;
+  size?: string;
+  isSubtle?: boolean;
+  wrap?: boolean;
+  separator?: boolean;
+  spacing?: string;
+  columns?: Array<{ type: string; width: string; items: AdaptiveCardElement[] }>;
+  items?: AdaptiveCardElement[];
+  facts?: Array<{ title: string; value: string }>;
+}
+
+interface AdaptiveCardAction {
+  type: string;
+  title: string;
+  url?: string;
+}
+
+interface AdaptiveCard {
+  type: 'message';
+  attachments: Array<{
+    contentType: 'application/vnd.microsoft.card.adaptive';
+    content: {
+      type: 'AdaptiveCard';
+      $schema: string;
+      version: string;
+      body: AdaptiveCardElement[];
+      actions: AdaptiveCardAction[];
+    };
+  }>;
+}
+
 /**
  * Create Microsoft Teams Adaptive Card
  */
-function createAdaptiveCard(data: TeamsCostData, style: string = 'detailed'): any {
+function createAdaptiveCard(data: TeamsCostData, style: string = 'detailed'): AdaptiveCard {
   const { todayCost, mtdCost, budget, budgetPercent, topServices, alerts, accountName, provider } = data;
 
   // Determine card color based on budget
@@ -42,7 +76,7 @@ function createAdaptiveCard(data: TeamsCostData, style: string = 'detailed'): an
     color = 'warning'; // yellow
   }
 
-  const card: any = {
+  const card: AdaptiveCard = {
     type: 'message',
     attachments: [
       {

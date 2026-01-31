@@ -42,19 +42,19 @@ export interface ApiResponse<T = any> {
   timestamp: string;
 }
 
-// Simple in-memory cache
-const cache = new Map<string, { data: any; expiry: number }>();
-
 export class ApiServer {
   private app: Express;
   private server?: Server;
   private config: ApiServerConfig;
+  private cache: Map<string, { data: any; expiry: number }> = new Map();
+  private cacheCleanupTimer?: NodeJS.Timeout;
 
   constructor(config: ApiServerConfig) {
     this.config = config;
     this.app = express();
     this.setupMiddleware();
     this.setupRoutes();
+    this.setupCacheCleanup();
   }
 
   private setupMiddleware(): void {
@@ -112,13 +112,13 @@ export class ApiServer {
     }
 
     if (this.config.auth.type === 'api-key') {
-      const apiKey = req.headers['x-api-key'] || req.query.apiKey;
+      const apiKey = req.headers['x-api-key'];
       if (!apiKey || !this.config.auth.apiKeys?.includes(apiKey as string)) {
         return res.status(401).json({
           status: 'error',
           error: {
             code: 'UNAUTHORIZED',
-            message: 'Invalid or missing API key',
+            message: 'Invalid or missing API key. Provide X-API-Key header.',
           },
           timestamp: new Date().toISOString(),
         } as ApiResponse);
@@ -135,7 +135,7 @@ export class ApiServer {
     }
 
     const key = `${req.method}:${req.path}:${JSON.stringify(req.query)}`;
-    const cached = cache.get(key);
+    const cached = this.cache.get(key);
 
     if (cached && cached.expiry > Date.now()) {
       return res.json(cached.data);
@@ -145,7 +145,7 @@ export class ApiServer {
     const originalJson = res.json.bind(res);
     res.json = (body: any) => {
       if (res.statusCode === 200) {
-        cache.set(key, {
+        this.cache.set(key, {
           data: body,
           expiry: Date.now() + this.config.cache.ttl * 1000,
         });
@@ -154,6 +154,26 @@ export class ApiServer {
     };
 
     next();
+  }
+
+  private setupCacheCleanup(): void {
+    // Clean expired cache entries every minute
+    this.cacheCleanupTimer = setInterval(() => {
+      const now = Date.now();
+      const keysToDelete: string[] = [];
+
+      for (const [key, entry] of this.cache.entries()) {
+        if (entry.expiry <= now) {
+          keysToDelete.push(key);
+        }
+      }
+
+      keysToDelete.forEach(key => this.cache.delete(key));
+
+      if (keysToDelete.length > 0) {
+        console.log(`🧹 Cleaned up ${keysToDelete.length} expired cache entries`);
+      }
+    }, 60 * 1000);
   }
 
   private setupRoutes(): void {
@@ -224,6 +244,13 @@ export class ApiServer {
   }
 
   async stop(): Promise<void> {
+    // Clean up timers
+    if (this.cacheCleanupTimer) {
+      clearInterval(this.cacheCleanupTimer);
+      this.cacheCleanupTimer = undefined;
+    }
+    this.cache.clear();
+
     return new Promise((resolve, reject) => {
       if (!this.server) {
         resolve();

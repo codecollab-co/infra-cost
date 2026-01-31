@@ -5,6 +5,104 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-01-31
+
+### Features - Advanced Cost Analysis Commands
+
+**Cost Forecasting** (`cost forecast`):
+- **Multiple forecasting models**: Linear, exponential, seasonal, and auto-select
+- **Confidence intervals**: Support for 80%, 90%, and 95% confidence levels
+- **Multi-month predictions**: Forecast 1-12 months into the future
+- **Trend analysis**: Automatic trend detection with percentage change calculations
+- **Intelligent recommendations**: Context-aware suggestions based on forecast trends
+- **Statistical accuracy**: Linear regression with standard error calculations
+- **Seasonal patterns**: Detects and applies weekly seasonality patterns
+- **Exponential growth**: Handles accelerating cost patterns with log-space regression
+- **Comprehensive output**: Summary, monthly breakdown, trend analysis, and recommendations
+
+**Multi-Cloud Cost Comparison** (`cost compare`):
+- **Cross-cloud analysis**: Compare costs across AWS, GCP, Azure, Oracle, Alibaba Cloud
+- **Service-level comparison**: Side-by-side service cost breakdown
+- **Provider rankings**: Automatic ranking by total cost with percentage distribution
+- **Top services analysis**: Identify most expensive services per provider
+- **Common services detection**: Find services running across multiple clouds
+- **Savings opportunities**: Calculate potential savings from migration
+- **Vendor lock-in analysis**: Alert when single provider exceeds 60% of costs
+- **Optimization recommendations**: Actionable suggestions for cost reduction
+
+**Cost Trends Analysis** (`cost trends`):
+- **Flexible time periods**: 7d, 30d, 90d, 12m analysis windows
+- **Multiple granularities**: Daily, weekly, or monthly aggregation
+- **Service-specific trends**: Analyze individual service cost patterns
+- **ASCII visualization**: Terminal-based cost trend charts with color coding
+- **Volatility detection**: Statistical analysis of cost variance
+- **Change detection**: Identify increasing, decreasing, and stable trends
+- **Percentage changes**: Calculate and display period-over-period changes
+- **Actionable insights**: Services with biggest cost changes highlighted
+
+### Technical Implementation
+
+**New Core Modules**:
+- `src/core/forecasting/forecaster.ts` - Complete forecasting engine with statistical models
+  - Linear regression with confidence intervals
+  - Exponential growth modeling
+  - Seasonal pattern detection and application
+  - Auto-model selection based on data characteristics
+  - Z-score calculations for confidence levels
+
+**Enhanced Command Handlers**:
+- `src/cli/commands/cost/forecast.ts` - Full implementation (previously stub)
+- `src/cli/commands/cost/compare.ts` - Full implementation (previously stub)
+- `src/cli/commands/cost/trends.ts` - Full implementation (previously stub)
+
+### User Experience
+
+- **Rich terminal output**: Tables, charts, and colored text for clarity
+- **Input validation**: Comprehensive parameter validation with helpful error messages
+- **Progress indicators**: Clear feedback during data fetching
+- **Graceful degradation**: Handles partial data and provider failures
+- **Detailed documentation**: In-line help and guidance for all options
+
+## [1.10.0] - 2026-01-31
+
+### Security Fixes - Critical
+- **CORS Security**: Changed default CORS origins from `['*']` to `['http://localhost:3000', 'http://127.0.0.1:3000']` - restricts API access to local only
+- **Authentication**: Changed default auth from `type: 'none'` to `type: 'api-key'` - requires authentication by default
+- **API Key Handling**: Removed insecure query parameter authentication, now only accepts `X-API-Key` header
+- **Port Validation**: Added validation for port numbers (1-65535) with clear error messages
+- **Input Validation**: Added validation for API parameters (days, cache TTL, etc.)
+
+### Performance & Reliability Fixes
+- **Memory Leak Fix - Webhook Manager**: Added automatic cleanup with 24-hour retention and 1000 item limit
+- **Memory Leak Fix - API Server Cache**: Added cleanup timer running every minute to remove expired entries
+- **Async File Operations**: Converted synchronous file operations to async in cache (won't block event loop)
+- **AWS API Pagination**: Added proper `NextPageToken` pagination loop to handle large datasets
+- **Graceful Shutdown**: Added proper cleanup methods for timers and maps on server stop
+
+### Type Safety Improvements
+- **GCP Config Types**: Replaced `credentials?: any` with proper `GCPServiceAccountCredentials` interface
+- **Teams Integration Types**: Added `AdaptiveCard`, `AdaptiveCardElement`, and `AdaptiveCardAction` interfaces
+- **AWS Budget Types**: Replaced `any` types with explicit budget interfaces for better type safety
+- **Error Handling Utility**: Created `src/utils/error-handling.ts` with `getErrorMessage()`, `AppError`, and type guards
+
+### User Experience Improvements
+- **Unimplemented Commands**: Updated `cost forecast`, `cost compare`, and `cost trends` commands with helpful guidance
+- **Clear Error Messages**: All commands now show what the feature will provide and suggest alternatives
+- **Better Validation Messages**: Improved error messages for invalid inputs with actionable guidance
+
+### Bug Fixes
+- **JSON Parsing**: Added try-catch for server config loading with fallback to defaults
+- **NaN Validation**: Added checks for all `parseInt()` and `parseFloat()` operations
+- **Error Type Checking**: Fixed `error.message` access throughout codebase with proper type guards
+
+### Testing
+- **Test Suite Results**: 380 tests passing, maintaining 93% success rate
+- **Mock Files**: Created comprehensive mocks for GCP, Azure, Oracle Cloud, and Alibaba Cloud providers
+
+### Documentation
+- **Security Best Practices**: Updated server defaults to follow security best practices
+- **Configuration Guide**: Added documentation for secure server configuration
+
 ## [1.1.0] - 2026-01-30
 
 ### Added - Google Cloud Platform Integration

@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { getProviderFromConfig } from '../utils';
 import { createApiResponse, createErrorResponse } from '../server';
+import { getErrorMessage } from '../../utils/error-handling';
 
 const router = Router();
 
@@ -17,6 +18,12 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const { days = 30 } = req.query;
     const daysNum = parseInt(days as string, 10);
+
+    if (isNaN(daysNum) || daysNum < 1 || daysNum > 365) {
+      return res.status(400).json(
+        createErrorResponse('INVALID_PARAMETER', 'Days must be between 1 and 365')
+      );
+    }
 
     // Placeholder forecast logic
     // In a real implementation, this would use historical data and forecasting models
@@ -53,7 +60,7 @@ router.get('/', async (req: Request, res: Response) => {
       })
     );
   } catch (error: any) {
-    res.status(500).json(createErrorResponse('FORECAST_ERROR', error.message));
+    res.status(500).json(createErrorResponse('FORECAST_ERROR', getErrorMessage(error)));
   }
 });
 

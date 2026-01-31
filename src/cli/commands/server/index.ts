@@ -19,10 +19,11 @@ const DEFAULT_CONFIG: ApiServerConfig = {
   host: '127.0.0.1',
   cors: {
     enabled: true,
-    origins: ['*'],
+    origins: ['http://localhost:3000', 'http://127.0.0.1:3000'],
   },
   auth: {
-    type: 'none',
+    type: 'api-key',
+    apiKeys: [],
   },
   rateLimit: {
     enabled: true,
@@ -37,8 +38,13 @@ const DEFAULT_CONFIG: ApiServerConfig = {
 
 function loadServerConfig(): ApiServerConfig {
   if (existsSync(SERVER_CONFIG_PATH)) {
-    const config = JSON.parse(readFileSync(SERVER_CONFIG_PATH, 'utf-8'));
-    return { ...DEFAULT_CONFIG, ...config };
+    try {
+      const config = JSON.parse(readFileSync(SERVER_CONFIG_PATH, 'utf-8'));
+      return { ...DEFAULT_CONFIG, ...config };
+    } catch (error) {
+      console.warn(chalk.yellow('⚠️  Invalid server config file, using defaults'));
+      return DEFAULT_CONFIG;
+    }
   }
   return DEFAULT_CONFIG;
 }
@@ -52,21 +58,30 @@ async function handleStart(options: any): Promise<void> {
     // Check if server is already running
     if (existsSync(PID_FILE)) {
       const pid = parseInt(readFileSync(PID_FILE, 'utf-8').trim(), 10);
-      try {
-        process.kill(pid, 0);
-        console.log(chalk.yellow('⚠️  Server is already running'));
-        console.log(chalk.gray(`   PID: ${pid}`));
-        return;
-      } catch {
-        // Process not running, remove stale PID file
-        require('fs').unlinkSync(PID_FILE);
+      if (!isNaN(pid)) {
+        try {
+          process.kill(pid, 0);
+          console.log(chalk.yellow('⚠️  Server is already running'));
+          console.log(chalk.gray(`   PID: ${pid}`));
+          return;
+        } catch {
+          // Process not running, remove stale PID file
+          require('fs').unlinkSync(PID_FILE);
+        }
       }
     }
 
     const config = loadServerConfig();
 
     // Override with CLI options
-    if (options.port) config.port = parseInt(options.port, 10);
+    if (options.port) {
+      const port = parseInt(options.port, 10);
+      if (isNaN(port) || port < 1 || port > 65535) {
+        console.log(chalk.red('❌ Invalid port number. Must be between 1 and 65535'));
+        process.exit(1);
+      }
+      config.port = port;
+    }
     if (options.host) config.host = options.host;
     if (options.apiKey) {
       config.auth = {
@@ -206,11 +221,25 @@ async function handleConfigure(options: any): Promise<void> {
   try {
     const config = loadServerConfig();
 
-    if (options.port) config.port = parseInt(options.port, 10);
+    if (options.port) {
+      const port = parseInt(options.port, 10);
+      if (isNaN(port) || port < 1 || port > 65535) {
+        console.log(chalk.red('❌ Invalid port number. Must be between 1 and 65535'));
+        process.exit(1);
+      }
+      config.port = port;
+    }
     if (options.host) config.host = options.host;
     if (options.enableCors !== undefined) config.cors.enabled = options.enableCors === 'true';
     if (options.cacheEnabled !== undefined) config.cache.enabled = options.cacheEnabled === 'true';
-    if (options.cacheTtl) config.cache.ttl = parseInt(options.cacheTtl, 10);
+    if (options.cacheTtl) {
+      const ttl = parseInt(options.cacheTtl, 10);
+      if (isNaN(ttl) || ttl < 0) {
+        console.log(chalk.red('❌ Invalid cache TTL. Must be a positive number'));
+        process.exit(1);
+      }
+      config.cache.ttl = ttl;
+    }
 
     saveServerConfig(config);
 

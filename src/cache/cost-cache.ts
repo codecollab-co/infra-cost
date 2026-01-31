@@ -181,13 +181,14 @@ class FileCacheStorage implements CacheStorage {
     if (!existsSync(this.cacheDir)) return [];
 
     const keys: string[] = [];
-    const files = readdirSync(this.cacheDir);
+    const { readdir, readFile } = await import('fs/promises');
+    const files = await readdir(this.cacheDir);
 
     for (const file of files) {
       if (!file.endsWith('.json')) continue;
 
       try {
-        const content = readFileSync(join(this.cacheDir, file), 'utf8');
+        const content = await readFile(join(this.cacheDir, file), 'utf8');
         const entry = JSON.parse(content) as CacheEntry;
 
         if (!pattern || entry.key.includes(pattern)) {
@@ -216,15 +217,16 @@ class FileCacheStorage implements CacheStorage {
 
     if (!existsSync(this.cacheDir)) return stats;
 
-    const files = readdirSync(this.cacheDir);
+    const { readdir, stat, readFile } = await import('fs/promises');
+    const files = await readdir(this.cacheDir);
 
     for (const file of files) {
       if (!file.endsWith('.json')) continue;
 
       try {
         const filePath = join(this.cacheDir, file);
-        const fileStat = statSync(filePath);
-        const content = readFileSync(filePath, 'utf8');
+        const fileStat = await stat(filePath);
+        const content = await readFile(filePath, 'utf8');
         const entry = JSON.parse(content) as CacheEntry;
 
         stats.totalEntries++;

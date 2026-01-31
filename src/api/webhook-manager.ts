@@ -47,6 +47,9 @@ export class WebhookManager extends EventEmitter {
   private deliveries: Map<string, WebhookDelivery> = new Map();
   private retryQueue: WebhookDelivery[] = [];
   private retryTimer?: NodeJS.Timeout;
+  private cleanupTimer?: NodeJS.Timeout;
+  private readonly MAX_DELIVERY_HISTORY = 1000;
+  private readonly DELIVERY_RETENTION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
   constructor(config: Partial<WebhookConfiguration> = {}) {
     super();
@@ -62,6 +65,7 @@ export class WebhookManager extends EventEmitter {
     };
 
     this.setupRetryProcessor();
+    this.setupCleanupProcessor();
   }
 
   public async deliverWebhook(
@@ -271,6 +275,58 @@ export class WebhookManager extends EventEmitter {
 
   private generateDeliveryId(): string {
     return `wh_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private setupCleanupProcessor(): void {
+    // Run cleanup every hour
+    this.cleanupTimer = setInterval(() => {
+      this.cleanupOldDeliveries();
+    }, 60 * 60 * 1000);
+  }
+
+  private cleanupOldDeliveries(): void {
+    const now = Date.now();
+    const deliveriesToRemove: string[] = [];
+
+    // Remove old completed/failed deliveries
+    for (const [id, delivery] of this.deliveries.entries()) {
+      const isComplete = delivery.status === 'delivered' || delivery.status === 'failed';
+      const createdAt = delivery.createdAt.getTime();
+      const age = now - createdAt;
+
+      if (isComplete && age > this.DELIVERY_RETENTION_MS) {
+        deliveriesToRemove.push(id);
+      }
+    }
+
+    // If we still have too many, remove oldest completed ones
+    if (this.deliveries.size > this.MAX_DELIVERY_HISTORY) {
+      const completed = Array.from(this.deliveries.entries())
+        .filter(([_, d]) => d.status === 'delivered' || d.status === 'failed')
+        .sort((a, b) => a[1].createdAt.getTime() - b[1].createdAt.getTime());
+
+      const toRemove = this.deliveries.size - this.MAX_DELIVERY_HISTORY;
+      completed.slice(0, toRemove).forEach(([id]) => deliveriesToRemove.push(id));
+    }
+
+    deliveriesToRemove.forEach(id => this.deliveries.delete(id));
+
+    if (deliveriesToRemove.length > 0) {
+      console.log(`🧹 Cleaned up ${deliveriesToRemove.length} old webhook deliveries`);
+    }
+  }
+
+  public shutdown(): void {
+    if (this.retryTimer) {
+      clearInterval(this.retryTimer);
+      this.retryTimer = undefined;
+    }
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = undefined;
+    }
+    this.deliveries.clear();
+    this.retryQueue = [];
   }
 
   // Event type definitions for type safety

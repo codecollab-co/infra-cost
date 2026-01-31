@@ -7,6 +7,7 @@ import { RDSClient, DescribeDBInstancesCommand } from '@aws-sdk/client-rds';
 import { LambdaClient, ListFunctionsCommand } from '@aws-sdk/client-lambda';
 import { BudgetsClient, DescribeBudgetsCommand, DescribeBudgetCommand } from '@aws-sdk/client-budgets';
 import dayjs from 'dayjs';
+import { getErrorMessage } from '../../utils/error-handling';
 import {
   CloudProviderAdapter,
   ProviderConfig,
@@ -93,7 +94,7 @@ export class AWSProvider extends CloudProviderAdapter {
         provider: CloudProvider.AWS
       };
     } catch (error) {
-      throw new Error(`Failed to get AWS account information: ${error.message}`);
+      throw new Error(`Failed to get AWS account information: ${getErrorMessage(error)}`);
     }
   }
 
@@ -108,47 +109,54 @@ export class AWSProvider extends CloudProviderAdapter {
       const endDate = dayjs().subtract(1, 'day');
       const startDate = endDate.subtract(65, 'day');
 
-      const pricingData = await costExplorer.send(new GetCostAndUsageCommand({
-        TimePeriod: {
-          Start: startDate.format('YYYY-MM-DD'),
-          End: endDate.format('YYYY-MM-DD'),
-        },
-        Granularity: 'DAILY',
-        Filter: {
-          Not: {
-            Dimensions: {
-              Key: 'RECORD_TYPE',
-              Values: ['Credit', 'Refund', 'Upfront', 'Support'],
+      const costByService: RawCostData = {};
+      let nextToken: string | undefined;
+
+      // Paginate through results if needed (though unlikely for 65-day window)
+      do {
+        const pricingData = await costExplorer.send(new GetCostAndUsageCommand({
+          TimePeriod: {
+            Start: startDate.format('YYYY-MM-DD'),
+            End: endDate.format('YYYY-MM-DD'),
+          },
+          Granularity: 'DAILY',
+          Filter: {
+            Not: {
+              Dimensions: {
+                Key: 'RECORD_TYPE',
+                Values: ['Credit', 'Refund', 'Upfront', 'Support'],
+              },
             },
           },
-        },
-        Metrics: ['UnblendedCost'],
-        GroupBy: [
-          {
-            Type: 'DIMENSION',
-            Key: 'SERVICE',
-          },
-        ],
-      }));
+          Metrics: ['UnblendedCost'],
+          GroupBy: [
+            {
+              Type: 'DIMENSION',
+              Key: 'SERVICE',
+            },
+          ],
+          NextPageToken: nextToken,
+        }));
 
-      const costByService: RawCostData = {};
+        for (const day of pricingData.ResultsByTime || []) {
+          for (const group of day.Groups || []) {
+            const serviceName = group.Keys?.[0];
+            const cost = group.Metrics?.UnblendedCost?.Amount;
+            const costDate = day.TimePeriod?.End;
 
-      for (const day of pricingData.ResultsByTime || []) {
-        for (const group of day.Groups || []) {
-          const serviceName = group.Keys?.[0];
-          const cost = group.Metrics?.UnblendedCost?.Amount;
-          const costDate = day.TimePeriod?.End;
-
-          if (serviceName && cost && costDate) {
-            costByService[serviceName] = costByService[serviceName] || {};
-            costByService[serviceName][costDate] = parseFloat(cost);
+            if (serviceName && cost && costDate) {
+              costByService[serviceName] = costByService[serviceName] || {};
+              costByService[serviceName][costDate] = parseFloat(cost);
+            }
           }
         }
-      }
+
+        nextToken = pricingData.NextPageToken;
+      } while (nextToken);
 
       return costByService;
     } catch (error) {
-      throw new Error(`Failed to get AWS cost data: ${error.message}`);
+      throw new Error(`Failed to get AWS cost data: ${getErrorMessage(error)}`);
     }
   }
 
@@ -1108,7 +1116,13 @@ export class AWSProvider extends CloudProviderAdapter {
   }
 
   // Helper methods for budget functionality
-  private determineBudgetStatus(budget: any): 'OK' | 'ALARM' | 'FORECASTED_ALARM' {
+  private determineBudgetStatus(budget: {
+    CalculatedSpend?: {
+      ActualSpend?: { Amount?: string };
+      ForecastedSpend?: { Amount?: string };
+    };
+    BudgetLimit?: { Amount?: string };
+  }): 'OK' | 'ALARM' | 'FORECASTED_ALARM' {
     if (!budget.CalculatedSpend) return 'OK';
 
     const actual = parseFloat(budget.CalculatedSpend.ActualSpend?.Amount || '0');
@@ -1120,7 +1134,7 @@ export class AWSProvider extends CloudProviderAdapter {
     return 'OK';
   }
 
-  private parseBudgetThresholds(budget: any): BudgetThreshold[] {
+  private parseBudgetThresholds(budget: unknown): BudgetThreshold[] {
     // In a real implementation, this would parse AWS Budget notification thresholds
     // For now, return default thresholds
     return [
@@ -1139,7 +1153,7 @@ export class AWSProvider extends CloudProviderAdapter {
     ];
   }
 
-  private parseCostFilters(budget: any): any {
+  private parseCostFilters(budget: { CostFilters?: Record<string, string[]> }): Record<string, string[]> {
     // In a real implementation, this would parse AWS Budget cost filters
     return budget.CostFilters || {};
   }
