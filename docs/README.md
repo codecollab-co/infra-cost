@@ -1,6 +1,27 @@
-# Documentation Index
+# 📚 infra-cost Documentation
 
-This directory contains comprehensive documentation for the infra-cost project.
+Complete documentation for the multi-cloud FinOps CLI tool.
+
+## 🚀 Quick Start
+
+New to infra-cost? Start here:
+1. [Installation Guide](./guides/GETTING_STARTED.md) (Coming soon)
+2. [Your First Cost Analysis](./guides/FIRST_ANALYSIS.md) (Coming soon)
+3. [Authentication Setup](./guides/AUTHENTICATION.md) (Coming soon)
+
+## 📖 Command Reference (NEW in v1.11.0 ✨)
+
+### Cost Analysis
+- **[Cost Analysis Commands](./commands/COST_ANALYSIS.md)** - Advanced forecasting, comparison, trends
+  - `cost forecast` - Predict 1-12 months ahead with 4 statistical models
+  - `cost compare` - Compare costs across AWS, GCP, Azure, Oracle, Alibaba
+  - `cost trends` - Analyze spending patterns with ASCII visualization
+
+### More Commands (Documentation coming soon)
+- **Quick Commands** - `now`, `free-tier` for instant insights
+- **Infrastructure** - `annotate`, `terraform` for IaC cost analysis
+- **Monitoring** - `alerts`, `budgets`, `anomaly` detection
+- **Optimization** - `recommendations`, `rightsizing`, `quickwins`
 
 ## 📚 Documentation Overview
 
@@ -105,5 +126,5 @@ If you can't find what you're looking for:
 
 ---
 
-**Last Updated**: 2026-01-27
-**Version**: 0.3.3
+**Last Updated**: 2026-01-31
+**Version**: v1.11.0
