@@ -449,6 +449,16 @@ See [full roadmap](./docs/ROADMAP.md) for detailed timeline.
 - Memory: 512MB+ available
 - Network: Internet access for cloud provider APIs
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=codecollab-co%2Finfra-cost&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=codecollab-co/infra-cost&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=codecollab-co/infra-cost&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=codecollab-co/infra-cost&type=date&legend=top-left" />
+ </picture>
+</a>
+
 ## 📄 License
 
 MIT © [Code Collab](https://github.com/codecollab-co)
@@ -464,13 +474,3 @@ MIT © [Code Collab](https://github.com/codecollab-co)
 [⭐ Star us on GitHub](https://github.com/codecollab-co/infra-cost) • [🐦 Follow on Twitter](https://twitter.com/codecollabco) • [💼 LinkedIn](https://linkedin.com/company/codecollab-co)
 
 </div>
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=codecollab-co%2Finfra-cost&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=codecollab-co/infra-cost&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=codecollab-co/infra-cost&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=codecollab-co/infra-cost&type=date&legend=top-left" />
- </picture>
-</a>
