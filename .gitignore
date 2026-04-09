@@ -122,3 +122,6 @@ dist/
 .claude/
 
 .DS_Store
+
+# OpenMemory - IDE/Assistant specific rules
+.cursor/rules/openmemory.mdc
